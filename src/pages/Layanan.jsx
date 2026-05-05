@@ -76,16 +76,82 @@ export default function Layanan() {
 
       <main>
         <header className="rk-pageHeader" aria-label="Layanan Online">
-          <div className="rk-container rk-pageHeaderInner">
-            <p className="rk-pageKicker">Layanan</p>
-            <h1 className="rk-pageTitle">Layanan Online</h1>
-            <p className="rk-pageSubtitle">
-              Pilih layanan administrasi yang tersedia, ajukan secara online, dan pantau statusnya melalui akun Anda.
-            </p>
+          <div className="rk-container rk-pageHeaderInner rk-layananHero">
+            <div className="rk-layananHeroLeft">
+              <p className="rk-pageKicker">Layanan</p>
+              <h1 className="rk-pageTitle">Layanan Online</h1>
+              <p className="rk-pageSubtitle">
+                Pilih layanan administrasi yang tersedia, ajukan secara online, dan pantau statusnya melalui akun Anda.
+              </p>
+
+              <div className="rk-heroActions" aria-label="Aksi cepat layanan">
+                <a className="rk-heroBtn rk-heroBtnPrimary" href="#rk-layanan-list">
+                  Ajukan Layanan <FiArrowRight aria-hidden="true" />
+                </a>
+                <Link className="rk-heroBtn rk-heroBtnSecondary" to="/layanan/ahli-waris">
+                  Lihat Persyaratan
+                </Link>
+              </div>
+            </div>
+
+            <div className="rk-layananHeroRight" aria-hidden="true">
+              <div className="rk-heroVisual">
+                <div className="rk-heroVisualFrame">
+                  <img src="/images/kantor2.png" alt="" loading="lazy" />
+                </div>
+                <div className="rk-heroVisualCard">
+                  <div className="rk-heroVisualLabel">Pelayanan Terpadu</div>
+                  <div className="rk-heroVisualTitle">Tertib, aman, dan terverifikasi.</div>
+                </div>
+              </div>
+            </div>
           </div>
         </header>
 
-        <section className="rk-pageSection" aria-label="Daftar layanan">
+        <section className="rk-layananQuickInfo" aria-label="Ringkasan layanan">
+          <div className="rk-container">
+            <div className="rk-layananInfoGrid">
+              <div className="rk-layananInfoCard">
+                <div className="rk-layananInfoIcon" aria-hidden="true">
+                  <FiFileText />
+                </div>
+                <div>
+                  <div className="rk-layananInfoTitle">8 Jenis Layanan</div>
+                  <div className="rk-layananInfoDesc">Administrasi utama kecamatan.</div>
+                </div>
+              </div>
+              <div className="rk-layananInfoCard">
+                <div className="rk-layananInfoIcon" aria-hidden="true">
+                  <FiArrowRight />
+                </div>
+                <div>
+                  <div className="rk-layananInfoTitle">Pengajuan Online</div>
+                  <div className="rk-layananInfoDesc">Isi formulir &amp; unggah dokumen.</div>
+                </div>
+              </div>
+              <div className="rk-layananInfoCard">
+                <div className="rk-layananInfoIcon" aria-hidden="true">
+                  <FiSearch />
+                </div>
+                <div>
+                  <div className="rk-layananInfoTitle">Pantau Status</div>
+                  <div className="rk-layananInfoDesc">Lihat progres verifikasi petugas.</div>
+                </div>
+              </div>
+              <div className="rk-layananInfoCard">
+                <div className="rk-layananInfoIcon" aria-hidden="true">
+                  <FiCheckCircle />
+                </div>
+                <div>
+                  <div className="rk-layananInfoTitle">Dokumen Terverifikasi</div>
+                  <div className="rk-layananInfoDesc">Lebih rapi dan mudah ditelusuri.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="rk-layanan-list" className="rk-pageSection" aria-label="Daftar layanan">
           <div className="rk-container">
             <div className="rk-layananGrid">
               {services.map((service) => {

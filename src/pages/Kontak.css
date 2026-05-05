@@ -1,6 +1,6 @@
 .rk-pageKontak .rk-pageHeader {
   position: relative;
-  padding: 36px 0 24px;
+  padding: 56px 0 40px;
   background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 0.92));
   color: rgba(255, 255, 255, 0.92);
   overflow: hidden;
@@ -19,7 +19,11 @@
 .rk-pageKontak .rk-pageHeaderInner {
   position: relative;
   z-index: 1;
-  max-width: 60ch;
+  max-width: none;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 18px;
+  align-items: center;
 }
 
 .rk-pageKontak .rk-pageKicker {
@@ -43,6 +47,87 @@
   line-height: 1.7;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.82);
+  max-width: 66ch;
+}
+
+.rk-contactHeroInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.rk-heroChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rk-heroChip svg {
+  color: rgba(197, 167, 84, 0.95);
+}
+
+.rk-contactHeroVisual {
+  position: relative;
+  border-radius: calc(var(--rk-radius-lg) + 8px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.26);
+  aspect-ratio: 16 / 11;
+}
+
+.rk-contactHeroVisual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(6, 28, 50, 0.2), rgba(6, 28, 50, 0) 55%),
+    radial-gradient(circle at 15% 20%, rgba(197, 167, 84, 0.16), rgba(0, 0, 0, 0) 56%);
+  pointer-events: none;
+}
+
+.rk-contactHeroVisual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.02) contrast(1.02);
+}
+
+.rk-contactHeroBadge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 18px 45px rgba(16, 52, 83, 0.18);
+  font-weight: 950;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  color: rgba(29, 42, 58, 0.92);
+}
+
+.rk-contactHeroBadge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rk-gold);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
 }
 
 /* SECTION */
@@ -53,15 +138,17 @@
 /* GRID */
 .rk-contactGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 0.85fr;
   gap: 14px;
   align-items: start;
 }
 
 /* CONTACT CARD */
-.rk-contactCards {
+.rk-contactCardsGrid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .rk-contactCard {
@@ -101,7 +188,6 @@
 
 /* FORM */
 .rk-formCard {
-  margin-top: 12px;
   border-radius: var(--rk-radius-lg);
   background: var(--rk-surface);
   border: 1px solid var(--rk-border);
@@ -151,6 +237,26 @@
   min-height: 100px;
 }
 
+.rk-formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.rk-sentHint {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(30, 136, 200, 0.08);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  color: rgba(11, 79, 124, 0.92);
+  font-weight: 800;
+  font-size: 12px;
+}
+
 /* BUTTON */
 .rk-submitBtn {
   border-radius: 999px;
@@ -159,6 +265,23 @@
   font-size: 13px;
   background: linear-gradient(135deg, rgba(30, 136, 200, 0.98), rgba(11, 79, 124, 0.98));
   color: white;
+  border: 0;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.rk-submitBtn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 18px 45px rgba(16, 52, 83, 0.2);
+}
+
+.rk-submitBtn:focus-visible {
+  outline: 2px solid rgba(30, 136, 200, 0.72);
+  outline-offset: 2px;
 }
 
 /* MAP */
@@ -186,28 +309,56 @@
 }
 
 .rk-mapBox {
-  height: 300px;
+  height: 360px;
   margin-top: 10px;
-  background: linear-gradient(135deg, rgba(11, 79, 124, 0.12), rgba(245, 248, 252, 0.9));
+  background:
+    radial-gradient(circle at 20% 20%, rgba(30, 136, 200, 0.16), rgba(0, 0, 0, 0) 56%),
+    repeating-linear-gradient(90deg, rgba(11, 79, 124, 0.06), rgba(11, 79, 124, 0.06) 1px, transparent 1px, transparent 24px),
+    linear-gradient(135deg, rgba(11, 79, 124, 0.1), rgba(245, 248, 252, 0.9));
   display: grid;
   place-items: center;
+  position: relative;
 }
 
 .rk-mapOverlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 12px;
   border-radius: 999px;
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(11, 79, 124, 0.12);
   font-weight: 800;
   font-size: 12px;
+  color: rgba(29, 42, 58, 0.92);
 }
 
 /* RESPONSIVE */
 @media (max-width: 1024px) {
+  .rk-pageKontak .rk-pageHeaderInner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .rk-contactCardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .rk-contactGrid {
     grid-template-columns: 1fr;
   }
 
   .rk-mapBox {
     height: 240px;
+  }
+}
+
+@media (max-width: 640px) {
+  .rk-pageKontak .rk-pageHeader {
+    padding: 44px 0 28px;
+  }
+
+  .rk-contactCardsGrid {
+    grid-template-columns: 1fr;
   }
 }
