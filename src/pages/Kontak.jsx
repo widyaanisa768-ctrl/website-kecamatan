@@ -43,7 +43,7 @@ export default function Kontak() {
 
             <div className="rk-contactHeroRight">
               <div className="rk-contactHeroVisual">
-                <img src="/images/kantor4.png" alt="Kantor Camat Rantau Kopar" loading="lazy" />
+                <img src="/images/kantor1.png" alt="Kantor Camat Rantau Kopar" loading="lazy" />
                 <div className="rk-contactHeroBadge">Pelayanan Publik</div>
               </div>
             </div>
