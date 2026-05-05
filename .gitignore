@@ -10,7 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.npm-cache
 *.local
+Git-2.54.0-64-bit.exe
 
 # Editor directories and files
 .vscode/*
