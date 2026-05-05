@@ -1,0 +1,213 @@
+.rk-pageKontak .rk-pageHeader {
+  position: relative;
+  padding: 36px 0 24px;
+  background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 0.92));
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.rk-pageKontak .rk-pageHeader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(30, 136, 200, 0.22), rgba(0, 0, 0, 0) 56%),
+    radial-gradient(circle at 82% 22%, rgba(197, 167, 84, 0.14), rgba(0, 0, 0, 0) 52%);
+  pointer-events: none;
+}
+
+.rk-pageKontak .rk-pageHeaderInner {
+  position: relative;
+  z-index: 1;
+  max-width: 60ch;
+}
+
+.rk-pageKontak .rk-pageKicker {
+  margin: 0 0 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.rk-pageKontak .rk-pageTitle {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.2;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.rk-pageKontak .rk-pageSubtitle {
+  margin: 0;
+  line-height: 1.7;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* SECTION */
+.rk-pageKontak .rk-pageSection {
+  padding: 40px 0;
+}
+
+/* GRID */
+.rk-contactGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+/* CONTACT CARD */
+.rk-contactCards {
+  display: grid;
+  gap: 10px;
+}
+
+.rk-contactCard {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  box-shadow: 0 10px 25px rgba(16, 52, 83, 0.08);
+  padding: 12px;
+}
+
+.rk-contactIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 79, 124, 0.08);
+  color: var(--rk-primary);
+}
+
+.rk-contactTitle {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.rk-contactText {
+  margin-top: 4px;
+  color: var(--rk-muted);
+  font-weight: 600;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+/* FORM */
+.rk-formCard {
+  margin-top: 12px;
+  border-radius: var(--rk-radius-lg);
+  background: var(--rk-surface);
+  border: 1px solid var(--rk-border);
+  box-shadow: var(--rk-shadow-soft);
+  padding: 14px;
+}
+
+.rk-formTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.rk-formDesc {
+  margin: 0;
+  color: var(--rk-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rk-form {
+  display: grid;
+  gap: 10px;
+}
+
+.rk-field {
+  display: grid;
+  gap: 6px;
+}
+
+.rk-label {
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.rk-input,
+.rk-textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(11, 79, 124, 0.16);
+  background: rgba(11, 79, 124, 0.04);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--rk-text);
+}
+
+.rk-textarea {
+  min-height: 100px;
+}
+
+/* BUTTON */
+.rk-submitBtn {
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 13px;
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.98), rgba(11, 79, 124, 0.98));
+  color: white;
+}
+
+/* MAP */
+.rk-mapCard {
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  box-shadow: 0 10px 25px rgba(16, 52, 83, 0.08);
+  overflow: hidden;
+}
+
+.rk-mapTop {
+  padding: 12px 12px 0;
+}
+
+.rk-mapTitle {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.rk-mapHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--rk-muted);
+}
+
+.rk-mapBox {
+  height: 300px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, rgba(11, 79, 124, 0.12), rgba(245, 248, 252, 0.9));
+  display: grid;
+  place-items: center;
+}
+
+.rk-mapOverlay {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: white;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .rk-contactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-mapBox {
+    height: 240px;
+  }
+}

@@ -1,0 +1,181 @@
+.rk-footer {
+  color: rgba(255, 255, 255, 0.88);
+  background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 1));
+  padding: 56px 0 26px;
+}
+
+.rk-footerGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.rk-footerBrand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rk-footerBrand {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rk-footerLogo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.rk-footerMarkInner {
+  position: absolute;
+  inset: 9px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 20% 20%, rgba(197, 167, 84, 0.92), rgba(11, 79, 124, 0) 60%),
+    linear-gradient(135deg, rgba(30, 136, 200, 0.92), rgba(11, 79, 124, 0.92));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+}
+
+.rk-footerBrandLine1 {
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.rk-footerBrandLine2 {
+  margin-top: 2px;
+  font-weight: 650;
+  opacity: 0.88;
+  font-size: 12px;
+}
+
+.rk-footerDesc {
+  margin: 0;
+  line-height: 1.8;
+  max-width: 50ch;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.rk-footerMeta {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.rk-footerMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.rk-footerSocial {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rk-socialBtn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.94);
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.rk-socialBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rk-footerTitle {
+  margin: 8px 0 12px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 0.2px;
+}
+
+.rk-footerLinks {
+  display: grid;
+  gap: 10px;
+}
+
+.rk-footerLink {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 800;
+  transition: color 180ms ease;
+}
+
+.rk-footerLink:hover {
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.rk-footerInfo {
+  display: grid;
+  gap: 12px;
+}
+
+.rk-footerInfoCard {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 14px;
+}
+
+.rk-footerInfoLabel {
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.94);
+  letter-spacing: 0.2px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.rk-footerInfoValue {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+.rk-footerBottom {
+  margin-top: 26px;
+}
+
+.rk-footerLine {
+  height: 1px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.rk-footerCopy {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 650;
+  font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+  .rk-footerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-socialBtn,
+  .rk-footerLink {
+    transition: none !important;
+  }
+}
+

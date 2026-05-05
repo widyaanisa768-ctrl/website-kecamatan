@@ -1,0 +1,453 @@
+.rk-pageHeader {
+  position: relative;
+  padding: 40px 0 24px;
+  background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 0.92));
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.rk-pageHeader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(30, 136, 200, 0.18), rgba(0, 0, 0, 0) 56%),
+    radial-gradient(circle at 82% 22%, rgba(197, 167, 84, 0.12), rgba(0, 0, 0, 0) 52%);
+  pointer-events: none;
+}
+
+.rk-pageHeaderInner {
+  position: relative;
+  z-index: 1;
+  max-width: 62ch;
+}
+
+.rk-pageKicker {
+  margin: 0 0 8px;
+  font-weight: 800;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.rk-pageTitle {
+  margin: 0 0 8px;
+ font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.18;
+  letter-spacing: -0.3px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.rk-pageSubtitle {
+  margin: 0;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rk-pageSection {
+  padding: 40px 0;
+}
+
+.rk-pageAlt {
+  background: rgba(11, 79, 124, 0.05);
+}
+
+.rk-grid2 {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.rk-surfaceCard {
+  background: var(--rk-surface);
+  border: 1px solid var(--rk-border);
+  border-radius: var(--rk-radius-lg);
+  box-shadow: var(--rk-shadow-soft);
+  padding: 16px;
+}
+
+.rk-h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.15px;
+}
+
+.rk-h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.15px;
+}
+
+.rk-p {
+  margin: 0 0 10px;
+  color: var(--rk-muted);
+  line-height: 1.75;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rk-p:last-child {
+  margin-bottom: 0;
+}
+
+.rk-highlightCard {
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.1), rgba(11, 79, 124, 0.05));
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  border-radius: var(--rk-radius-lg);
+  box-shadow: 0 18px 42px rgba(16, 52, 83, 0.1);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.rk-highlightRow {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(11, 79, 124, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.rk-highlightIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 79, 124, 0.08);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  color: var(--rk-primary);
+}
+
+.rk-highlightTitle {
+  font-weight: 900;
+  letter-spacing: -0.15px;
+  font-size: 14px;
+}
+
+.rk-highlightDesc {
+  margin-top: 2px;
+  color: var(--rk-muted);
+  font-weight: 600;
+  line-height: 1.6;
+  font-size: 12px;
+}
+
+.rk-sectionHeadCompact {
+  max-width: 70ch;
+  margin-bottom: 14px;
+}
+
+.rk-profilGrid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.rk-profilMedia {
+  border-radius: var(--rk-radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 36px rgba(16, 52, 83, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.rk-profilMedia img {
+  width: 100%;
+  height: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.02);
+}
+
+.rk-profilCard {
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
+  padding: 16px;
+}
+
+.rk-profilHighlights {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.rk-profilHighlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(11, 79, 124, 0.06);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  color: rgba(29, 42, 58, 0.92);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.rk-profilHighlight svg {
+  color: rgba(30, 136, 200, 0.95);
+}
+
+.rk-bulletList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.rk-bulletList li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  color: var(--rk-muted);
+  font-weight: 650;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.rk-bulletList li svg {
+  color: rgba(30, 136, 200, 0.95);
+  margin-top: 2px;
+}
+
+.rk-pageProfil .rk-mapCard {
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
+  overflow: hidden;
+}
+
+.rk-pageProfil .rk-mapHead {
+  padding: 14px 14px 0;
+}
+
+.rk-pageProfil .rk-mapTitle {
+  font-weight: 900;
+  letter-spacing: -0.15px;
+  font-size: 15px;
+}
+
+.rk-pageProfil .rk-mapHint {
+  margin-top: 4px;
+  color: var(--rk-muted);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.rk-pageProfil .rk-mapBox {
+  height: 260px;
+  margin-top: 12px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(30, 136, 200, 0.16), rgba(0, 0, 0, 0) 56%),
+    linear-gradient(135deg, rgba(11, 79, 124, 0.1), rgba(245, 248, 252, 0.9));
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.rk-pageProfil .rk-mapOverlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: rgba(29, 42, 58, 0.92);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.rk-dataGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.rk-dataCard {
+  border-radius: var(--rk-radius-md);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
+  padding: 14px;
+}
+
+.rk-dataLabel {
+  color: rgba(29, 42, 58, 0.76);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rk-dataValue {
+  margin-top: 8px;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+  color: rgba(29, 42, 58, 0.96);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.rk-dataUnit {
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+  color: rgba(29, 42, 58, 0.6);
+}
+
+.rk-commitCard {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  align-items: start;
+  border-radius: var(--rk-radius-lg);
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.1), rgba(11, 79, 124, 0.05));
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 18px 42px rgba(16, 52, 83, 0.1);
+  padding: 16px;
+}
+
+.rk-commitIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  color: rgba(30, 136, 200, 0.95);
+}
+
+.rk-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--rk-muted);
+  line-height: 1.75;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rk-list li {
+  margin: 5px 0;
+}
+
+.rk-tfGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.rk-tfItem {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  color: var(--rk-muted);
+  font-weight: 650;
+  line-height: 1.75;
+  font-size: 14px;
+}
+
+.rk-tfItem svg {
+  color: rgba(30, 136, 200, 0.95);
+  margin-top: 2px;
+}
+
+.rk-infoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.rk-infoCard {
+  border-radius: var(--rk-radius-md);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
+  padding: 14px;
+}
+
+.rk-infoTitle {
+  font-weight: 900;
+  letter-spacing: -0.15px;
+  font-size: 14px;
+}
+
+.rk-infoText {
+  margin-top: 6px;
+  color: var(--rk-muted);
+  font-weight: 600;
+  line-height: 1.65;
+  font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+  .rk-profilGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-dataGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rk-infoGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .rk-pageHeader {
+    padding: 32px 0 20px;
+  }
+
+  .rk-pageTitle {
+    font-size: 24px;
+  }
+
+  .rk-pageSubtitle,
+  .rk-p,
+  .rk-list,
+  .rk-tfItem,
+  .rk-bulletList li {
+    font-size: 13px;
+  }
+
+  .rk-dataGrid,
+  .rk-infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-dataValue {
+    font-size: 20px;
+  }
+
+  .rk-pageSection {
+    padding: 32px 0;
+  }
+}

@@ -1,0 +1,213 @@
+.rk-formKerja .rk-formHeader {
+  position: relative;
+  padding: 56px 0 36px;
+  background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 0.92));
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.rk-formKerja .rk-formHeader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(30, 136, 200, 0.22), rgba(0, 0, 0, 0) 56%),
+    radial-gradient(circle at 82% 22%, rgba(197, 167, 84, 0.14), rgba(0, 0, 0, 0) 52%);
+  pointer-events: none;
+}
+
+.rk-formKerja .rk-formHeaderInner {
+  position: relative;
+  z-index: 1;
+  max-width: 74ch;
+}
+
+.rk-formKerja .rk-formKicker {
+  margin: 0 0 10px;
+  font-weight: 950;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.rk-formKerja .rk-formTitle {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.4px;
+  font-weight: 980;
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.rk-formKerja .rk-formSubtitle {
+  margin: 0;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 650;
+}
+
+.rk-formKerja .rk-formSection {
+  padding: 56px 0;
+}
+
+.rk-formKerja .rk-formCard {
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  box-shadow: 0 22px 52px rgba(16, 52, 83, 0.12);
+  padding: 18px;
+}
+
+.rk-statusRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.rk-statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(11, 79, 124, 0.06);
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  color: rgba(29, 42, 58, 0.92);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.rk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.rk-field {
+  border-radius: 18px;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  background: rgba(11, 79, 124, 0.03);
+  padding: 14px;
+}
+
+.rk-label {
+  display: block;
+  font-weight: 900;
+  font-size: 13px;
+  color: rgba(29, 42, 58, 0.92);
+}
+
+.rk-required {
+  color: rgba(197, 167, 84, 0.98);
+  font-weight: 980;
+}
+
+.rk-inputRow {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.rk-inputIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  color: rgba(30, 136, 200, 0.95);
+}
+
+.rk-input,
+.rk-textarea {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(11, 79, 124, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px 12px;
+  font: inherit;
+  color: rgba(29, 42, 58, 0.94);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.rk-input:focus,
+.rk-textarea:focus {
+  border-color: rgba(30, 136, 200, 0.55);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 30px rgba(16, 52, 83, 0.12);
+}
+
+.rk-textarea {
+  margin-top: 10px;
+  resize: vertical;
+  min-height: 110px;
+}
+
+.rk-error {
+  margin-top: 10px;
+  font-weight: 850;
+  color: rgba(180, 52, 52, 0.95);
+  background: rgba(180, 52, 52, 0.08);
+  border: 1px solid rgba(180, 52, 52, 0.16);
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
+.rk-formActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.rk-submitBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-weight: 950;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.98), rgba(11, 79, 124, 0.98));
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 45px rgba(16, 52, 83, 0.18);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-submitBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 52px rgba(16, 52, 83, 0.22);
+}
+
+@media (max-width: 900px) {
+  .rk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .rk-formKerja .rk-formSection {
+    padding: 48px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-input,
+  .rk-textarea,
+  .rk-submitBtn {
+    transition: none !important;
+  }
+}
+

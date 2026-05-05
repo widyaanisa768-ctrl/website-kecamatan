@@ -1,0 +1,388 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+.rk-portal {
+  --rk-primary: #0b4f7c;
+  --rk-secondary: #1e88c8;
+  --rk-bg: #f5f8fc;
+  --rk-surface: #ffffff;
+  --rk-text: #1d2a3a;
+  --rk-muted: #5b6b7c;
+  --rk-border: rgba(16, 52, 83, 0.12);
+  --rk-shadow: 0 18px 45px rgba(16, 52, 83, 0.16);
+  --rk-shadow-soft: 0 12px 28px rgba(16, 52, 83, 0.12);
+  --rk-radius-lg: 24px;
+  --rk-radius-md: 18px;
+  --rk-radius-sm: 14px;
+  --rk-gold: rgba(197, 167, 84, 0.9);
+
+  min-height: 100svh;
+  background: var(--rk-bg);
+  color: var(--rk-text);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Arial,
+    sans-serif;
+}
+
+.rk-noScroll {
+  overflow: hidden;
+}
+
+.rk-container {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+/* Shared portal typography */
+.rk-portal .rk-eyebrow {
+  margin: 0 0 10px;
+  font-weight: 950;
+  color: var(--rk-primary);
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.rk-portal .rk-sectionTitle {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 2.3vw, 34px);
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  color: var(--rk-text);
+}
+
+.rk-portal .rk-sectionDesc {
+  margin: 0;
+  color: var(--rk-muted);
+  line-height: 1.8;
+  font-weight: 650;
+}
+
+.rk-portal .rk-miniBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-weight: 950;
+  font-size: 12px;
+  color: var(--rk-primary);
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 79, 124, 0.2);
+  background: rgba(11, 79, 124, 0.05);
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-portal .rk-miniBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.08);
+  box-shadow: 0 14px 30px rgba(16, 52, 83, 0.12);
+}
+
+/* Navbar */
+.rk-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #ffffff;
+  border-bottom: 1px solid var(--rk-border);
+  box-shadow: 0 1px 2px rgba(16, 52, 83, 0.12);
+}
+
+.rk-navInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  gap: 18px;
+}
+
+.rk-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--rk-text);
+  text-decoration: none;
+  min-width: 250px;
+}
+
+.rk-brandMark {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(11, 79, 124, 0.14), rgba(30, 136, 200, 0.1));
+  border: 1px solid rgba(11, 79, 124, 0.18);
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.rk-brandMarkInner {
+  position: absolute;
+  inset: 9px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 20% 20%, rgba(197, 167, 84, 0.95), rgba(11, 79, 124, 0) 60%),
+    linear-gradient(135deg, rgba(30, 136, 200, 0.95), rgba(11, 79, 124, 0.9));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+}
+
+.rk-brandText {
+  display: grid;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+.rk-brandLine1 {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  font-size: 14px;
+}
+
+.rk-brandLine2 {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.rk-navRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rk-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.rk-link {
+  color: rgba(29, 42, 58, 0.88);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.rk-link:hover {
+  background: rgba(11, 79, 124, 0.08);
+  color: var(--rk-text);
+  transform: translateY(-1px);
+}
+
+.rk-link.isActive {
+  background: rgba(11, 79, 124, 0.1);
+  color: var(--rk-text);
+}
+
+.rk-loginBtn {
+  text-decoration: none;
+  font-weight: 900;
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: var(--rk-primary);
+  border: 1px solid rgba(11, 79, 124, 0.28);
+  background: rgba(11, 79, 124, 0.08);
+  transition:
+    background 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.rk-loginBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 30px rgba(16, 52, 83, 0.14);
+}
+
+.rk-burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  color: var(--rk-text);
+  border: 1px solid rgba(11, 79, 124, 0.18);
+  background: rgba(11, 79, 124, 0.06);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.rk-burger:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.1);
+}
+
+/* Minimal utility classes used by Navbar.jsx */
+.bg-white {
+  background: #ffffff;
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 2px rgba(16, 52, 83, 0.12);
+}
+
+.border-b {
+  border-bottom: 1px solid var(--rk-border);
+}
+
+/* Mobile menu */
+.rk-mobile {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.rk-mobile.isOpen {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.rk-mobilePanel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: min(380px, calc(100% - 24px));
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--rk-border);
+  border-radius: 22px;
+  box-shadow: var(--rk-shadow);
+  padding: 14px;
+  z-index: 2;
+  transform: translateY(-8px);
+  transition: transform 220ms ease;
+}
+
+.rk-mobile.isOpen .rk-mobilePanel {
+  transform: translateY(0);
+}
+
+.rk-mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 10px;
+}
+
+.rk-mobileTitle {
+  font-weight: 950;
+  color: var(--rk-text);
+  letter-spacing: 0.2px;
+}
+
+.rk-mobileClose {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(11, 79, 124, 0.18);
+  background: rgba(11, 79, 124, 0.06);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--rk-text);
+}
+
+.rk-mobileLinks {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+}
+
+.rk-mobileLink {
+  text-decoration: none;
+  color: var(--rk-text);
+  font-weight: 900;
+  padding: 12px 12px;
+  border-radius: 16px;
+  background: rgba(11, 79, 124, 0.05);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.rk-mobileLink:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.08);
+}
+
+.rk-mobileLink.isActive {
+  background: rgba(11, 79, 124, 0.1);
+}
+
+.rk-mobileLink.isLogin {
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.92), rgba(11, 79, 124, 0.92));
+  color: rgba(255, 255, 255, 0.98);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.rk-mobileBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(4, 14, 23, 0.48);
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .rk-links {
+    display: none;
+  }
+
+  .rk-burger {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .rk-container {
+    width: min(1180px, calc(100% - 32px));
+  }
+}
+
+@media (max-width: 480px) {
+  .rk-loginBtn {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-link,
+  .rk-loginBtn,
+  .rk-burger,
+  .rk-mobilePanel,
+  .rk-mobileLink {
+    transition: none !important;
+  }
+}
+
+.rk-logo {
+  height: 42px;
+  width: auto;
+}
+
+.rk-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
