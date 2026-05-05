@@ -97,7 +97,7 @@ export default function Layanan() {
             <div className="rk-layananHeroRight" aria-hidden="true">
               <div className="rk-heroVisual">
                 <div className="rk-heroVisualFrame">
-                  <img src="/images/kantor2.png" alt="" loading="lazy" />
+                  <img src="/images/kantor1.png" alt="" loading="lazy" />
                 </div>
                 <div className="rk-heroVisualCard">
                   <div className="rk-heroVisualLabel">Pelayanan Terpadu</div>
