@@ -70,6 +70,17 @@ export default function Layanan() {
     []
   )
 
+  const scrollToDaftarLayanan = (e) => {
+    e.preventDefault()
+    const targetId = 'daftar-layanan'
+    const target = document.getElementById(targetId)
+    if (!target) return
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    window.history?.replaceState?.(null, '', `#${targetId}`)
+    target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  }
+
   return (
     <div className="rk-portal rk-pageLayanan">
       <Navbar />
@@ -85,12 +96,20 @@ export default function Layanan() {
               </p>
 
               <div className="rk-heroActions" aria-label="Aksi cepat layanan">
-                <a className="rk-heroBtn rk-heroBtnPrimary" href="#rk-layanan-list">
+                <a
+                  className="rk-heroBtn rk-heroBtnPrimary"
+                  href="#daftar-layanan"
+                  onClick={scrollToDaftarLayanan}
+                >
                   Ajukan Layanan <FiArrowRight aria-hidden="true" />
                 </a>
-                <Link className="rk-heroBtn rk-heroBtnSecondary" to="/layanan/ahli-waris">
+                <a
+                  className="rk-heroBtn rk-heroBtnSecondary"
+                  href="#daftar-layanan"
+                  onClick={scrollToDaftarLayanan}
+                >
                   Lihat Persyaratan
-                </Link>
+                </a>
               </div>
             </div>
 
@@ -151,7 +170,7 @@ export default function Layanan() {
           </div>
         </section>
 
-        <section id="rk-layanan-list" className="rk-pageSection" aria-label="Daftar layanan">
+        <section id="daftar-layanan" className="rk-pageSection" aria-label="Daftar layanan">
           <div className="rk-container">
             <div className="rk-layananGrid">
               {services.map((service) => {
