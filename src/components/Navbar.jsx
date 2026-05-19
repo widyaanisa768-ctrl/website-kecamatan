@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
+import { clearAuth } from '../lib/rkLocal'
 import './Navbar.css'
 
 const NAV_ITEMS = [
@@ -12,7 +13,19 @@ const NAV_ITEMS = [
 ]
 
 export default function Navbar() {
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+
+  const userLabel = (user?.nama_lengkap || user?.username || '').trim()
+  const isLoggedIn = !!userLabel
 
   useEffect(() => {
     if (!menuOpen) return
@@ -28,6 +41,38 @@ export default function Navbar() {
       document.body.classList.remove('rk-noScroll')
     }
   }, [menuOpen])
+
+  useEffect(() => {
+    const syncUser = () => {
+      try {
+        const raw = window.localStorage.getItem('user')
+        setUser(raw ? JSON.parse(raw) : null)
+      } catch {
+        setUser(null)
+      }
+    }
+
+    syncUser()
+    window.addEventListener('focus', syncUser)
+    window.addEventListener('storage', syncUser)
+    return () => {
+      window.removeEventListener('focus', syncUser)
+      window.removeEventListener('storage', syncUser)
+    }
+  }, [])
+
+  const handleLogout = () => {
+    try {
+      window.localStorage.removeItem('accessToken')
+      window.localStorage.removeItem('user')
+      window.localStorage.removeItem('token')
+      clearAuth()
+    } finally {
+      setUser(null)
+      setMenuOpen(false)
+      navigate('/login', { replace: true })
+    }
+  }
 
   return (
     <header className="rk-nav bg-white shadow-sm border-b" role="banner">
@@ -59,9 +104,20 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <NavLink to="/login" className="rk-loginBtn">
-            Login
-          </NavLink>
+          {isLoggedIn ? (
+            <div className="rk-userNav" aria-label="Akun">
+              <span className="rk-userName" title={userLabel}>
+                {userLabel}
+              </span>
+              <button type="button" className="rk-loginBtn rk-logoutBtn" onClick={handleLogout}>
+                Keluar
+              </button>
+            </div>
+          ) : (
+            <NavLink to="/login" className="rk-loginBtn">
+              Login
+            </NavLink>
+          )}
 
           <button
             type="button"
@@ -96,9 +152,20 @@ export default function Navbar() {
                 {item.label}
               </NavLink>
             ))}
-            <NavLink to="/login" className="rk-mobileLink isLogin" onClick={() => setMenuOpen(false)}>
-              Login
-            </NavLink>
+            {isLoggedIn ? (
+              <>
+                <div className="rk-mobileUser" aria-label="Akun">
+                  {userLabel}
+                </div>
+                <button type="button" className="rk-mobileLink isLogout" onClick={handleLogout}>
+                  Keluar
+                </button>
+              </>
+            ) : (
+              <NavLink to="/login" className="rk-mobileLink isLogin" onClick={() => setMenuOpen(false)}>
+                Login
+              </NavLink>
+            )}
           </div>
         </div>
 

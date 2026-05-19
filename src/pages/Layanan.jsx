@@ -186,7 +186,7 @@ export default function Layanan() {
                     <p className="rk-layananDesc">{service.desc}</p>
                     <div className="rk-layananActions">
                       <Link to={service.to} className="rk-miniBtn">
-                        Ajukan <FiArrowRight aria-hidden="true" />
+                        Lihat Detail <FiArrowRight aria-hidden="true" />
                       </Link>
                     </div>
                   </article>

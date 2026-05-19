@@ -16,7 +16,7 @@
   --mono: ui-monospace, Consolas, monospace;
 
   font: 15px/150% var(--sans);
-  letter-spacing: 0.18px;
+  letter-spacing: 0;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -54,9 +54,29 @@ body {
   margin: 0;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
 #root {
   min-height: 100svh;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 h1,
@@ -104,7 +124,10 @@ code {
 }
 
 .rk-container {
-  width: min(1200px, calc(100% - 48px));
+  width: min(1180px, calc(100% - 48px));
+  max-width: 1180px;
+  margin-inline: auto;
+  min-width: 0;
 }
 
 h1 {
@@ -123,8 +146,29 @@ p {
 input,
 textarea,
 select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   color: inherit;
   caret-color: currentColor;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+main {
+  min-width: 0;
 }
 
 input:-webkit-autofill,
@@ -133,4 +177,204 @@ select:-webkit-autofill {
   -webkit-text-fill-color: #111 !important;
   caret-color: #111 !important;
   box-shadow: 0 0 0px 1000px #fff inset !important;
+}
+
+/* Shared layout guardrails for service forms */
+body .rk-portal.rk-formPage {
+  overflow-x: hidden;
+}
+
+body .rk-portal.rk-formPage .rk-container {
+  width: min(1040px, calc(100% - 48px));
+  max-width: 1040px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+body .rk-portal.rk-formPage .rk-formHeaderInner {
+  max-width: 1040px;
+}
+
+body .rk-portal.rk-formPage .rk-formSection {
+  padding: 52px 0;
+}
+
+body .rk-portal.rk-formPage .rk-formCard {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 20px;
+  padding: 22px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+body .rk-portal.rk-formPage .rk-grid,
+body .rk-portal.rk-formPage .rk-docGrid,
+body .rk-portal.rk-formPage .rk-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+body .rk-portal.rk-formPage .rk-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body .rk-portal.rk-formPage .rk-span2 {
+  grid-column: span 2;
+}
+
+body .rk-portal.rk-formPage .rk-field,
+body .rk-portal.rk-formPage .rk-docField {
+  min-width: 0;
+  width: 100%;
+  border-radius: 16px;
+  padding: 14px;
+  box-sizing: border-box;
+}
+
+body .rk-portal.rk-formPage .rk-inputRow {
+  grid-template-columns: 44px minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+}
+
+body .rk-portal.rk-formPage .rk-input,
+body .rk-portal.rk-formPage .rk-textarea,
+body .rk-portal.rk-formPage .rk-file,
+body .rk-portal.rk-formPage select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body .rk-portal.rk-formPage .rk-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+body .rk-portal.rk-formPage .rk-file {
+  overflow: hidden;
+}
+
+body .rk-portal.rk-formPage .rk-picked,
+body .rk-portal.rk-formPage .rk-error,
+body .rk-portal.rk-formPage .rk-note,
+body .rk-portal.rk-formPage .rk-helpText,
+body .rk-portal.rk-formPage .rk-formFoot,
+body .rk-portal.rk-formPage .rk-formHint {
+  overflow-wrap: anywhere;
+}
+
+body .rk-portal.rk-formPage .rk-divider {
+  width: 100%;
+  margin: 20px 0;
+}
+
+body .rk-portal.rk-formPage .rk-formActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 20px;
+}
+
+body .rk-portal.rk-formPage .rk-submitBtn {
+  min-width: 148px;
+  max-width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .rk-container {
+    width: min(960px, calc(100% - 40px));
+  }
+
+  body .rk-portal.rk-formPage .rk-container {
+    width: min(900px, calc(100% - 40px));
+  }
+
+  body .rk-portal.rk-formPage .rk-formCard {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .rk-container {
+    width: min(720px, calc(100% - 32px));
+  }
+
+  body .rk-portal.rk-formPage .rk-container {
+    width: min(720px, calc(100% - 32px));
+  }
+
+  body .rk-portal.rk-formPage .rk-formSection {
+    padding: 44px 0;
+  }
+
+  body .rk-portal.rk-formPage .rk-grid,
+  body .rk-portal.rk-formPage .rk-docGrid,
+  body .rk-portal.rk-formPage .rk-fields {
+    grid-template-columns: 1fr;
+  }
+
+  body .rk-portal.rk-formPage .rk-span2 {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .rk-container {
+    width: min(456px, calc(100% - 24px));
+  }
+
+  body .rk-portal.rk-formPage .rk-container {
+    width: min(456px, calc(100% - 24px));
+  }
+
+  body .rk-portal.rk-formPage .rk-formHeader {
+    padding: 44px 0 28px;
+  }
+
+  body .rk-portal.rk-formPage .rk-formSection {
+    padding: 32px 0;
+  }
+
+  body .rk-portal.rk-formPage .rk-formCard {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  body .rk-portal.rk-formPage .rk-formCardHead,
+  body .rk-portal.rk-formPage .rk-help {
+    grid-template-columns: 1fr;
+  }
+
+  body .rk-portal.rk-formPage .rk-formCardIcon,
+  body .rk-portal.rk-formPage .rk-helpIcon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+  }
+
+  body .rk-portal.rk-formPage .rk-inputRow {
+    grid-template-columns: 1fr;
+  }
+
+  body .rk-portal.rk-formPage .rk-inputIcon {
+    display: none;
+  }
+
+  body .rk-portal.rk-formPage .rk-formActions,
+  body .rk-portal.rk-formPage .rk-submitBtn,
+  body .rk-portal.rk-formPage .rk-formHint {
+    width: 100%;
+  }
 }

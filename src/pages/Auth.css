@@ -7,34 +7,39 @@
 }
 
 .rk-authPage {
-  min-height: 100svh;
+  min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 28px;
+  padding: clamp(20px, 3vw, 32px);
   background: radial-gradient(circle at 20% 15%, rgba(30, 136, 200, 0.18), transparent 55%),
     radial-gradient(circle at 90% 80%, rgba(11, 79, 124, 0.14), transparent 55%), #f5f8fc;
   color: var(--rk-text-dark);
+  overflow-x: hidden;
 }
 
 .rk-authShell {
-  width: min(1180px, 100%);
-  min-height: 88vh;
-  border-radius: 26px;
+  width: min(1120px, 100%);
+  min-height: min(680px, calc(100vh - 64px));
+  margin: auto;
+  border-radius: 22px;
   overflow: hidden;
   background: #ffffff;
   border: 1px solid rgba(16, 52, 83, 0.12);
   box-shadow: 0 22px 48px rgba(16, 52, 83, 0.12);
   display: grid;
-  grid-template-columns: 1.08fr 0.92fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .rk-authLeft {
   position: relative;
-  padding: 28px 36px;
+  min-width: 0;
+  padding: clamp(24px, 3.5vw, 40px);
   background-image: var(--rk-auth-bg, url('/images/kantor1.png'));
   background-size: cover;
   background-position: center;
   color: var(--rk-text-light);
+  overflow: hidden;
 }
 
 .rk-authLeft::before {
@@ -62,7 +67,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .rk-authBrand {
@@ -104,9 +110,9 @@
 
 .rk-authTitle {
   margin: 0;
-  font-size: clamp(42px, 3.2vw, 52px);
+  font-size: clamp(34px, 3.2vw, 48px);
   font-weight: 950;
-  letter-spacing: -0.6px;
+  letter-spacing: 0;
   line-height: 1.1;
   max-width: 18ch;
   color: var(--rk-white);
@@ -124,7 +130,7 @@
 .rk-authPoints {
   display: grid;
   gap: 14px;
-  margin-top: auto;
+  margin-top: 18px;
   padding-bottom: 4px;
 }
 
@@ -173,10 +179,12 @@
 .rk-authRight {
   position: relative;
   background: linear-gradient(135deg, rgba(235, 245, 255, 0.88), rgba(245, 248, 252, 0.92));
-  display: grid;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px;
+  min-width: 0;
+  padding: clamp(24px, 3.5vw, 40px);
+  overflow: hidden;
 }
 
 .rk-authRight::before {
@@ -204,13 +212,14 @@
 .rk-authCard {
   position: relative;
   z-index: 1;
-  width: min(var(--rk-auth-card-width, 480px), 100%);
+  width: min(var(--rk-auth-card-width, 440px), 100%);
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(16, 52, 83, 0.12);
-  border-radius: 24px;
+  border-radius: 20px;
   box-shadow: 0 16px 38px rgba(16, 52, 83, 0.12);
-  padding: var(--rk-auth-card-pad, 40px);
+  padding: var(--rk-auth-card-pad, clamp(24px, 3vw, 36px));
   backdrop-filter: blur(10px);
+  box-sizing: border-box;
 }
 
 .rk-authCardHead {
@@ -221,7 +230,7 @@
 .rk-authCardTitle {
   margin: 0;
   font-weight: 950;
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
   font-size: 24px;
   color: var(--rk-primary);
 }
@@ -240,8 +249,8 @@
 }
 
 .rk-authPage.isRegister .rk-authCard {
-  --rk-auth-card-width: 560px; /* perkecil biar gak kepanjangan */
-  --rk-auth-card-pad: 34px;
+  --rk-auth-card-width: 520px;
+  --rk-auth-card-pad: clamp(24px, 3vw, 34px);
 }
 
 .rk-authPage.isRegister .rk-authRight {
@@ -252,8 +261,8 @@
 }
 
 .rk-authPage.isLogin .rk-authCard {
-  --rk-auth-card-width: 480px;
-  --rk-auth-card-pad: 40px;
+  --rk-auth-card-width: 440px;
+  --rk-auth-card-pad: clamp(24px, 3vw, 38px);
 }
 
 .rk-authPage.isLogin .rk-authForm {
@@ -262,7 +271,7 @@
 
 .rk-authRow2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -299,6 +308,8 @@
 
 .rk-authInput {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border-radius: 14px;
   border: 1px solid rgba(16, 52, 83, 0.16);
   background: #ffffff;
@@ -438,40 +449,83 @@
   font-weight: 950;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1024px) {
   .rk-authShell {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    min-height: min(640px, calc(100vh - 48px));
+  }
+
+  .rk-authLeft,
+  .rk-authRight {
+    padding: 24px;
+  }
+
+  .rk-authTitle {
+    font-size: 34px;
+  }
+
+  .rk-authSubtitle {
+    line-height: 1.7;
+  }
+
+  .rk-authPoints {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .rk-authPage {
+    align-items: start;
+    padding: 16px;
+  }
+
+  .rk-authShell {
+    width: min(560px, 100%);
     grid-template-columns: 1fr;
     min-height: auto;
   }
 
   .rk-authLeft {
-    min-height: 340px;
+    min-height: auto;
   }
 
   .rk-authPoints {
     grid-template-columns: 1fr 1fr;
-    margin-top: 18px;
+  }
+
+  .rk-authRow2 {
+    grid-template-columns: 1fr;
   }
 
   .rk-authRight {
+    min-height: 420px;
     padding: 22px;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .rk-authPage {
-    padding: 18px;
+    min-height: 100vh;
+    padding: 12px;
+    place-items: center;
+  }
+
+  .rk-authShell {
+    min-height: calc(100vh - 24px);
+    border-radius: 18px;
   }
 
   .rk-authLeft {
-    padding: 22px;
+    display: none;
   }
 
-  .rk-authPoints {
-    grid-template-columns: 1fr;
+  .rk-authRight {
+    min-height: calc(100vh - 24px);
+    padding: 16px;
   }
 
   .rk-authCard {
+    border-radius: 18px;
     padding: 22px 18px 18px;
   }
 

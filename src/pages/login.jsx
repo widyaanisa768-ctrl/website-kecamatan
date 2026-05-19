@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff, FiLock, FiShield, FiUser, FiZap } from 'react-icons/fi'
 import { setAuth } from '../lib/rkLocal'
+import { login } from '../services/authService'
 import './Auth.css'
 
 export default function LoginPage() {
@@ -14,6 +15,8 @@ export default function LoginPage() {
     remember: false,
   })
   const [showPassword, setShowPassword] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const points = useMemo(
     () => [
@@ -34,40 +37,58 @@ export default function LoginPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
+
+    if (notice && (name === 'username' || name === 'password')) {
+      setNotice('')
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!form.username || !form.password) {
-      alert('Username dan password wajib diisi')
-      return
-    }
-
-    if (isPetugasMode) {
-      const ok = form.username === 'petugas' && form.password === 'petugas123'
-      if (!ok) {
-        alert('Username atau password petugas salah')
+    void (async () => {
+      if (!form.username || !form.password) {
+        setNotice('Username dan password wajib diisi.')
         return
       }
 
-      setAuth({
-        role: 'petugas',
-        username: form.username,
-        name: 'Widya Putri',
-      })
+      setBusy(true)
+      setNotice('')
 
-      navigate('/dashboard-petugas')
-      return
-    }
+      const usernameInput = form.username
+      const passwordInput = form.password
 
-    setAuth({
-      role: 'masyarakat',
-      username: form.username,
-      name: form.username,
-    })
-    alert('Login berhasil')
-    navigate('/')
+      try {
+        const payload = await login(usernameInput, passwordInput)
+
+        if (!payload?.success) {
+          setNotice(payload?.message || 'Login gagal.')
+          return
+        }
+
+        const accessToken = payload.accessToken || payload.token || ''
+        const user = payload.user || null
+
+        if (accessToken) window.localStorage.setItem('accessToken', accessToken)
+        if (user) window.localStorage.setItem('user', JSON.stringify(user))
+
+        const role = user?.role || (isPetugasMode ? 'petugas' : 'masyarakat')
+        const resolvedUsername = user?.username || usernameInput
+        const name = user?.name || user?.nama || resolvedUsername
+
+        setAuth({ role, username: resolvedUsername, name })
+        setNotice('')
+
+        if (role === 'petugas') navigate('/dashboard-petugas')
+        else if (role === 'kepala_camat') navigate('/dashboard-kepala-camat')
+        else navigate('/home')
+      } catch (err) {
+        console.log('[login] error (raw):', err)
+        setNotice(`${err?.name || 'Error'}: ${err?.message || String(err)}`)
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   return (
@@ -120,7 +141,7 @@ export default function LoginPage() {
 
             <form className="rk-authForm" onSubmit={handleSubmit}>
               <div className="rk-authField">
-                <label className="rk-authLabel" htmlFor="rk-login-username">
+                <label className="rk-authLabel" htmlFor="rk-login-email">
                   Username
                 </label>
                 <div className="rk-authInputWrap">
@@ -128,7 +149,7 @@ export default function LoginPage() {
                     <FiUser />
                   </span>
                   <input
-                    id="rk-login-username"
+                    id="rk-login-email"
                     className="rk-authInput"
                     type="text"
                     name="username"
@@ -170,9 +191,16 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              <button type="submit" className="rk-authSubmit">
+
+              {notice ? (
+                <div className="rk-authNotice" role="status" aria-live="polite">
+                  {notice}
+                </div>
+              ) : null}
+
+              <button type="submit" className="rk-authSubmit" disabled={busy}>
                 <FiArrowRight aria-hidden="true" />
-                Login
+                {busy ? 'Memproses...' : 'Login'}
               </button>
             </form>
 

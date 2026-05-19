@@ -6,7 +6,6 @@ import Profil from './pages/Profil'
 import Layanan from './pages/Layanan'
 import Galeri from './pages/Galeri'
 import Kontak from './pages/Kontak'
-import DashboardMasyarakat from './pages/DashboardMasyarakat'
 import StatusPengajuan from './pages/StatusPengajuan'
 import DashboardPetugas from './pages/DashboardPetugas'
 import DaftarPengajuanPetugas from './pages/DaftarPengajuanPetugas'
@@ -63,9 +62,9 @@ function App() {
         <Route path="/layanan/surat-tanah" element={<SuratTanahForm />} />
         <Route path="/layanan/yayasan-ormas" element={<YayasanOrmasForm />} />
 
-        {/* Dashboard masyarakat (seperti sebelumnya) */}
-        <Route path="/dashboard" element={<DashboardMasyarakat />} />
-        <Route path="/dashboard-masyarakat" element={<Navigate to="/dashboard" replace />} />
+        {/* Legacy dashboard masyarakat -> Beranda */}
+        <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+        <Route path="/dashboard-masyarakat" element={<Navigate to="/home" replace />} />
         <Route
           path="/status-pengajuan"
           element={

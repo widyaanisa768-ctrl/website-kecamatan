@@ -76,12 +76,12 @@ export default function DashboardMasyarakat() {
       <Navbar />
 
       <main>
-        <header className="rk-pageHeader" aria-label="Layanan Online">
+        <header className="rk-pageHeader" aria-label="Dashboard Masyarakat">
           <div className="rk-container rk-pageHeaderInner">
-            <p className="rk-pageKicker">Layanan</p>
-            <h1 className="rk-pageTitle">Layanan Online</h1>
+            <p className="rk-pageKicker">Dashboard</p>
+            <h1 className="rk-pageTitle">Dashboard Masyarakat</h1>
             <p className="rk-pageSubtitle">
-              Pilih layanan administrasi yang tersedia, ajukan secara online, dan pantau statusnya melalui akun Anda.
+              Ajukan layanan administrasi secara online dan pantau status pengajuan Anda melalui akun ini.
             </p>
           </div>
         </header>
@@ -119,4 +119,3 @@ export default function DashboardMasyarakat() {
     </div>
   )
 }
-
