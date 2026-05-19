@@ -59,6 +59,22 @@ export default function LoginPage() {
       const passwordInput = form.password
 
       try {
+        if (isPetugasMode) {
+          const allowedUsername = 'petugas'
+          const allowedPassword = 'petugas123'
+
+          if (usernameInput !== allowedUsername || passwordInput !== allowedPassword) {
+            setNotice('Username atau password salah.')
+            return
+          }
+
+          const user = { role: 'petugas', username: allowedUsername, name: 'Petugas' }
+          window.localStorage.setItem('user', JSON.stringify(user))
+          setAuth({ role: 'petugas', username: user.username, name: user.name })
+          navigate('/petugas/dashboard', { replace: true })
+          return
+        }
+
         const payload = await login(usernameInput, passwordInput)
 
         if (!payload?.success) {
@@ -79,7 +95,7 @@ export default function LoginPage() {
         setAuth({ role, username: resolvedUsername, name })
         setNotice('')
 
-        if (role === 'petugas') navigate('/dashboard-petugas')
+        if (role === 'petugas') navigate('/petugas/dashboard', { replace: true })
         else if (role === 'kepala_camat') navigate('/dashboard-kepala-camat')
         else navigate('/home')
       } catch (err) {

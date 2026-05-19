@@ -240,11 +240,11 @@ export default function DetailPengajuanPetugas() {
           --dpt-shadow:0 12px 26px rgba(16, 32, 51, .08);
         }
         .dpt-page{min-height:100vh;background:var(--dpt-bg);color:var(--dpt-text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-        .dpt-shell{display:flex;min-height:100vh;}
+        .dpt-shell{display:flex;align-items:stretch;min-height:100vh;}
         .dpt-sidebar{
           width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--dpt-navy),#081E34);
           color:var(--dpt-white);padding:18px 14px;border-right:1px solid rgba(255,255,255,.08);
-          position:sticky;top:0;height:100vh;
+          position:sticky;top:0;align-self:stretch;min-height:100vh;height:auto;
         }
         .dpt-brand{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:14px;}
         .dpt-logo{

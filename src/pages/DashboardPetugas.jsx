@@ -111,11 +111,11 @@ function DashboardPetugas() {
           --dp-shadow:0 10px 24px rgba(16, 32, 51, .10);
         }
         .dp-page{min-height:100vh;background:var(--dp-bg);color:var(--dp-text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-        .dp-shell{display:flex;min-height:100vh;}
+        .dp-shell{display:flex;align-items:stretch;min-height:100vh;}
         .dp-sidebar{
           width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--dp-navy),#081E34);
           color:var(--dp-white);padding:18px 14px;border-right:1px solid rgba(255,255,255,.08);
-          position:sticky;top:0;height:100vh;
+          position:sticky;top:0;align-self:stretch;min-height:100vh;height:auto;
         }
         .dp-brand{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:14px;}
         .dp-logo{
