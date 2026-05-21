@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { STATUS, getSubmissionById, pushNotif, updateSubmission } from '../lib/rkLocal'
+import '../styles/petugas-ui.css'
 
 function formatTanggalID(date) {
   try {
@@ -19,18 +20,18 @@ function formatTanggalID(date) {
 function getStatusClass(status) {
   switch (status) {
     case STATUS.MENUNGGU:
-      return 'dpt-badge dpt-badge--waiting'
+      return 'ptg-badge ptg-badge--waiting'
     case STATUS.PERLU_PERBAIKAN:
-      return 'dpt-badge dpt-badge--reject'
+      return 'ptg-badge ptg-badge--reject'
     case STATUS.DIPROSES:
-      return 'dpt-badge dpt-badge--process'
+      return 'ptg-badge ptg-badge--process'
     case STATUS.DISETUJUI:
     case STATUS.SELESAI:
-      return 'dpt-badge dpt-badge--done'
+      return 'ptg-badge ptg-badge--done'
     case STATUS.DITOLAK:
-      return 'dpt-badge dpt-badge--reject'
+      return 'ptg-badge ptg-badge--reject'
     default:
-      return 'dpt-badge'
+      return 'ptg-badge'
   }
 }
 
@@ -40,7 +41,6 @@ export default function DetailPengajuanPetugas() {
   const params = useParams()
 
   const today = useMemo(() => new Date(), [])
-  const activeMenu = 'Daftar Pengajuan'
   const submissionId = params?.id || location.state?.submission?.id || ''
 
   const petugas = {
@@ -223,397 +223,191 @@ export default function DetailPengajuanPetugas() {
   }
 
   return (
-    <div className="dpt-page">
-      <style>{`
-        :root{
-          --dpt-navy:#0B2A4A;
-          --dpt-navy-2:#0E3A67;
-          --dpt-white:#FFFFFF;
-          --dpt-bg:#F4F7FB;
-          --dpt-surface:#FFFFFF;
-          --dpt-surface-2:#F9FBFF;
-          --dpt-gold:#C9A227;
-          --dpt-gold-soft:#E7D6A2;
-          --dpt-text:#102033;
-          --dpt-muted:#66768A;
-          --dpt-border:rgba(11, 42, 74, .12);
-          --dpt-shadow:0 12px 26px rgba(16, 32, 51, .08);
-        }
-        .dpt-page{min-height:100vh;background:var(--dpt-bg);color:var(--dpt-text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-        .dpt-shell{display:flex;align-items:stretch;min-height:100vh;}
-        .dpt-sidebar{
-          width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--dpt-navy),#081E34);
-          color:var(--dpt-white);padding:18px 14px;border-right:1px solid rgba(255,255,255,.08);
-          position:sticky;top:0;align-self:stretch;min-height:100vh;height:auto;
-        }
-        .dpt-brand{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:14px;}
-        .dpt-logo{
-          width:44px;height:44px;border-radius:12px;
-          background:linear-gradient(135deg,var(--dpt-gold),var(--dpt-gold-soft));
-          display:grid;place-items:center;color:var(--dpt-navy);font-weight:900;letter-spacing:.5px;
-          box-shadow:0 10px 20px rgba(201,162,39,.22);
-        }
-        .dpt-brandTitle{display:flex;flex-direction:column;line-height:1.15;}
-        .dpt-brandTitle strong{font-size:14px;letter-spacing:.2px;}
-        .dpt-brandTitle span{font-size:12px;color:rgba(255,255,255,.72);}
-        .dpt-nav{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-        .dpt-navBtn{
-          border:1px solid rgba(255,255,255,.10);
-          background:rgba(255,255,255,.06);
-          color:var(--dpt-white);
-          padding:12px 12px;border-radius:14px;cursor:pointer;
-          display:flex;align-items:center;gap:10px;
-          transition:transform .12s ease, background .12s ease, border-color .12s ease;
-          text-align:left;
-        }
-        .dpt-navBtn:hover{transform:translateY(-1px);background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);}
-        .dpt-navBtn.is-active{background:rgba(201,162,39,.16);border-color:rgba(201,162,39,.35);}
-        .dpt-navDot{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.45);box-shadow:0 0 0 6px rgba(255,255,255,.04) inset;}
-        .dpt-navBtn.is-active .dpt-navDot{background:var(--dpt-gold);box-shadow:0 0 0 6px rgba(201,162,39,.18) inset;}
-        .dpt-navText{font-size:13px;font-weight:700;letter-spacing:.2px;}
-        .dpt-sidebarFoot{
-          margin-top:auto;padding:12px 10px;border-top:1px solid rgba(255,255,255,.10);
-          color:rgba(255,255,255,.72);font-size:12px;
-        }
-        .dpt-main{flex:1;display:flex;flex-direction:column;}
-        .dpt-topbar{
-          height:72px;display:flex;align-items:center;justify-content:space-between;
-          padding:14px 22px;border-bottom:1px solid var(--dpt-border);
-          background:rgba(255,255,255,.72);backdrop-filter:blur(8px);
-          position:sticky;top:0;z-index:5;
-        }
-        .dpt-topbarTitle{display:flex;flex-direction:column;gap:2px;}
-        .dpt-topbarTitle h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--dpt-navy);}
-        .dpt-topbarTitle p{margin:0;font-size:12px;color:var(--dpt-muted);}
-        .dpt-profile{display:flex;align-items:center;gap:12px;}
-        .dpt-avatar{
-          width:38px;height:38px;border-radius:12px;
-          background:linear-gradient(135deg,var(--dpt-navy-2),var(--dpt-navy));
-          box-shadow:0 10px 20px rgba(11,42,74,.18);
-          display:grid;place-items:center;color:var(--dpt-white);font-weight:900;
-        }
-        .dpt-profileMeta{display:flex;flex-direction:column;line-height:1.15;}
-        .dpt-profileMeta strong{font-size:13px;}
-        .dpt-profileMeta span{font-size:12px;color:var(--dpt-muted);}
-
-        .dpt-content{padding:18px 22px 28px;}
-        .dpt-card{
-          background:var(--dpt-surface);
-          border:1px solid var(--dpt-border);
-          border-radius:18px;
-          box-shadow:0 12px 24px rgba(16,32,51,.06);
-        }
-
-        .dpt-header{padding:16px;}
-        .dpt-headerTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-        .dpt-titleWrap{display:flex;flex-direction:column;gap:6px;}
-        .dpt-kicker{
-          display:inline-flex;align-items:center;gap:10px;
-          font-size:12px;font-weight:900;letter-spacing:.22px;color:var(--dpt-navy);
-        }
-        .dpt-kickerLine{width:24px;height:2px;background:linear-gradient(90deg,var(--dpt-gold),transparent);}
-        .dpt-title{margin:0;font-size:18px;color:var(--dpt-navy);letter-spacing:.2px;}
-        .dpt-subtitle{margin:0;font-size:13px;color:var(--dpt-muted);max-width:78ch;}
-        .dpt-headActions{display:flex;gap:10px;flex-wrap:wrap;}
-        .dpt-btn{
-          border:1px solid rgba(11,42,74,.18);
-          background:linear-gradient(180deg,#FFFFFF,#F6FAFF);
-          color:var(--dpt-navy);
-          padding:10px 12px;border-radius:14px;font-weight:900;font-size:12px;cursor:pointer;
-          transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-          white-space:nowrap;
-        }
-        .dpt-btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(11,42,74,.10);border-color:rgba(11,42,74,.26);}
-        .dpt-btnPrimary{
-          border:1px solid rgba(201,162,39,.40);
-          background:linear-gradient(180deg, rgba(201,162,39,.95), rgba(231,214,162,.95));
-          color:#1B2A3A;
-        }
-        .dpt-btnDanger{
-          border:1px solid rgba(239,68,68,.30);
-          background:linear-gradient(180deg, rgba(239,68,68,.12), rgba(255,255,255,.76));
-          color:#7A1E1E;
-        }
-        .dpt-divider{height:1px;background:var(--dpt-border);margin-top:12px;}
-
-        .dpt-grid{margin-top:14px;display:grid;grid-template-columns:1.5fr .9fr;gap:14px;align-items:start;}
-        .dpt-stack{display:flex;flex-direction:column;gap:14px;}
-        .dpt-cardHeader{
-          padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
-        }
-        .dpt-cardHeader h2{margin:0;font-size:14px;color:var(--dpt-navy);letter-spacing:.2px;}
-        .dpt-subtle{font-size:12px;color:var(--dpt-muted);}
-        .dpt-cardBody{padding:0 16px 16px;}
-
-        .dpt-kv{
-          display:grid;
-          grid-template-columns:180px 1fr;
-          gap:10px 14px;
-          border:1px solid var(--dpt-border);
-          border-radius:16px;
-          padding:14px;
-          background:linear-gradient(180deg,#FFFFFF,#FBFDFF);
-        }
-        .dpt-kv dt{margin:0;color:var(--dpt-muted);font-size:12px;font-weight:900;}
-        .dpt-kv dd{margin:0;color:var(--dpt-text);font-weight:800;font-size:13px;}
-        .dpt-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;letter-spacing:.2px;}
-
-        .dpt-badge{
-          display:inline-flex;align-items:center;gap:8px;
-          padding:6px 10px;border-radius:999px;border:1px solid var(--dpt-border);
-          font-size:12px;font-weight:900;letter-spacing:.15px;
-          background:#fff;
-        }
-        .dpt-badge::before{content:"";width:8px;height:8px;border-radius:999px;background:#94A3B8;}
-        .dpt-badge--waiting{background:rgba(250, 204, 21, .16);border-color:rgba(250, 204, 21, .40);color:#7A5A00;}
-        .dpt-badge--waiting::before{background:#FACC15;}
-        .dpt-badge--process{background:rgba(59, 130, 246, .14);border-color:rgba(59, 130, 246, .35);color:#0B3A7A;}
-        .dpt-badge--process::before{background:#3B82F6;}
-        .dpt-badge--done{background:rgba(34, 197, 94, .14);border-color:rgba(34, 197, 94, .35);color:#155D2E;}
-        .dpt-badge--done::before{background:#22C55E;}
-        .dpt-badge--reject{background:rgba(239, 68, 68, .12);border-color:rgba(239, 68, 68, .35);color:#7A1E1E;}
-        .dpt-badge--reject::before{background:#EF4444;}
-
-        .dpt-attachments{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;}
-        .dpt-file{
-          border:1px solid rgba(11,42,74,.14);
-          border-radius:16px;
-          background:linear-gradient(180deg,#FFFFFF,#F7FAFF);
-          padding:12px;
-          display:flex;gap:10px;align-items:flex-start;
-          min-height:74px;
-        }
-        .dpt-fileIcon{
-          width:42px;height:42px;border-radius:14px;
-          display:grid;place-items:center;
-          background:linear-gradient(135deg, rgba(201,162,39,.18), rgba(11,42,74,.10));
-          border:1px solid rgba(201,162,39,.26);
-          color:var(--dpt-navy);
-          font-weight:900;
-          flex:0 0 auto;
-        }
-        .dpt-fileMeta{min-width:0;}
-        .dpt-fileMeta strong{display:block;font-size:12px;color:var(--dpt-navy);letter-spacing:.2px;}
-        .dpt-fileMeta span{display:block;margin-top:4px;font-size:12px;color:var(--dpt-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .dpt-fileMeta em{display:inline-block;margin-top:6px;font-style:normal;font-size:11px;font-weight:900;color:rgba(11,42,74,.74);}
-
-        .dpt-form{display:flex;flex-direction:column;gap:10px;}
-        .dpt-field{display:flex;flex-direction:column;gap:6px;}
-        .dpt-label{font-size:12px;color:var(--dpt-muted);font-weight:900;}
-        .dpt-select,.dpt-textarea{
-          width:100%;
-          border-radius:14px;
-          border:1px solid rgba(11,42,74,.16);
-          background:linear-gradient(180deg,#FFFFFF,#F7FAFF);
-          color:var(--dpt-text);
-          outline:none;
-          font-size:13px;
-          padding:10px 12px;
-          transition:border-color .12s ease, box-shadow .12s ease;
-        }
-        .dpt-textarea{min-height:120px;resize:vertical;}
-        .dpt-select:focus,.dpt-textarea:focus{border-color:rgba(11,42,74,.30);box-shadow:0 0 0 4px rgba(11,42,74,.08);}
-        .dpt-actionRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
-        .dpt-hint{margin:0;font-size:12px;color:var(--dpt-muted);line-height:1.4;}
-
-        /* Toast */
-        .dpt-toast{
-          position:fixed;right:18px;top:88px;z-index:70;
-          border-radius:16px;
-          border:1px solid rgba(11,42,74,.14);
-          background:rgba(255,255,255,.90);
-          backdrop-filter:blur(10px);
-          box-shadow:0 18px 34px rgba(16,32,51,.14);
-          padding:12px 12px;
-          min-width:260px;
-        }
-        .dpt-toastTop{display:flex;align-items:center;gap:10px;}
-        .dpt-toastDot{width:10px;height:10px;border-radius:999px;background:#94A3B8;}
-        .dpt-toastMsg{font-size:12px;color:var(--dpt-text);font-weight:800;}
-        .dpt-toast--success .dpt-toastDot{background:#22C55E;}
-        .dpt-toast--danger .dpt-toastDot{background:#EF4444;}
-        .dpt-toast--info .dpt-toastDot{background:#3B82F6;}
-
-        /* Responsive */
-        @media (max-width: 1180px){
-          .dpt-grid{grid-template-columns:1fr;}
-        }
-        @media (max-width: 980px){
-          .dpt-sidebar{width:240px;flex-basis:240px;}
-          .dpt-content{padding:16px;}
-          .dpt-attachments{grid-template-columns:repeat(2, minmax(0, 1fr));}
-        }
-        @media (max-width: 860px){
-          .dpt-profileMeta{display:none;}
-        }
-      `}</style>
-
+    <div className="ptg-page">
       {toast ? (
-        <div className={`dpt-toast dpt-toast--${toast.type || 'info'}`} role="status" aria-live="polite">
-          <div className="dpt-toastTop">
-            <span className="dpt-toastDot" aria-hidden="true" />
-            <div className="dpt-toastMsg">{toast.message}</div>
+        <div className={`ptg-toast ptg-toast--${toast.type || 'info'}`} role="status" aria-live="polite">
+          <div className="ptg-toastTop">
+            <span className="ptg-toastDot" aria-hidden="true" />
+            <div className="ptg-toastMsg">{toast.message}</div>
           </div>
         </div>
       ) : null}
 
-      <div className="dpt-shell">
-        <SidebarPetugas prefix="dpt" activeLabel={activeMenu} />
+      <div className="ptg-shell">
+        <SidebarPetugas activeLabel="Daftar Pengajuan" />
 
-        <main className="dpt-main">
-          <header className="dpt-topbar">
-            <div className="dpt-topbarTitle">
-              <h1>Petugas • Detail Pengajuan</h1>
+        <main className="ptg-main">
+          <header className="ptg-topbar">
+            <div className="ptg-topbarTitle">
+              <h1>Detail Pengajuan</h1>
               <p>{formatTanggalID(today)}</p>
             </div>
 
-            <div className="dpt-profile" aria-label="Profil petugas">
-              <div className="dpt-profileMeta">
-                <strong>{petugas.nama}</strong>
-                <span>{petugas.jabatan}</span>
+            <div className="ptg-topbarSearch" aria-label="Ringkasan pengajuan">
+              <div className="ptg-search" style={{ background: 'rgba(255,255,255,.88)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path d="M8 8h8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <input
+                  value={submission?.id ? `Nomor: ${submission.id}` : 'Nomor: -'}
+                  readOnly
+                  aria-label="Nomor pengajuan"
+                />
               </div>
-              <div className="dpt-avatar" title={petugas.unit} aria-hidden="true">
-                {petugas.nama
-                  .split(' ')
-                  .slice(0, 2)
-                  .map((w) => w[0])
-                  .join('')
-                  .toUpperCase()}
+            </div>
+
+            <div className="ptg-topbarRight" aria-label="Profil petugas">
+              <button type="button" className="ptg-iconBtn ptg-bell" aria-label="Notifikasi">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </button>
+
+              <div className="ptg-profile" aria-label="Profil petugas">
+                <div className="ptg-profileMeta">
+                  <strong>{petugas.nama}</strong>
+                  <span>{petugas.jabatan}</span>
+                </div>
+                <div className="ptg-avatar" title={petugas.unit} aria-hidden="true">
+                  {petugas.nama
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((w) => w[0])
+                    .join('')
+                    .toUpperCase()}
+                </div>
               </div>
             </div>
           </header>
 
-          <div className="dpt-content">
-            <section className="dpt-card" aria-label="Header detail pengajuan">
-              <div className="dpt-header">
-                <div className="dpt-headerTop">
-                  <div className="dpt-titleWrap">
-                    <div className="dpt-kicker">
-                      <span className="dpt-kickerLine" aria-hidden="true" />
-                      <span>DETAIL PENGAJUAN</span>
-                    </div>
-                    <h2 className="dpt-title">Detail Pengajuan</h2>
-                    <p className="dpt-subtitle">
-                      Tinjau informasi pemohon, kelengkapan lampiran, dan lakukan perubahan status sesuai proses
-                      pelayanan.
-                    </p>
-                  </div>
-
-                  <div className="dpt-headActions">
-                    <button
-                      type="button"
-                      className="dpt-btn"
-                      onClick={() => navigate('/petugas/pengajuan')}
-                      title="Kembali ke daftar pengajuan"
-                    >
-                      Kembali ke Daftar
+          <div className="ptg-content">
+            <div className="ptg-body">
+              <section className="ptg-card ptg-section" aria-label="Header detail pengajuan">
+                <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                  <h2>Ringkasan</h2>
+                  <div className="ptg-actionsRow">
+                    <button type="button" className="ptg-btn" onClick={() => navigate('/petugas/pengajuan')}>
+                      Kembali
                     </button>
-                    <button type="button" className="dpt-btn dpt-btnPrimary" onClick={cetak}>
+                    <button type="button" className="ptg-btn" onClick={cetak}>
                       Cetak
                     </button>
                   </div>
                 </div>
-                <div className="dpt-divider" />
-              </div>
-            </section>
-
-            <div className="dpt-grid">
-              <div className="dpt-stack">
-                <section className="dpt-card" aria-label="Informasi pemohon">
-                  <div className="dpt-cardHeader">
-                    <h2>Informasi Pemohon</h2>
-                    <div className="dpt-subtle">Data identitas</div>
+                <div className="ptg-divider" />
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+                  <div className="ptg-subtle">
+                    Nomor: <strong className="ptg-mono">{submission?.id || '-'}</strong>
                   </div>
-                  <div className="dpt-cardBody">
-                    <dl className="dpt-kv">
-                      <dt>Nama Lengkap</dt>
-                      <dd>{submission?.pemohon?.nama || '-'}</dd>
-
-                      <dt>NIK</dt>
-                      <dd className="dpt-mono">{submission?.pemohon?.nik || '-'}</dd>
-
-                      <dt>Nomor HP</dt>
-                      <dd className="dpt-mono">-</dd>
-
-                      <dt>Alamat</dt>
-                      <dd>-</dd>
-
-                      <dt>Jenis Layanan</dt>
-                      <dd>{submission?.layanan || '-'}</dd>
-
-                      <dt>Tanggal Pengajuan</dt>
-                      <dd>{submission?.createdAt ? formatTanggalID(submission.createdAt) : '-'}</dd>
-                    </dl>
-                  </div>
-                </section>
-
-                <section className="dpt-card" aria-label="Informasi pengajuan">
-                  <div className="dpt-cardHeader">
-                    <h2>Informasi Pengajuan</h2>
-                    <div className="dpt-subtle">Nomor & status</div>
-                  </div>
-                  <div className="dpt-cardBody">
-                    <dl className="dpt-kv">
-                      <dt>Nomor Pengajuan</dt>
-                      <dd className="dpt-mono">{submission?.id || '-'}</dd>
-
-                      <dt>Status Saat Ini</dt>
-                      <dd>
-                        <span className={getStatusClass(statusBaru)}>{statusBaru}</span>
-                      </dd>
-
-                      <dt>Keterangan Pemohon</dt>
-                      <dd style={{ fontWeight: 700, color: 'var(--dpt-muted)' }}>{submission?.keteranganPemohon || '-'}</dd>
-
-                      <dt>Catatan Petugas</dt>
-                      <dd style={{ fontWeight: 800 }}>{catatanPetugas || '-'}</dd>
-                    </dl>
-                  </div>
-                </section>
-
-                <section className="dpt-card" aria-label="Lampiran pengajuan">
-                  <div className="dpt-cardHeader">
-                    <h2>Lampiran</h2>
-                    <div className="dpt-subtle">Nama file lampiran</div>
-                  </div>
-                  <div className="dpt-cardBody">
-                    <div className="dpt-attachments">
-                      {lampiran.length === 0 ? (
-                        <div className="dpt-hint">Tidak ada lampiran.</div>
-                      ) : (
-                        lampiran.map((file) => (
-                          <div key={file.id} className="dpt-file">
-                            <div className="dpt-fileIcon" aria-hidden="true">
-                              {file.ext}
-                            </div>
-                            <div className="dpt-fileMeta">
-                              <strong>{file.label}</strong>
-                              <span title={file.filename}>{file.filename}</span>
-                              <em>Tersedia</em>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <p className="dpt-hint" style={{ marginTop: 10 }}>
-                      Catatan: Saat integrasi backend, lampiran dapat ditingkatkan menjadi preview gambar/PDF dan
-                      validasi kelengkapan dokumen.
-                    </p>
-                  </div>
-                </section>
-              </div>
-
-              <aside className="dpt-card" aria-label="Aksi petugas">
-                <div className="dpt-cardHeader">
-                  <h2>Aksi Petugas</h2>
-                  <div className="dpt-subtle">Ubah status & catatan</div>
+                  <div>{statusBaru ? <span className={getStatusClass(statusBaru)}>{statusBaru}</span> : null}</div>
                 </div>
-                <div className="dpt-cardBody">
-                  <div className="dpt-form">
-                    <div className="dpt-field">
-                      <div className="dpt-label">Ubah Status</div>
+              </section>
+
+              <div className="ptg-gridTwo">
+                <div className="ptg-stack">
+                  <section className="ptg-card ptg-section" aria-label="Informasi pemohon">
+                    <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                      <h2>Informasi Pemohon</h2>
+                      <div className="ptg-subtle">Data identitas</div>
+                    </div>
+                    <div className="ptg-divider" />
+                    <div style={{ marginTop: 12 }}>
+                      <dl className="ptg-kv">
+                        <dt>Nama</dt>
+                        <dd>{submission?.pemohon?.nama || '-'}</dd>
+
+                        <dt>NIK</dt>
+                        <dd className="ptg-mono">{submission?.pemohon?.nik || '-'}</dd>
+
+                        <dt>Username</dt>
+                        <dd className="ptg-mono">{submission?.pemohon?.username || '-'}</dd>
+                      </dl>
+                    </div>
+                  </section>
+
+                  <section className="ptg-card ptg-section" aria-label="Informasi pengajuan">
+                    <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                      <h2>Informasi Pengajuan</h2>
+                      <div className="ptg-subtle">Nomor & layanan</div>
+                    </div>
+                    <div className="ptg-divider" />
+                    <div style={{ marginTop: 12 }}>
+                      <dl className="ptg-kv">
+                        <dt>Nomor Pengajuan</dt>
+                        <dd className="ptg-mono">{submission?.id || '-'}</dd>
+
+                        <dt>Jenis Layanan</dt>
+                        <dd>{submission?.layanan || '-'}</dd>
+
+                        <dt>Tanggal Pengajuan</dt>
+                        <dd>{submission?.createdAt ? formatTanggalID(submission.createdAt) : '-'}</dd>
+
+                        <dt>Keterangan Pemohon</dt>
+                        <dd style={{ fontWeight: 750, color: 'var(--ptg-muted)' }}>{submission?.keteranganPemohon || '-'}</dd>
+
+                        <dt>Catatan Petugas</dt>
+                        <dd style={{ fontWeight: 850 }}>{catatanPetugas || '-'}</dd>
+                      </dl>
+                    </div>
+                  </section>
+
+                  <section className="ptg-card ptg-section" aria-label="Lampiran pengajuan">
+                    <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                      <h2>Lampiran</h2>
+                      <div className="ptg-subtle">Nama file lampiran</div>
+                    </div>
+                    <div className="ptg-divider" />
+                    <div style={{ marginTop: 12 }}>
+                      <div className="ptg-attachments">
+                        {lampiran.length === 0 ? (
+                          <div className="ptg-hint">Tidak ada lampiran.</div>
+                        ) : (
+                          lampiran.map((file) => (
+                            <div key={file.id} className="ptg-file">
+                              <div className="ptg-fileIcon" aria-hidden="true">
+                                {file.ext}
+                              </div>
+                              <div className="ptg-fileMeta">
+                                <strong>{file.label}</strong>
+                                <span title={file.filename}>{file.filename}</span>
+                                <em>Tersedia</em>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <p className="ptg-hint" style={{ marginTop: 10 }}>
+                        Catatan: Saat integrasi backend, lampiran dapat ditingkatkan menjadi preview gambar/PDF dan validasi
+                        kelengkapan dokumen.
+                      </p>
+                    </div>
+                  </section>
+                </div>
+
+                <aside className="ptg-card ptg-section" aria-label="Aksi petugas">
+                  <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                    <h2>Aksi Petugas</h2>
+                    <div className="ptg-subtle">Ubah status & catatan</div>
+                  </div>
+                  <div className="ptg-divider" />
+
+                  <div style={{ marginTop: 12 }} className="ptg-stack">
+                    <div className="ptg-field">
+                      <div className="ptg-label">Ubah Status</div>
                       <select
-                        className="dpt-select"
+                        className="ptg-select"
                         value={statusBaru}
                         onChange={(e) => setStatusBaru(e.target.value)}
                         aria-label="Ubah status pengajuan"
@@ -626,10 +420,10 @@ export default function DetailPengajuanPetugas() {
                       </select>
                     </div>
 
-                    <div className="dpt-field">
-                      <div className="dpt-label">Catatan Petugas</div>
+                    <div className="ptg-field">
+                      <div className="ptg-label">Catatan Petugas</div>
                       <textarea
-                        className="dpt-textarea"
+                        className="ptg-textarea"
                         value={catatanPetugas}
                         onChange={(e) => setCatatanPetugas(e.target.value)}
                         placeholder="Tulis catatan verifikasi, kekurangan berkas, atau tindak lanjut..."
@@ -637,31 +431,31 @@ export default function DetailPengajuanPetugas() {
                       />
                     </div>
 
-                    <div className="dpt-actionRow">
-                      <button type="button" className="dpt-btn dpt-btnPrimary" onClick={simpanPerubahan}>
+                    <div className="ptg-actionRow">
+                      <button type="button" className="ptg-btn ptg-btnPrimary" onClick={simpanPerubahan}>
                         Simpan Perubahan
                       </button>
-                      <button type="button" className="dpt-btn" onClick={verifikasi}>
+                      <button type="button" className="ptg-btn" onClick={verifikasi}>
                         Verifikasi
                       </button>
-                      <button type="button" className="dpt-btn" onClick={setujui}>
+                      <button type="button" className="ptg-btn" onClick={setujui}>
                         Setujui
                       </button>
-                      <button type="button" className="dpt-btn" onClick={buatSurat}>
+                      <button type="button" className="ptg-btn" onClick={buatSurat}>
                         Buat Surat
                       </button>
-                      <button type="button" className="dpt-btn dpt-btnDanger" onClick={perluPerbaikan}>
+                      <button type="button" className="ptg-btn ptg-btnDanger" onClick={perluPerbaikan}>
                         Perlu Perbaikan
                       </button>
                     </div>
 
-                    <p className="dpt-hint">
+                    <p className="ptg-hint" style={{ margin: 0 }}>
                       Tombol <strong>Verifikasi</strong>, <strong>Setujui</strong>, <strong>Perlu Perbaikan</strong>, dan{' '}
                       <strong>Buat Surat</strong> mengubah status pengajuan serta memicu notifikasi (mock).
                     </p>
                   </div>
-                </div>
-              </aside>
+                </aside>
+              </div>
             </div>
           </div>
         </main>

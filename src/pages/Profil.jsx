@@ -95,7 +95,7 @@ export default function Profil() {
               <aside className="rk-mapCard" aria-label="Peta (placeholder)">
                 <div className="rk-mapHead">
                   <div className="rk-mapTitle">Peta Wilayah</div>
-                  <div className="rk-mapHint">Placeholder peta, dapat diganti embed peta resmi.</div>
+                  <div className="rk-mapHint">Placeholder peta, dapat diganti dengan peta resmi.</div>
                 </div>
                 <div className="rk-mapBox" role="img" aria-label="Placeholder peta wilayah">
                   <div className="rk-mapOverlay">

@@ -78,7 +78,7 @@ export default function Footer() {
           <div className="rk-footerInfo">
             <div className="rk-footerInfoCard">
               <div className="rk-footerInfoLabel">Jam Layanan</div>
-              <div className="rk-footerInfoValue">Senin–Jumat (08.00–16.00)</div>
+              <div className="rk-footerInfoValue">Senin – Jumat (08.00 – 16.00)</div>
             </div>
             <div className="rk-footerInfoCard">
               <div className="rk-footerInfoLabel">Layanan Online</div>

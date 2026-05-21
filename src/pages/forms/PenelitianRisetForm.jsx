@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { FiArrowRight, FiCheckCircle, FiClipboard, FiFileText, FiUploadCloud } from 'react-icons/fi'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import './PenelitianRisetForm.css'
-import { STATUS, createSubmission, getAuth, getSubmissionById, mergeDokumenMeta, updateSubmission } from '../../lib/rkLocal'
+import { getAuth } from '../../lib/rkLocal'
+import { apiRequest } from '../../services/api'
 
 const INITIAL = {
   nama_peneliti: '',
@@ -31,34 +32,36 @@ function normalizeData(data) {
   }
 }
 
+function pickBackendMessage(res) {
+  const data = res?.data
+  if (!data) return res?.status ? `HTTP ${res.status}` : 'Terjadi kesalahan.'
+  if (typeof data === 'string') return data
+  if (typeof data !== 'object') return 'Terjadi kesalahan.'
+
+  const baseMsg = data.message || data.error || data.msg || ''
+  const details = Array.isArray(data.errors)
+    ? data.errors
+        .map((e) => (typeof e === 'string' ? e : e?.message || e?.msg || e?.error || ''))
+        .filter(Boolean)
+        .slice(0, 6)
+    : []
+
+  if (baseMsg && details.length) return `${baseMsg}: ${details.join(', ')}`
+  return baseMsg || `HTTP ${res?.status || ''}`.trim()
+}
+
 export default function PenelitianRisetForm() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const editId = searchParams.get('edit') || ''
 
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
-  const [editing, setEditing] = useState(null)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!editId) return
-    const auth = getAuth()
-    const sub = getSubmissionById(editId)
-    if (!auth || auth.role !== 'masyarakat' || !sub || sub?.pemohon?.username !== auth.username) {
-      alert('Pengajuan tidak ditemukan.')
-      navigate('/dashboard', { replace: true })
-      return
-    }
-    if (sub.status !== STATUS.MENUNGGU && sub.status !== STATUS.DITOLAK && sub.status !== STATUS.PERLU_PERBAIKAN) {
-      alert('Pengajuan tidak dapat diedit karena sudah diverifikasi petugas.')
-      navigate('/dashboard', { replace: true })
-      return
-    }
-    setEditing(sub)
-    const data = sub.data && typeof sub.data === 'object' ? sub.data : null
-    if (data) setForm((prev) => ({ ...prev, ...normalizeData(data) }))
-  }, [editId, navigate])
+    setNotice('')
+  }, [])
 
   const validators = useMemo(
     () => ({
@@ -106,11 +109,7 @@ export default function PenelitianRisetForm() {
     }
     for (const key of Object.keys(INITIAL_FILES)) {
       const hasNew = !!files[key]
-      const hasOld =
-        (key === 'ktp' && !!editing?.dokumen?.fotocopyKtpMahasiswa?.name) ||
-        (key === 'ktm' && !!editing?.dokumen?.fotocopyKtm?.name) ||
-        (key === 'suratRekomendasi' && !!editing?.dokumen?.suratRekomendasi?.name)
-      if (!hasNew && !hasOld) {
+      if (!hasNew) {
         const msg = validators[key]?.(null) || 'Wajib diunggah.'
         nextErrors[key] = msg
       }
@@ -121,6 +120,7 @@ export default function PenelitianRisetForm() {
 
   const onSubmit = (e) => {
     e.preventDefault()
+    setNotice('')
     if (!validate()) return
 
     const payload = {
@@ -134,40 +134,42 @@ export default function PenelitianRisetForm() {
       },
     }
 
-    try {
-      const keteranganPemohon = `Nama: ${form.nama_peneliti} • Instansi: ${form.instansi} • Topik: ${form.topik_penelitian}`
-      if (editing) {
-        const nextStatus =
-          editing.status === STATUS.DITOLAK || editing.status === STATUS.PERLU_PERBAIKAN ? STATUS.MENUNGGU : editing.status
-        const next = updateSubmission(editing.id, {
-          layanan: payload.layanan,
-          layananPath: payload.layananPath,
-          data: payload.data,
-          keteranganPemohon,
-          dokumen: mergeDokumenMeta(editing.dokumen, payload.dokumen),
-          status: nextStatus,
-          catatanPetugas: nextStatus === STATUS.MENUNGGU ? '' : editing.catatanPetugas,
-        })
-        if (!next) throw new Error('update_failed')
-      } else {
-        createSubmission({
-          layanan: payload.layanan,
-          layananPath: payload.layananPath,
-          data: payload.data,
-          keteranganPemohon,
-          dokumen: payload.dokumen,
-        })
+    void (async () => {
+      const auth = getAuth()
+      if (!auth) {
+        setNotice('Silakan login terlebih dahulu.')
+        navigate('/login', { replace: true })
+        return
       }
 
-      alert('Pengajuan berhasil dikirim.')
-      setForm(INITIAL)
-      setFiles(INITIAL_FILES)
-      setErrors({})
-      navigate('/dashboard')
-    } catch {
-      alert('Silakan login sebagai masyarakat terlebih dahulu.')
-      navigate('/login', { replace: true })
-    }
+      setBusy(true)
+      try {
+        // Backend endpoint ini hanya menerima field spesifik penelitian (tanpa payload umum).
+        const res = await apiRequest('/rekomendasi_penelitian', {
+          method: 'POST',
+          withAuth: true,
+          body: {
+            nama_peneliti: form.nama_peneliti,
+            instansi: form.instansi,
+            topik_penelitian: form.topik_penelitian,
+            lokasi_penelitian: form.lokasi_penelitian,
+            waktu_penelitian: form.waktu_penelitian,
+          },
+        })
+
+        if (!res?.ok) {
+          setNotice(pickBackendMessage(res) || 'Gagal mengirim pengajuan.')
+          return
+        }
+
+        const successMsg =
+          (res?.data && typeof res.data === 'object' && (res.data.message || res.data.msg)) || 'Pengajuan berhasil dikirim.'
+        setNotice(successMsg)
+        window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   return (
@@ -327,16 +329,25 @@ export default function PenelitianRisetForm() {
               </div>
 
               <div className="rk-formActions">
-                <button type="submit" className="rk-submitBtn">
-                  Kirim <FiArrowRight aria-hidden="true" />
+                <button type="submit" className="rk-submitBtn" disabled={busy}>
+                  {busy ? 'Memproses...' : 'Kirim'} <FiArrowRight aria-hidden="true" />
                 </button>
                 <div className="rk-formHint" aria-label="Keterangan">
                   <FiCheckCircle aria-hidden="true" /> Bertanda <span className="rk-required">*</span> wajib diisi.
                 </div>
               </div>
 
+              {notice ? (
+                <div className="rk-help" role="status" aria-live="polite" style={{ marginTop: 14 }}>
+                  <div className="rk-helpIcon" aria-hidden="true">
+                    <FiFileText />
+                  </div>
+                  <div className="rk-helpText">{notice}</div>
+                </div>
+              ) : null}
+
               <div className="rk-formFoot" aria-label="Catatan">
-                <FiFileText aria-hidden="true" /> Pengajuan ini bersifat dummy (belum terhubung backend).
+                <FiFileText aria-hidden="true" /> Upload dokumen akan diproses setelah data pengajuan tersimpan.
               </div>
             </form>
           </div>
@@ -347,3 +358,4 @@ export default function PenelitianRisetForm() {
     </div>
   )
 }
+

@@ -55,3 +55,37 @@ export async function login(username, password) {
     }
   }
 }
+
+export async function register({ nama_lengkap, username, email, password }) {
+  try {
+    if (import.meta.env.DEV) console.log('[authService] register payload:', { nama_lengkap, username, email, password })
+
+    const res = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: { nama_lengkap, username, email, password },
+      withAuth: false,
+    })
+
+    const base = res.data && typeof res.data === 'object' ? res.data : {}
+    const message =
+      base.message ||
+      (typeof res.data === 'string'
+        ? res.data
+        : res.data
+          ? `HTTP ${res.status}: ${JSON.stringify(res.data)}`
+          : `HTTP ${res.status}`)
+
+    if (!res.ok) return { success: false, status: res.status, message }
+
+    return { success: true, status: res.status, message: base.message || 'Registrasi berhasil! Silakan login.' }
+  } catch (err) {
+    const isAbort = err?.name === 'AbortError'
+    if (import.meta.env.DEV) console.log('[authService] register error (raw):', err)
+    return {
+      success: false,
+      message: isAbort
+        ? `AbortError: permintaan melebihi batas waktu (${(err && err.message) || 'timeout'}).`
+        : `${err?.name || 'Error'}: ${err?.message || String(err)}`,
+    }
+  }
+}

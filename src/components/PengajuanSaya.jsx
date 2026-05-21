@@ -1,6 +1,30 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { STATUS, deleteSubmission, getAuth, listSubmissionsByUsername } from '../lib/rkLocal'
+import { STATUS, getAuth } from '../lib/rkLocal'
+import { getDetailPengajuan, getPengajuanSaya } from '../services/pengajuanService'
+
+function safeParse(raw, fallback = null) {
+  try {
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function getStoredUser() {
+  if (typeof window === 'undefined') return null
+  return safeParse(window.localStorage.getItem('user'), null)
+}
+
+function getStoredRole() {
+  if (typeof window === 'undefined') return ''
+  return window.localStorage.getItem('role') || ''
+}
+
+function getStoredToken() {
+  if (typeof window === 'undefined') return ''
+  return window.localStorage.getItem('accessToken') || window.localStorage.getItem('token') || ''
+}
 
 function formatDateTime(date) {
   try {
@@ -62,34 +86,186 @@ function downloadHasilSurat(hasilSurat) {
   URL.revokeObjectURL(url)
 }
 
-export default function PengajuanSaya() {
+export default function PengajuanSaya({ variant = 'default' } = {}) {
   const navigate = useNavigate()
   const auth = getAuth()
-
-  const username = auth?.role === 'masyarakat' ? auth.username : ''
-
-  const [items, setItems] = useState(() => (username ? listSubmissionsByUsername(username) : []))
+  const [items, setItems] = useState([])
   const [active, setActive] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const refresh = () => setItems(username ? listSubmissionsByUsername(username) : [])
-    refresh()
+    const token = getStoredToken()
+    const user = getStoredUser()
+    if (!token || !user) {
+      navigate('/login', { replace: true })
+      return undefined
+    }
+
+    const refresh = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const res = await getPengajuanSaya()
+        if (!res?.success) {
+          setItems([])
+          setError(res?.message || 'Gagal memuat pengajuan.')
+          return
+        }
+        setItems(res.items || [])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void refresh()
     window.addEventListener('focus', refresh)
     window.addEventListener('storage', refresh)
     return () => {
       window.removeEventListener('focus', refresh)
       window.removeEventListener('storage', refresh)
     }
-  }, [username])
+  }, [navigate])
 
-  const activeStatus = active?.status
+  function getId(item) {
+    return item?.id || item?._id || item?.pengajuan_id || item?.uuid || ''
+  }
+
+  function getLayanan(item) {
+    return item?.jenis_layanan || item?.layanan || item?.service || item?.title || '-'
+  }
+
+  function getNama(item) {
+    const layanan = String(getLayanan(item) || '')
+    const isPenelitian =
+      item?.__endpoint === '/rekomendasi_penelitian' || layanan.toLowerCase().includes('penelitian') || layanan.toLowerCase().includes('riset')
+
+    const data = item?.data_form && typeof item.data_form === 'object' ? item.data_form : item?.data && typeof item.data === 'object' ? item.data : {}
+
+    const pick = (key) => item?.[key] || data?.[key] || ''
+
+    if (isPenelitian) {
+      const namaPeneliti = pick('nama_peneliti')
+      if (String(namaPeneliti).trim()) return String(namaPeneliti)
+    }
+
+    const orderedKeys = ['nama_pemohon', 'nama_peneliti', 'nama_lengkap', 'nama', 'nama_pengaju', 'pemohon']
+    for (const key of orderedKeys) {
+      const v = pick(key)
+      if (String(v).trim()) return String(v)
+    }
+    return '-'
+  }
+
+  function getCreatedAt(item) {
+    return item?.createdAt || item?.created_at || item?.tanggal_pengajuan || item?.tanggalPengajuan || item?.created || null
+  }
+
+  function getUpdatedAt(item) {
+    return item?.updatedAt || item?.updated_at || item?.tanggal_update || item?.tanggalUpdate || null
+  }
+
+  function getStatus(item) {
+    return item?.status || item?.status_pengajuan || item?.statusPengajuan || STATUS.MENUNGGU
+  }
+
+  const visibleItems = useMemo(() => {
+    const list = Array.isArray(items) ? items : []
+
+    const storedUser = getStoredUser()
+    const storedRole = storedUser?.role || getStoredRole() || ''
+    const role = String(auth?.role || storedRole || '').toLowerCase()
+
+    const privileged = role === 'petugas' || role === 'admin' || role === 'kepala_camat'
+    if (privileged) return list
+
+    if (role !== 'masyarakat') return list
+
+    const userId = String(storedUser?.id || storedUser?.user_id || storedUser?.id_user || storedUser?._id || '').trim()
+
+    const getOwnerId = (it) => {
+      const direct =
+        it?.user_id ||
+        it?.id_user ||
+        it?.pemohon_id ||
+        it?.masyarakat_id ||
+        it?.masyarakatId ||
+        it?.userId ||
+        it?.idUser ||
+        it?.created_by ||
+        it?.createdBy ||
+        it?.pemohon?.pemohon_id ||
+        it?.pemohon?.id ||
+        it?.pemohon?.user_id ||
+        it?.pemohon?.id_user ||
+        it?.pemohon?._id ||
+        it?.user?.id ||
+        it?.user?.user_id ||
+        it?.user?.id_user ||
+        it?.user?._id ||
+        it?.masyarakat?.id ||
+        it?.masyarakat?._id ||
+        it?.masyarakat?.user_id ||
+        it?.masyarakat?.id_user ||
+        ''
+      return direct ? String(direct).trim() : ''
+    }
+
+    const hasOwnerField = list.some((it) => !!getOwnerId(it))
+    if (!hasOwnerField) {
+      // TODO: Backend belum mengirim field owner per item (user_id/id_user/pemohon_id/created_by/masyarakat_id).
+      // Sesuai instruksi: jangan filter dulu, tampilkan data dan beri peringatan.
+      if (import.meta.env.DEV) console.warn('[status-pengajuan] owner field tidak ditemukan pada item; skip filter untuk masyarakat.')
+      return list
+    }
+
+    if (!userId) {
+      if (import.meta.env.DEV) console.warn('[status-pengajuan] user id tidak ditemukan di localStorage.user; skip filter untuk masyarakat.')
+      return list
+    }
+
+    const filtered = list.filter((it) => getOwnerId(it) === userId)
+
+    if (import.meta.env.DEV) {
+      const sample = list[0]
+      console.log('[status-pengajuan] user login:', storedUser)
+      console.log('[status-pengajuan] contoh item pertama:', sample)
+      console.log('[status-pengajuan] jumlah sebelum filter:', list.length)
+      console.log('[status-pengajuan] jumlah setelah filter:', filtered.length)
+      if (filtered.length === 0 && list.length > 0) {
+        const ownerSamples = list
+          .map((it) => getOwnerId(it))
+          .filter(Boolean)
+          .slice(0, 8)
+        console.warn('[status-pengajuan] hasil filter 0. userId=', userId, 'contoh ownerId item=', ownerSamples)
+      }
+    }
+
+    return filtered
+  }, [items, auth?.role])
+
+  const counts = useMemo(() => {
+    const list = Array.isArray(visibleItems) ? visibleItems : []
+    const isWaiting = (s) => s === STATUS.MENUNGGU
+    const isProcess = (s) => s === STATUS.DIPROSES
+    const isDone = (s) => s === STATUS.SELESAI || s === STATUS.DISETUJUI
+    return {
+      total: list.length,
+      menunggu: list.filter((it) => isWaiting(getStatus(it))).length,
+      diproses: list.filter((it) => isProcess(getStatus(it))).length,
+      selesai: list.filter((it) => isDone(getStatus(it))).length,
+    }
+  }, [visibleItems])
+
+  const activeStatus = getStatus(active)
   const canEdit = isEditable(activeStatus)
   const canDownload = activeStatus === STATUS.SELESAI && !!active?.hasilSurat?.filename
 
   const dataEntries = useMemo(() => {
-    const data = active?.data && typeof active.data === 'object' ? active.data : null
-    if (!data) return []
-    return Object.entries(data).filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '')
+    if (!active || typeof active !== 'object') return []
+    const data = active?.data_form || active?.data
+    const source = data && typeof data === 'object' ? data : active
+    return Object.entries(source).filter(([, v]) => v !== undefined && v !== null && String(v).trim?.() !== '')
   }, [active])
 
   function close() {
@@ -97,40 +273,17 @@ export default function PengajuanSaya() {
   }
 
   function onDetail(item) {
-    setActive(item)
-  }
-
-  function goEdit(item) {
-    const to = item?.layananPath
-    if (!to) {
-      alert('Form layanan untuk pengajuan ini tidak ditemukan.')
+    const id = getId(item)
+    if (!id) {
+      setActive(item)
       return
     }
-    navigate(`${to}?edit=${encodeURIComponent(item.id)}`)
-  }
 
-  function onDelete(item) {
-    const ok = window.confirm(`Hapus pengajuan "${item.id}"?`)
-    if (!ok) return
-    try {
-      deleteSubmission(item.id)
-      close()
-      setItems(username ? listSubmissionsByUsername(username) : [])
-      alert('Pengajuan berhasil dihapus.')
-    } catch {
-      alert('Gagal menghapus pengajuan.')
-    }
-  }
-
-  function onResubmit(item) {
-    if (!item) return
-    if (!isEditable(item.status)) return
-    if (item.status !== STATUS.DITOLAK && item.status !== STATUS.PERLU_PERBAIKAN) {
-      goEdit(item)
-      return
-    }
-    // Arahkan ke form edit; saat submit form akan mengubah status kembali ke MENUNGGU.
-    goEdit(item)
+    void (async () => {
+      const res = await getDetailPengajuan(id)
+      if (res?.success) setActive(res.data || item)
+      else setActive(item)
+    })()
   }
 
   return (
@@ -140,10 +293,12 @@ export default function PengajuanSaya() {
         .rk-mySubHead { display:flex; align-items:flex-end; justify-content:space-between; gap: 12px; }
         .rk-mySubHead h2 { margin: 0; }
         .rk-mySubCard { border: 1px solid rgba(0,0,0,.08); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.7); box-shadow: 0 10px 24px rgba(0,0,0,.05); }
+        .rk-mySubCard.isCompact { padding: 12px; border-radius: 14px; }
         .rk-mySubRow { display:flex; align-items:center; justify-content:space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(0,0,0,.06); }
         .rk-mySubRow:first-child { border-top: none; padding-top: 0; }
         .rk-mySubMeta { min-width: 0; }
-        .rk-mySubId { font-weight: 800; color: #111; }
+        .rk-mySubName { font-weight: 900; color: #111; }
+        .rk-mySubNo { font-size: 12px; opacity: .78; margin-top: 2px; }
         .rk-mySubSub { font-size: 13px; opacity: .9; margin-top: 2px; }
         .rk-mySubBadge { font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(0,0,0,.1); font-weight: 900; }
         .rk-mySubBadge.is-waiting { background: rgba(245, 158, 11, .12); border-color: rgba(245, 158, 11, .28); color: #7a4a00; }
@@ -168,36 +323,79 @@ export default function PengajuanSaya() {
         .rk-kv dt { font-weight: 900; color: #111; }
         .rk-kv dd { margin: 0; opacity: .95; }
         .rk-modalFoot { padding: 14px 16px; display:flex; flex-wrap:wrap; gap: 10px; justify-content:flex-end; border-top: 1px solid rgba(0,0,0,.08); background: rgba(0,0,0,.02); }
+
+        .rk-summaryGrid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .rk-summaryCard { padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(11,79,124,.12); background: rgba(255,255,255,.82); box-shadow: 0 10px 22px rgba(16,52,83,.06); }
+        .rk-summaryLabel { font-size: 12px; font-weight: 900; opacity: .85; color: rgba(29,42,58,.92); }
+        .rk-summaryValue { margin-top: 6px; font-size: 20px; font-weight: 950; color: #061c32; letter-spacing: -.2px; }
+        .rk-summaryHint { margin-top: 4px; font-size: 12px; opacity: .72; }
+        .rk-summaryCard.isWaiting { border-color: rgba(245,158,11,.26); }
+        .rk-summaryCard.isProcess { border-color: rgba(59,130,246,.26); }
+        .rk-summaryCard.isDone { border-color: rgba(16,185,129,.26); }
+
+        @media (max-width: 900px) { .rk-summaryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 520px) { .rk-summaryGrid { grid-template-columns: 1fr; } .rk-mySubRow { align-items:flex-start; } }
       `}</style>
 
       <div className="rk-container">
         <div className="rk-mySubWrap">
-          <div className="rk-mySubHead">
-            <div>
-              <p className="rk-pageKicker">Pengajuan</p>
-              <h2>Riwayat Pengajuan Saya</h2>
-              <p className="rk-pageSubtitle">Daftar pengajuan yang pernah Anda kirim (hanya milik akun Anda).</p>
+          {variant === 'default' ? (
+            <div className="rk-mySubHead">
+              <div>
+                <p className="rk-pageKicker">Pengajuan</p>
+                <h2>Riwayat Pengajuan Saya</h2>
+                <p className="rk-pageSubtitle">Daftar pengajuan yang pernah Anda kirim (hanya milik akun Anda).</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rk-summaryGrid" aria-label="Ringkasan status pengajuan">
+              <div className="rk-summaryCard">
+                <div className="rk-summaryLabel">Total Pengajuan</div>
+                <div className="rk-summaryValue">{loading ? '—' : counts.total}</div>
+                <div className="rk-summaryHint">Semua layanan</div>
+              </div>
+              <div className="rk-summaryCard isWaiting">
+                <div className="rk-summaryLabel">Menunggu Verifikasi</div>
+                <div className="rk-summaryValue">{loading ? '—' : counts.menunggu}</div>
+                <div className="rk-summaryHint">Belum diproses</div>
+              </div>
+              <div className="rk-summaryCard isProcess">
+                <div className="rk-summaryLabel">Diproses</div>
+                <div className="rk-summaryValue">{loading ? '—' : counts.diproses}</div>
+                <div className="rk-summaryHint">Sedang berjalan</div>
+              </div>
+              <div className="rk-summaryCard isDone">
+                <div className="rk-summaryLabel">Selesai / Disetujui</div>
+                <div className="rk-summaryValue">{loading ? '—' : counts.selesai}</div>
+                <div className="rk-summaryHint">Sudah final</div>
+              </div>
+            </div>
+          )}
 
-          <div className="rk-mySubCard" role="region" aria-label="Daftar pengajuan">
-            {!username ? (
-              <div style={{ opacity: 0.9 }}>Silakan login untuk melihat pengajuan Anda.</div>
-            ) : items.length === 0 ? (
-              <div style={{ opacity: 0.9 }}>Belum ada pengajuan. Silakan ajukan layanan melalui daftar layanan di atas.</div>
+          <div className={`rk-mySubCard ${variant !== 'default' ? 'isCompact' : ''}`} role="region" aria-label="Daftar pengajuan">
+            {loading ? (
+              <div style={{ opacity: 0.9 }}>Memuat data pengajuan...</div>
+            ) : error ? (
+              <div style={{ opacity: 0.95, color: 'rgba(122,18,18,.92)' }}>{error}</div>
+            ) : visibleItems.length === 0 ? (
+              <div style={{ opacity: 0.9, display: 'grid', gap: 6 }}>
+                <div style={{ fontWeight: 950, color: '#111' }}>Belum ada pengajuan</div>
+                <div style={{ fontSize: 13, opacity: 0.85 }}>Silakan ajukan layanan online terlebih dahulu, lalu status akan muncul di sini.</div>
+              </div>
             ) : (
-              items.map((item) => (
-                <div key={item.id} className="rk-mySubRow">
+              visibleItems.map((item) => (
+                <div key={getId(item) || JSON.stringify(item)} className="rk-mySubRow">
                   <div className="rk-mySubMeta">
-                    <div className="rk-mySubId">{item.id}</div>
+                    <div className="rk-mySubName">{getNama(item)}</div>
+                    {getId(item) ? <div className="rk-mySubNo">No: {getId(item)}</div> : null}
                     <div className="rk-mySubSub">
-                      {item.layanan} • {formatDateTime(item.createdAt)}
+                      {getLayanan(item)} • {formatDateTime(getCreatedAt(item))}
                     </div>
                   </div>
 
                   <div className="rk-mySubActions">
-                    <span className={`rk-mySubBadge ${badgeClass(item.status)}`} title={item.status}>
-                      {statusLabel(item.status)}
+                    <span className={`rk-mySubBadge ${badgeClass(getStatus(item))}`} title={getStatus(item)}>
+                      {statusLabel(getStatus(item))}
                     </span>
                     <button type="button" className="rk-miniBtn2" onClick={() => onDetail(item)}>
                       Detail
@@ -217,7 +415,7 @@ export default function PengajuanSaya() {
               <div>
                 <div className="rk-modalTitle">Detail Pengajuan</div>
                 <div style={{ marginTop: 4, opacity: 0.9, fontSize: 13 }}>
-                  {active.id} • {active.layanan}
+                  {getId(active)} • {getLayanan(active)}
                 </div>
               </div>
               <button type="button" className="rk-miniBtn2" onClick={close}>
@@ -247,11 +445,11 @@ export default function PengajuanSaya() {
               <div className="rk-mySubCard" aria-label="Ringkasan data pengajuan">
                 <dl className="rk-kv">
                   <dt>Tanggal</dt>
-                  <dd>{formatDateTime(active.createdAt)}</dd>
+                  <dd>{formatDateTime(getCreatedAt(active))}</dd>
                   <dt>Terakhir Update</dt>
-                  <dd>{formatDateTime(active.updatedAt)}</dd>
+                  <dd>{formatDateTime(getUpdatedAt(active))}</dd>
                   <dt>Keterangan</dt>
-                  <dd>{active.keteranganPemohon || '-'}</dd>
+                  <dd>{active?.keterangan || active?.keteranganPemohon || '-'}</dd>
                 </dl>
               </div>
 
@@ -273,31 +471,15 @@ export default function PengajuanSaya() {
             </div>
 
             <div className="rk-modalFoot">
-              {activeStatus === STATUS.DITOLAK || activeStatus === STATUS.PERLU_PERBAIKAN ? (
-                <button type="button" className="rk-miniBtn2" onClick={() => onResubmit(active)}>
-                  Kirim Ulang
-                </button>
-              ) : null}
-
               {canEdit ? (
-                <>
-                  <button type="button" className="rk-miniBtn2" onClick={() => goEdit(active)}>
-                    Edit
-                  </button>
-                  <button type="button" className="rk-miniBtn2" onClick={() => goEdit(active)}>
-                    Tambah
-                  </button>
-                  <button type="button" className="rk-miniBtn2" onClick={() => onDelete(active)}>
-                    Hapus
-                  </button>
-                </>
-              ) : null}
-
-              {!canEdit ? (
                 <button type="button" className="rk-miniBtn2" disabled>
-                  Edit/Hapus/Tambah dinonaktifkan setelah diverifikasi
+                  Edit/Hapus belum tersedia
                 </button>
-              ) : null}
+              ) : (
+                <button type="button" className="rk-miniBtn2" disabled>
+                  Status terkunci setelah diproses
+                </button>
+              )}
             </div>
           </div>
         </div>

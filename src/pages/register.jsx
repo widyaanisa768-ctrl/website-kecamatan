@@ -11,6 +11,7 @@ import {
   FiUser,
   FiZap,
 } from 'react-icons/fi'
+import { register } from '../services/authService'
 import './Auth.css'
 
 function Register() {
@@ -35,6 +36,7 @@ function Register() {
 
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -59,12 +61,28 @@ function Register() {
       return
     }
 
-    setMessage('Registrasi berhasil! Silakan login.')
-    console.log('Data register:', formData)
+    void (async () => {
+      setBusy(true)
+      try {
+        const payload = await register({
+          nama_lengkap: formData.nama,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        })
+        if (!payload?.success) {
+          setMessage(payload?.message || 'Registrasi gagal.')
+          return
+        }
 
-    setTimeout(() => {
-      navigate('/login')
-    }, 800)
+        setMessage(payload?.message || 'Registrasi berhasil! Silakan login.')
+        window.setTimeout(() => {
+          navigate('/login', { replace: true })
+        }, 800)
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   return (
@@ -211,9 +229,9 @@ function Register() {
                 </div>
               </div>
 
-              <button type="submit" className="rk-authSubmit">
+              <button type="submit" className="rk-authSubmit" disabled={busy}>
                 <FiArrowRight aria-hidden="true" />
-                Register
+                {busy ? 'Memproses...' : 'Register'}
               </button>
 
               {message ? (

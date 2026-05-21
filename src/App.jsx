@@ -103,13 +103,17 @@ function App() {
         />
         <Route
           path="/petugas/data-masyarakat"
+          element={<Navigate to="/petugas/masyarakat" replace />}
+        />
+        <Route
+          path="/petugas/masyarakat"
           element={
             <RequirePetugas>
               <KelolaDataMasyarakat />
             </RequirePetugas>
           }
         />
-        <Route path="/kelola-data-masyarakat" element={<Navigate to="/petugas/data-masyarakat" replace />} />
+        <Route path="/kelola-data-masyarakat" element={<Navigate to="/petugas/masyarakat" replace />} />
 
         <Route path="/logout" element={<Logout />} />
         <Route path="/login" element={<Login />} />

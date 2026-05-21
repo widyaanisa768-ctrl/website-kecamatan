@@ -37,7 +37,7 @@ export async function apiRequest(path, options = {}) {
     body,
     headers: extraHeaders,
     withAuth = true,
-    timeoutMs = 12000,
+    timeoutMs = 30000,
     signal,
   } = options
 

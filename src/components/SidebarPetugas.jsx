@@ -1,23 +1,30 @@
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { clearAuth, getAuth } from '../lib/rkLocal'
+import '../styles/petugas-ui.css'
 
-export default function SidebarPetugas({ prefix = 'dp', activeLabel = 'Dashboard' }) {
+export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const auth = getAuth()
 
-  const menuItems = useMemo(
-    () => [
-      { label: 'Dashboard', to: '/petugas/dashboard' },
-      { label: 'Daftar Pengajuan', to: '/petugas/pengajuan' },
-      { label: 'Verifikasi', to: '/petugas/pengajuan?filter=menunggu' },
-      { label: 'Kelola Data Masyarakat', to: '/petugas/data-masyarakat' },
-      { label: 'Logout', action: 'logout' },
-    ],
-    []
-  )
+  const menuItems = useMemo(() => {
+    return [
+      { label: 'Dashboard', to: '/petugas/dashboard', icon: 'dashboard' },
+      { label: 'Daftar Pengajuan', to: '/petugas/pengajuan', icon: 'pengajuan' },
+      { label: 'Kelola Data Masyarakat', to: '/petugas/masyarakat', icon: 'masyarakat' },
+      { label: 'Logout', action: 'logout', icon: 'logout' },
+    ]
+  }, [])
 
-  const cls = (suffix) => `${prefix}-${suffix}`
+  function isActive(item) {
+    if (item.action === 'logout') return false
+    const path = location?.pathname || ''
+    if (item.to === '/petugas/dashboard') return path === '/petugas/dashboard'
+    if (item.to === '/petugas/pengajuan') return path.startsWith('/petugas/pengajuan')
+    if (item.to === '/petugas/masyarakat') return path.startsWith('/petugas/masyarakat')
+    return activeLabel === item.label
+  }
 
   function onClick(item) {
     if (item.action === 'logout') {
@@ -36,34 +43,35 @@ export default function SidebarPetugas({ prefix = 'dp', activeLabel = 'Dashboard
     .toUpperCase()
 
   return (
-    <aside className={cls('sidebar')} aria-label="Sidebar petugas">
-      <div className={cls('brand')}>
-        <div className={cls('logo')} aria-hidden="true">
+    <aside className="ptg-sidebar" aria-label="Sidebar petugas" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="ptg-brand">
+        <div className="ptg-logo" aria-hidden="true">
           KR
         </div>
-        <div className={cls('brandTitle')}>
+        <div className="ptg-brandTitle">
           <strong>Pelayanan Terpadu</strong>
           <span>Kec. Rantau Kopar</span>
         </div>
       </div>
 
-      <nav className={cls('nav')} aria-label="Menu sidebar">
+      <nav className="ptg-nav" aria-label="Menu sidebar" style={{ flex: 1, overflow: 'auto', paddingBottom: 10 }}>
         {menuItems.map((item) => (
           <button
             key={item.label}
             type="button"
-            className={`${cls('navBtn')} ${activeLabel === item.label ? 'is-active' : ''}`}
+            data-icon={item.icon}
+            className={`ptg-navBtn ${isActive(item) ? 'is-active' : ''}`}
             onClick={() => onClick(item)}
           >
-            <span className={cls('navDot')} aria-hidden="true" />
-            <span className={cls('navText')}>{item.label}</span>
+            <span className="ptg-navDot" aria-hidden="true" />
+            <span className="ptg-navText">{item.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className={cls('sidebarFoot')}>
+      <div className="ptg-sidebarFoot">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className={cls('avatar')} aria-hidden="true">
+          <div className="ptg-avatar" aria-hidden="true">
             {initials || 'PT'}
           </div>
           <div style={{ minWidth: 0 }}>
@@ -77,4 +85,3 @@ export default function SidebarPetugas({ prefix = 'dp', activeLabel = 'Dashboard
     </aside>
   )
 }
-

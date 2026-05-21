@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { FiArrowRight, FiCheckCircle, FiFileText, FiUploadCloud, FiUser } from 'react-icons/fi'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import './YayasanOrmasForm.css'
-import { STATUS, createSubmission, getAuth, getSubmissionById, mergeDokumenMeta, updateSubmission } from '../../lib/rkLocal'
+import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
+import { createPengajuan } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_pemohon: '',
@@ -36,34 +37,18 @@ function normalizeData(data) {
 
 export default function YayasanOrmasForm() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const editId = searchParams.get('edit') || ''
 
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
-  const [editing, setEditing] = useState(null)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const requiredFiles = useMemo(() => Object.keys(INITIAL_FILES), [])
 
   useEffect(() => {
-    if (!editId) return
-    const auth = getAuth()
-    const sub = getSubmissionById(editId)
-    if (!auth || auth.role !== 'masyarakat' || !sub || sub?.pemohon?.username !== auth.username) {
-      alert('Pengajuan tidak ditemukan.')
-      navigate('/dashboard', { replace: true })
-      return
-    }
-    if (sub.status !== STATUS.MENUNGGU && sub.status !== STATUS.DITOLAK && sub.status !== STATUS.PERLU_PERBAIKAN) {
-      alert('Pengajuan tidak dapat diedit karena sudah diverifikasi petugas.')
-      navigate('/dashboard', { replace: true })
-      return
-    }
-    setEditing(sub)
-    const data = sub.data && typeof sub.data === 'object' ? sub.data : null
-    if (data) setForm((prev) => ({ ...prev, ...normalizeData(data) }))
-  }, [editId, navigate])
+    setNotice('')
+  }, [])
 
   const validators = useMemo(
     () => ({
@@ -113,14 +98,7 @@ export default function YayasanOrmasForm() {
     }
     for (const key of requiredFiles) {
       const hasNew = !!files[key]
-      const hasOld =
-        (key === 'rekomLurah' && !!editing?.dokumen?.rekomendasiLurahPenghuluAsli?.name) ||
-        (key === 'daftarGuruPengurus' && !!editing?.dokumen?.daftarNamaGuruPengurus?.name) ||
-        (key === 'daftarAnakDidik' && !!editing?.dokumen?.daftarNamaAnakDidik?.name) ||
-        (key === 'fotoDokumentasi' && !!editing?.dokumen?.fotoDokumentasiGedungAtauMusyawarah?.name) ||
-        (key === 'ktpPengurus' && !!editing?.dokumen?.fotocopyKtpPengurus?.name) ||
-        (key === 'aktaNotaris' && !!editing?.dokumen?.aktaNotarisPendirian?.name)
-      if (!hasNew && !hasOld) nextErrors[key] = 'Wajib diunggah.'
+      if (!hasNew) nextErrors[key] = 'Wajib diunggah.'
     }
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -128,6 +106,7 @@ export default function YayasanOrmasForm() {
 
   const onSubmit = (e) => {
     e.preventDefault()
+    setNotice('')
     if (!validate()) return
 
     const payload = {
@@ -144,40 +123,44 @@ export default function YayasanOrmasForm() {
       },
     }
 
-    try {
-      const keteranganPemohon = `Lembaga: ${form.nama_lembaga} • Pemohon: ${form.nama_pemohon} • Jabatan: ${form.jabatan}`
-      if (editing) {
-        const nextStatus =
-          editing.status === STATUS.DITOLAK || editing.status === STATUS.PERLU_PERBAIKAN ? STATUS.MENUNGGU : editing.status
-        const next = updateSubmission(editing.id, {
-          layanan: payload.layanan,
-          layananPath: payload.layananPath,
-          data: payload.data,
-          keteranganPemohon,
-          dokumen: mergeDokumenMeta(editing.dokumen, payload.dokumen),
-          status: nextStatus,
-          catatanPetugas: nextStatus === STATUS.MENUNGGU ? '' : editing.catatanPetugas,
-        })
-        if (!next) throw new Error('update_failed')
-      } else {
-        createSubmission({
-          layanan: payload.layanan,
-          layananPath: payload.layananPath,
-          dokumen: payload.dokumen,
-          keteranganPemohon,
-          data: payload.data,
-        })
+    void (async () => {
+      const auth = getAuth()
+      if (!auth) {
+        setNotice('Silakan login terlebih dahulu.')
+        navigate('/login', { replace: true })
+        return
       }
 
-      alert('Pengajuan berhasil dikirim.')
-      setForm(INITIAL)
-      setFiles(INITIAL_FILES)
-      setErrors({})
-      navigate('/dashboard')
-    } catch {
-      alert('Silakan login sebagai masyarakat terlebih dahulu.')
-      navigate('/login', { replace: true })
-    }
+      setBusy(true)
+      try {
+        const keteranganPemohon = `Lembaga: ${form.nama_lembaga} • Pemohon: ${form.nama_pemohon} • Jabatan: ${form.jabatan}`
+        const dokumen_meta = mergeDokumenMeta({}, payload.dokumen)
+
+        const res = await createPengajuan({
+          jenis_layanan: payload.layanan,
+          nama_pemohon: form.nama_pemohon,
+          nik: form.nik,
+          email: '',
+          no_hp: '',
+          alamat: form.alamat_lembaga,
+          keterangan: keteranganPemohon,
+          tanggal_pengajuan: new Date().toISOString(),
+          dokumen_meta,
+          data_form: payload.data,
+          layanan_path: payload.layananPath,
+        })
+
+        if (!res?.success) {
+          setNotice(res?.message || 'Gagal mengirim pengajuan.')
+          return
+        }
+
+        setNotice(res?.message || 'Pengajuan berhasil dikirim.')
+        window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   return (
@@ -395,16 +378,25 @@ export default function YayasanOrmasForm() {
               </div>
 
               <div className="rk-formActions">
-                <button type="submit" className="rk-submitBtn">
-                  Kirim <FiArrowRight aria-hidden="true" />
+                <button type="submit" className="rk-submitBtn" disabled={busy}>
+                  {busy ? 'Memproses...' : 'Kirim'} <FiArrowRight aria-hidden="true" />
                 </button>
                 <div className="rk-formHint" aria-label="Keterangan">
                   <FiCheckCircle aria-hidden="true" /> Bertanda <span className="rk-required">*</span> wajib diisi.
                 </div>
               </div>
 
+              {notice ? (
+                <div className="rk-help" role="status" aria-live="polite" style={{ marginTop: 14 }}>
+                  <div className="rk-helpIcon" aria-hidden="true">
+                    <FiFileText />
+                  </div>
+                  <div className="rk-helpText">{notice}</div>
+                </div>
+              ) : null}
+
               <div className="rk-formFoot" aria-label="Catatan">
-                <FiFileText aria-hidden="true" /> Pengajuan ini bersifat dummy (belum terhubung backend).
+                <FiFileText aria-hidden="true" /> Upload dokumen akan diproses setelah data pengajuan tersimpan.
               </div>
             </form>
           </div>
@@ -415,3 +407,4 @@ export default function YayasanOrmasForm() {
     </div>
   )
 }
+
