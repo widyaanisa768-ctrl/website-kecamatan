@@ -17,9 +17,15 @@ import {
 } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { getAuth } from '../lib/rkLocal'
 import './HomeModern.css'
 
 export default function HomeModern() {
+  const getMasyarakatPath = (path) => {
+    const auth = getAuth()
+    return auth?.role === 'masyarakat' ? path : '/login'
+  }
+
   const services = useMemo(
     () => [
       {
@@ -109,10 +115,10 @@ export default function HomeModern() {
               </p>
 
               <div className="rk-heroActions">
-                <Link className="rk-btn rk-btnPrimary" to="/layanan">
+                <Link className="rk-btn rk-btnPrimary" to={getMasyarakatPath('/layanan')}>
                   Ajukan Layanan <FiArrowRight aria-hidden="true" />
                 </Link>
-                <Link className="rk-btn rk-btnGhost" to="/status-pengajuan">
+                <Link className="rk-btn rk-btnGhost" to={getMasyarakatPath('/status-pengajuan')}>
                   Cek Status Pengajuan
                 </Link>
               </div>
@@ -221,7 +227,7 @@ export default function HomeModern() {
                     </div>
                     <p className="rk-cardDesc">{service.desc}</p>
                     <div className="rk-cardActions">
-                      <Link to={service.to} className="rk-miniBtn">
+                      <Link to={getMasyarakatPath(service.to)} className="rk-miniBtn">
                         Ajukan <FiArrowRight aria-hidden="true" />
                       </Link>
                     </div>
@@ -301,7 +307,7 @@ export default function HomeModern() {
                 </p>
               </div>
               <div className="rk-ctaActions">
-                <Link to="/layanan" className="rk-btn rk-btnPrimary">
+                <Link to={getMasyarakatPath('/layanan')} className="rk-btn rk-btnPrimary">
                   Mulai Pengajuan <FiArrowRight aria-hidden="true" />
                 </Link>
                 <Link to="/kontak" className="rk-btn rk-btnGhostAlt">

@@ -7,7 +7,7 @@ import './Navbar.css'
 const NAV_ITEMS = [
   { label: 'Beranda', to: '/home', end: true },
   { label: 'Profil Kecamatan', to: '/profil' },
-  { label: 'Layanan Online', to: '/layanan' },
+  { label: 'Layanan Online', to: '/layanan', authOnly: true },
   { label: 'Galeri', to: '/galeri' },
   { label: 'Kontak', to: '/kontak' },
 ]
@@ -27,6 +27,8 @@ export default function Navbar() {
   const userMenuRef = useRef(null)
   const [user, setUser] = useState(() => {
     try {
+      const auth = getAuth()
+      if (auth) return auth
       const raw = window.localStorage.getItem('user')
       return raw ? JSON.parse(raw) : null
     } catch {
@@ -37,9 +39,16 @@ export default function Navbar() {
 
   const userLabel = (user?.name || user?.nama_lengkap || user?.username || '').trim()
 
+  const auth = useMemo(() => {
+    try {
+      return getAuth()
+    } catch {
+      return null
+    }
+  }, [user, token])
+
   const role = useMemo(() => {
     try {
-      const auth = getAuth()
       return (
         window.localStorage.getItem('role') ||
         user?.role ||
@@ -51,9 +60,11 @@ export default function Navbar() {
     }
   }, [user])
 
-  const isLoggedIn = !!token && !!user && !!userLabel
-
-  const dashboardPath = role === 'petugas' ? '/petugas/dashboard' : '/status-pengajuan'
+  const isLoggedIn = !!auth || (!!token && !!user && !!userLabel)
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => !item.authOnly || (isLoggedIn && role === 'masyarakat')),
+    [isLoggedIn, role]
+  )
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -93,6 +104,13 @@ export default function Navbar() {
   useEffect(() => {
     const syncAuth = () => {
       try {
+        const auth = getAuth()
+        if (auth) {
+          setUser(auth)
+          setToken(readToken())
+          return
+        }
+
         const raw = window.localStorage.getItem('user')
         setUser(raw ? JSON.parse(raw) : null)
       } catch {
@@ -146,7 +164,7 @@ export default function Navbar() {
 
         <div className="rk-navRight">
           <nav className="rk-links" aria-label="Navigasi utama">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -215,7 +233,7 @@ export default function Navbar() {
           </div>
 
           <div className="rk-mobileLinks" aria-label="Navigasi mobile">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

@@ -47,20 +47,90 @@ function App() {
         {/* Halaman publik */}
         <Route path="/home" element={<HomeModern />} />
         <Route path="/profil" element={<Profil />} />
-        <Route path="/layanan" element={<Layanan />} />
+        <Route
+          path="/layanan"
+          element={
+            <RequireMasyarakat>
+              <Layanan />
+            </RequireMasyarakat>
+          }
+        />
         <Route path="/galeri" element={<Galeri />} />
         <Route path="/kontak" element={<Kontak />} />
 
-        {/* Layanan (tetap seperti sebelumnya) */}
-        <Route path="/layanan/ahli-waris" element={<AhliWarisForm />} />
-        <Route path="/layanan/rekomendasi-kerja" element={<RekomendasiKerjaForm />} />
-        <Route path="/layanan/penelitian" element={<PenelitianRisetForm />} />
-        <Route path="/layanan/penelitian-riset" element={<PenelitianRisetForm />} />
-        <Route path="/layanan/surat-pindah" element={<SuratPindahForm />} />
-        <Route path="/layanan/akta-kelahiran" element={<AktaKelahiranForm />} />
-        <Route path="/layanan/kartu-keluarga" element={<KartuKeluargaForm />} />
-        <Route path="/layanan/surat-tanah" element={<SuratTanahForm />} />
-        <Route path="/layanan/yayasan-ormas" element={<YayasanOrmasForm />} />
+        {/* Layanan masyarakat */}
+        <Route
+          path="/layanan/ahli-waris"
+          element={
+            <RequireMasyarakat>
+              <AhliWarisForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/rekomendasi-kerja"
+          element={
+            <RequireMasyarakat>
+              <RekomendasiKerjaForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/penelitian"
+          element={
+            <RequireMasyarakat>
+              <PenelitianRisetForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/penelitian-riset"
+          element={
+            <RequireMasyarakat>
+              <PenelitianRisetForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/surat-pindah"
+          element={
+            <RequireMasyarakat>
+              <SuratPindahForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/akta-kelahiran"
+          element={
+            <RequireMasyarakat>
+              <AktaKelahiranForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/kartu-keluarga"
+          element={
+            <RequireMasyarakat>
+              <KartuKeluargaForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/surat-tanah"
+          element={
+            <RequireMasyarakat>
+              <SuratTanahForm />
+            </RequireMasyarakat>
+          }
+        />
+        <Route
+          path="/layanan/yayasan-ormas"
+          element={
+            <RequireMasyarakat>
+              <YayasanOrmasForm />
+            </RequireMasyarakat>
+          }
+        />
 
         {/* Legacy dashboard masyarakat -> Beranda */}
         <Route path="/dashboard" element={<Navigate to="/home" replace />} />

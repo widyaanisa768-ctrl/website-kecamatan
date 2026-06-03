@@ -97,7 +97,7 @@ export default function LoginPage() {
 
         if (role === 'petugas') navigate('/petugas/dashboard', { replace: true })
         else if (role === 'kepala_camat') navigate('/dashboard-kepala-camat')
-        else navigate('/home')
+        else navigate('/layanan')
       } catch (err) {
         console.log('[login] error (raw):', err)
         setNotice(`${err?.name || 'Error'}: ${err?.message || String(err)}`)
