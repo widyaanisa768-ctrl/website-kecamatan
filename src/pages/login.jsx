@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff, FiLock, FiShield, FiUser, FiZap } from 'react-icons/fi'
 import { setAuth } from '../lib/rkLocal'
+import { loginLocalRole } from '../lib/authRoles'
 import { login } from '../services/authService'
 import './Auth.css'
 
@@ -30,6 +31,16 @@ export default function LoginPage() {
 
   const isPetugasMode =
     location.pathname === '/login-petugas' || new URLSearchParams(location.search).get('role') === 'petugas'
+  const isKepalaCamatMode = new URLSearchParams(location.search).get('role') === 'kepala_camat'
+  // Akun petugas lokal.
+  // Akun kepala camat lokal.
+  const localRoleMode = isPetugasMode ? 'petugas' : isKepalaCamatMode ? 'kepala_camat' : ''
+  const authPanelLabel =
+    localRoleMode === 'petugas'
+      ? 'Login Petugas'
+      : localRoleMode === 'kepala_camat'
+        ? 'Login Kepala Camat'
+        : 'Login Masyarakat'
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -59,22 +70,22 @@ export default function LoginPage() {
       const passwordInput = form.password
 
       try {
-        if (isPetugasMode) {
-          const allowedUsername = 'petugas'
-          const allowedPassword = 'petugas123'
-
-          if (usernameInput !== allowedUsername || passwordInput !== allowedPassword) {
-            setNotice('Username atau password salah.')
+        if (localRoleMode) {
+          const result = loginLocalRole(usernameInput, passwordInput, localRoleMode)
+          if (!result?.success) {
+            setNotice(result?.message || 'Username atau password salah.')
             return
           }
 
-          const user = { role: 'petugas', username: allowedUsername, name: 'Petugas' }
+          const user = result.user
           window.localStorage.setItem('user', JSON.stringify(user))
-          setAuth({ role: 'petugas', username: user.username, name: user.name })
-          navigate('/petugas/dashboard', { replace: true })
+          window.localStorage.setItem('role', user.role)
+          setAuth({ role: user.role, username: user.username, name: user.name })
+          navigate(result.redirect, { replace: true })
           return
         }
 
+        // Login masyarakat dari backend.
         const payload = await login(usernameInput, passwordInput)
 
         if (!payload?.success) {
@@ -87,6 +98,7 @@ export default function LoginPage() {
 
         if (accessToken) window.localStorage.setItem('accessToken', accessToken)
         if (user) window.localStorage.setItem('user', JSON.stringify(user))
+        if (user?.role) window.localStorage.setItem('role', user.role)
 
         const role = user?.role || (isPetugasMode ? 'petugas' : 'masyarakat')
         const resolvedUsername = user?.username || usernameInput
@@ -146,12 +158,16 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="rk-authRight" aria-label={isPetugasMode ? 'Login Petugas' : 'Login Masyarakat'}>
+        <section className="rk-authRight" aria-label={authPanelLabel}>
           <div className="rk-authCard">
             <div className="rk-authCardHead">
               <h2 className="rk-authCardTitle">Selamat datang</h2>
               <p className="rk-authCardSubtitle">
-              {isPetugasMode ? ' sebagai petugas' : ''}
+                {localRoleMode === 'petugas'
+                  ? ' sebagai petugas'
+                  : localRoleMode === 'kepala_camat'
+                    ? ' sebagai kepala camat'
+                    : ''}
               </p>
             </div>
 
