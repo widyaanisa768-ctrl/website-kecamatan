@@ -1,5 +1,5 @@
 .rk-homeModern .rk-hero {
-  min-height: 90vh;
+  min-height: 680px;
   background-size: cover;
   background-position: center;
   position: relative;
@@ -35,10 +35,10 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   align-items: center;
-  gap: 34px;
-  padding: 84px 0 56px;
+  gap: 36px;
+  padding: 78px 0 92px;
   min-width: 0;
 }
 
@@ -51,7 +51,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 9px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -74,7 +74,7 @@
 .rk-heroTitle {
   color: rgba(255, 255, 255, 0.98);
   margin: 16px 0 12px;
-  font-size: clamp(32px, 4.2vw, 56px);
+  font-size: clamp(34px, 4.5vw, 60px);
   line-height: 1.08;
   letter-spacing: 0;
   font-weight: 950;
@@ -85,7 +85,7 @@
   color: rgba(255, 255, 255, 0.86);
   font-size: 16px;
   line-height: 1.7;
-  max-width: 56ch;
+  max-width: 62ch;
   font-weight: 650;
 }
 
@@ -165,36 +165,15 @@
   box-shadow: 0 18px 40px rgba(16, 52, 83, 0.12);
 }
 
-.rk-heroMeta {
-  display: flex;
-  gap: 18px;
-  margin-top: 22px;
-  flex-wrap: wrap;
-}
-
-.rk-metaItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.86);
-  font-weight: 850;
-  font-size: 13px;
-  max-width: 100%;
-}
-
 .rk-heroCard {
   border-radius: var(--rk-radius-lg);
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  padding: 18px;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(205, 229, 244, 0.28);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 20px;
   color: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.24);
 }
 
 .rk-heroCardHeader {
@@ -211,6 +190,7 @@
   letter-spacing: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.98);
 }
 
 .rk-heroCardPill {
@@ -218,23 +198,23 @@
   font-size: 12px;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(197, 167, 84, 0.16);
-  border: 1px solid rgba(197, 167, 84, 0.26);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(205, 229, 244, 0.24);
   color: rgba(255, 255, 255, 0.92);
 }
 
 .rk-heroCardGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .rk-heroCardStat {
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(205, 229, 244, 0.18);
   min-width: 0;
 }
 
@@ -243,28 +223,43 @@
   font-size: 18px;
   letter-spacing: 0;
   overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.98);
 }
 
 .rk-heroCardLabel {
   margin-top: 2px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(235, 245, 255, 0.82);
   font-weight: 850;
 }
 
 .rk-heroCardList {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .rk-heroCardRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 850;
   color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
+  line-height: 1.35;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(205, 229, 244, 0.14);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.rk-heroCardRow svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: rgba(186, 230, 253, 0.98);
 }
 
 .rk-heroWave {
@@ -278,7 +273,11 @@
 
 /* Shared sections */
 .rk-section {
-  padding: 76px 0;
+  padding: 68px 0;
+}
+
+.rk-sectionCompact {
+  padding: 48px 0 60px;
 }
 
 .rk-alt {
@@ -321,7 +320,39 @@
 .rk-sectionFooter {
   display: flex;
   justify-content: center;
-  margin-top: 22px;
+  margin-top: 24px;
+}
+
+.rk-sectionCta {
+  width: min(300px, 100%);
+  min-height: 56px;
+  justify-content: center;
+  padding: 14px 24px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--rk-secondary), var(--rk-primary));
+  border-color: rgba(11, 79, 124, 0.12);
+  box-shadow: 0 18px 38px rgba(11, 79, 124, 0.22);
+  font-size: 15px;
+  font-weight: 950;
+  gap: 12px;
+}
+
+.rk-sectionCta:hover {
+  transform: translateY(-3px);
+  color: #ffffff;
+  background: linear-gradient(135deg, #166fa8, #073f65);
+  box-shadow: 0 24px 48px rgba(11, 79, 124, 0.28);
+}
+
+.rk-sectionCta svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.6;
+  transition: transform 180ms ease;
+}
+
+.rk-sectionCta:hover svg {
+  transform: translateX(3px);
 }
 
 .rk-card {
@@ -361,6 +392,8 @@
 .rk-serviceCard {
   padding: 16px;
   min-width: 0;
+  display: grid;
+  gap: 8px;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -390,10 +423,6 @@
   color: var(--rk-primary);
 }
 
-.rk-cardActions {
-  margin-top: 14px;
-}
-
 .rk-miniBtn {
   display: inline-flex;
   align-items: center;
@@ -419,19 +448,28 @@
 }
 
 /* Steps */
+.rk-stepsSection {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 248, 252, 0.92));
+}
+
 .rk-stepGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
 }
 
 .rk-stepCard {
+  height: 100%;
   border-radius: var(--rk-radius-md);
   background: var(--rk-surface);
   border: 1px solid var(--rk-border);
   padding: 16px;
   box-shadow: var(--rk-shadow-soft);
   min-width: 0;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
 }
 
 .rk-stepTop {
@@ -464,17 +502,23 @@
   border: 1px solid rgba(30, 136, 200, 0.14);
 }
 
+.rk-stepCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(11, 79, 124, 0.2);
+  box-shadow: 0 22px 46px rgba(16, 52, 83, 0.14);
+}
+
 /* About */
 .rk-aboutCard {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
-  gap: 14px;
+  gap: 18px;
   align-items: start;
   border-radius: var(--rk-radius-lg);
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(11, 79, 124, 0.14);
-  box-shadow: 0 18px 42px rgba(16, 52, 83, 0.12);
-  padding: 18px;
+  box-shadow: var(--rk-shadow-soft);
+  padding: 26px;
   min-width: 0;
 }
 
@@ -497,7 +541,7 @@
 .rk-briefGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: 18px;
+  gap: 24px;
   align-items: center;
 }
 
@@ -512,14 +556,14 @@
 .rk-briefMedia img {
   width: 100%;
   height: 100%;
-  max-height: 360px;
+  max-height: 320px;
   object-fit: cover;
   display: block;
   filter: saturate(1.03);
 }
 
 .rk-briefActions {
-  margin-top: 18px;
+  margin-top: 22px;
 }
 
 /* Profile + gallery preview */
@@ -690,16 +734,46 @@
 
 /* CTA */
 .rk-cta {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--rk-radius-lg);
-  background: linear-gradient(135deg, rgba(30, 136, 200, 0.12), rgba(11, 79, 124, 0.06));
+  background: linear-gradient(135deg, rgba(224, 244, 255, 0.92), rgba(243, 250, 255, 0.98));
   border: 1px solid rgba(11, 79, 124, 0.14);
-  box-shadow: 0 22px 52px rgba(16, 52, 83, 0.12);
-  padding: 28px;
-  display: flex;
-  justify-content: space-between;
+  box-shadow: var(--rk-shadow-soft);
+  padding: 32px 42px 32px 34px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) minmax(250px, auto);
   align-items: center;
-  gap: 18px;
+  gap: 24px;
   min-width: 0;
+}
+
+.rk-cta::after {
+  content: none;
+}
+
+.rk-ctaIcon {
+  position: relative;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--rk-secondary), var(--rk-primary));
+  box-shadow: 0 16px 32px rgba(11, 79, 124, 0.2);
+}
+
+.rk-ctaIcon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.rk-ctaContent,
+.rk-ctaActions {
+  position: relative;
+  z-index: 1;
 }
 
 .rk-ctaTitle {
@@ -713,20 +787,31 @@
   margin: 0;
   color: var(--rk-muted);
   line-height: 1.8;
-  max-width: 62ch;
+  max-width: 68ch;
   font-weight: 650;
 }
 
 .rk-ctaActions {
   display: flex;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
+.rk-ctaActions .rk-btn {
+  min-height: 46px;
+  padding-inline: 18px;
+  box-shadow: 0 12px 26px rgba(16, 52, 83, 0.12);
+}
+
 @media (max-width: 1024px) {
+  .rk-homeModern .rk-hero {
+    min-height: auto;
+  }
+
   .rk-homeModern .rk-heroGrid {
     grid-template-columns: 1fr;
-    padding-top: 76px;
+    padding-top: 72px;
   }
 
   .rk-heroCard {
@@ -739,6 +824,7 @@
 
   .rk-stepGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 
   .rk-briefGrid {
@@ -752,11 +838,15 @@
 
 @media (max-width: 768px) {
   .rk-section {
-    padding: 62px 0;
+    padding: 56px 0;
+  }
+
+  .rk-sectionCompact {
+    padding: 42px 0 50px;
   }
 
   .rk-homeModern .rk-heroGrid {
-    padding: 64px 0 48px;
+    padding: 58px 0 64px;
   }
 
   .rk-heroActions,
@@ -777,8 +867,14 @@
   }
 
   .rk-cta {
-    flex-direction: column;
+    grid-template-columns: 54px minmax(0, 1fr);
     align-items: flex-start;
+    padding: 28px;
+  }
+
+  .rk-ctaActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 }
 
@@ -788,10 +884,14 @@
   }
 
   .rk-homeModern .rk-heroGrid {
-    padding: 48px 0 44px;
+    padding: 44px 0 58px;
   }
 
   .rk-heroCardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-heroCardList {
     grid-template-columns: 1fr;
   }
 
@@ -811,6 +911,16 @@
     grid-template-columns: 1fr;
   }
 
+  .rk-cta {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .rk-ctaActions {
+    grid-column: auto;
+    width: 100%;
+  }
+
   .rk-statGrid {
     grid-template-columns: 1fr;
   }
@@ -819,6 +929,7 @@
 @media (prefers-reduced-motion: reduce) {
   .rk-btn,
   .rk-serviceCard,
+  .rk-stepCard,
   .rk-miniBtn,
   .rk-miniLink,
   .rk-galleryItem img {

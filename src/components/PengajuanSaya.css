@@ -1,0 +1,601 @@
+.rk-pengajuanSaya {
+  padding: 42px 0 64px;
+}
+
+.rk-pengajuanSaya .rk-mySubWrap {
+  gap: 20px;
+}
+
+.rk-pengajuanSaya .rk-summaryGrid {
+  gap: 14px;
+}
+
+.rk-pengajuanSaya .rk-summaryCard {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 112px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.09);
+}
+
+.rk-pengajuanSaya .rk-summaryCard::after {
+  content: '';
+  position: absolute;
+  right: -34px;
+  bottom: -44px;
+  width: 104px;
+  height: 104px;
+  border-radius: 999px;
+  background: rgba(11, 79, 124, 0.035);
+}
+
+.rk-pengajuanSaya .rk-summaryIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: var(--rk-primary);
+  background: rgba(11, 79, 124, 0.08);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+}
+
+.rk-pengajuanSaya .rk-summaryIcon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isWaiting {
+  border-color: rgba(217, 119, 6, 0.25);
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isWaiting .rk-summaryIcon {
+  color: #9a5b00;
+  background: rgba(245, 158, 11, 0.11);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isProcess {
+  border-color: rgba(30, 136, 200, 0.24);
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isProcess .rk-summaryIcon {
+  color: #0b5e94;
+  background: rgba(30, 136, 200, 0.1);
+  border-color: rgba(30, 136, 200, 0.2);
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isDone {
+  border-color: rgba(22, 163, 74, 0.23);
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isDone .rk-summaryIcon {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.19);
+}
+
+.rk-pengajuanSaya .rk-summaryLabel {
+  opacity: 1;
+  color: rgba(29, 42, 58, 0.72);
+}
+
+.rk-pengajuanSaya .rk-summaryValue {
+  margin-top: 3px;
+  font-size: 26px;
+  color: var(--rk-text);
+  letter-spacing: 0;
+}
+
+.rk-pengajuanSaya .rk-summaryHint {
+  margin-top: 2px;
+  color: var(--rk-muted);
+  opacity: 1;
+}
+
+.rk-pengajuanSaya .rk-mySubCard {
+  border-radius: 18px;
+  border: 1px solid rgba(11, 79, 124, 0.11);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 38px rgba(16, 52, 83, 0.09);
+}
+
+.rk-pengajuanSaya .rk-mySubCard.isCompact {
+  padding: 8px 18px;
+  border-radius: 18px;
+}
+
+.rk-pengajuanSaya .rk-mySubRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-top-color: rgba(11, 79, 124, 0.08);
+}
+
+.rk-pengajuanSaya .rk-mySubServiceIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--rk-primary);
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.12), rgba(11, 79, 124, 0.06));
+  border: 1px solid rgba(11, 79, 124, 0.11);
+}
+
+.rk-pengajuanSaya .rk-mySubName {
+  color: var(--rk-text);
+  font-size: 14px;
+}
+
+.rk-pengajuanSaya .rk-mySubNo {
+  color: var(--rk-muted);
+  opacity: 1;
+}
+
+.rk-pengajuanSaya .rk-mySubSub {
+  color: rgba(29, 42, 58, 0.75);
+  opacity: 1;
+  line-height: 1.5;
+}
+
+.rk-pengajuanSaya .rk-mySubActions {
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 590px;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge {
+  padding: 7px 11px;
+  border-width: 1px;
+  white-space: nowrap;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge.is-waiting {
+  color: #8a5100;
+  background: #fff7e6;
+  border-color: #f3d29a;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge.is-process {
+  color: #075985;
+  background: #eaf7ff;
+  border-color: #b9e2f8;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge.is-approve,
+.rk-pengajuanSaya .rk-mySubBadge.is-done {
+  color: #166534;
+  background: #edf9f0;
+  border-color: #bce6c5;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge.is-reject {
+  color: #991b1b;
+  background: #fff0f0;
+  border-color: #f1c1c1;
+}
+
+.rk-pengajuanSaya .rk-mySubBadge.is-unknown {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2 {
+  gap: 7px;
+  min-height: 38px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  border-color: rgba(11, 79, 124, 0.24);
+  color: var(--rk-primary) !important;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 18px rgba(16, 52, 83, 0.07);
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.06);
+  box-shadow: 0 12px 24px rgba(16, 52, 83, 0.12);
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isDetail {
+  color: #0b5e94 !important;
+  border-color: #8dc9eb;
+  background: #ffffff;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isEdit {
+  color: #9a5b00 !important;
+  border-color: #edbd6e;
+  background: #fffdf8;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isDelete {
+  color: #b42318 !important;
+  border-color: #efaaa5;
+  background: #fffafa;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isDownload,
+.rk-pengajuanSaya .rk-miniBtn2.isSave {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #15803d;
+  background: #15803d;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isSave {
+  border-color: var(--rk-primary);
+  background: var(--rk-primary);
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isDownload:hover,
+.rk-pengajuanSaya .rk-miniBtn2.isSave:hover {
+  background: #166534;
+}
+
+.rk-pengajuanSaya .rk-miniBtn2.isSave:hover {
+  background: #083f66;
+}
+
+.rk-pengajuanSaya .rk-rowStatusInfo,
+.rk-pengajuanSaya .rk-resultUnavailable {
+  margin-top: 6px;
+  color: #526577;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rk-pengajuanSaya .rk-rowStatusInfo.isReject {
+  color: #991b1b;
+}
+
+.rk-pengajuanSaya .rk-resultUnavailable {
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice {
+  position: fixed;
+  top: 92px;
+  right: 18px;
+  z-index: 700;
+  width: min(420px, calc(100vw - 36px));
+  min-height: 48px;
+  padding: 12px 12px 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #b9d9ef;
+  border-radius: 14px;
+  color: #075985;
+  background: #f0f9ff;
+  box-shadow: 0 18px 46px rgba(6, 28, 50, 0.2);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice.is-success {
+  color: #166534;
+  border-color: #bce6c5;
+  background: #edf9f0;
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice.is-error {
+  color: #991b1b;
+  border-color: #f1c1c1;
+  background: #fff0f0;
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice > svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice span {
+  flex: 1;
+}
+
+.rk-pengajuanSaya .rk-pengajuanNotice button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rk-pengajuanSaya .rk-modalOverlay {
+  z-index: 500;
+  padding: 20px;
+  background: rgba(6, 28, 50, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.rk-pengajuanSaya .rk-modal {
+  width: min(820px, 100%);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  border-color: rgba(11, 79, 124, 0.13);
+  box-shadow: 0 30px 90px rgba(6, 28, 50, 0.3);
+}
+
+.rk-pengajuanSaya .rk-modalHead {
+  padding: 18px 20px;
+  border-bottom-color: rgba(11, 79, 124, 0.09);
+  background: linear-gradient(180deg, #ffffff, #f8fbfe);
+}
+
+.rk-pengajuanSaya .rk-modalTitle {
+  color: var(--rk-text);
+  font-size: 19px;
+}
+
+.rk-pengajuanSaya .rk-modalSubtitle {
+  margin-top: 4px;
+  color: var(--rk-muted);
+  font-size: 13px;
+}
+
+.rk-pengajuanSaya .rk-modalBody {
+  overflow-y: auto;
+  padding: 18px 20px;
+  gap: 14px;
+}
+
+.rk-pengajuanSaya .rk-statusBox {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(11, 79, 124, 0.04);
+  border-color: rgba(11, 79, 124, 0.12);
+  color: rgba(29, 42, 58, 0.86);
+}
+
+.rk-pengajuanSaya .rk-statusBox.is-waiting {
+  background: #fffaf0;
+  border-color: #f2d7a8;
+}
+
+.rk-pengajuanSaya .rk-statusBox.is-process {
+  background: #f0f9ff;
+  border-color: #c7e8f8;
+}
+
+.rk-pengajuanSaya .rk-statusBox.is-approve,
+.rk-pengajuanSaya .rk-statusBox.is-done {
+  background: #f0faf3;
+  border-color: #c5e8cc;
+}
+
+.rk-pengajuanSaya .rk-statusBox.is-reject {
+  background: #fff4f4;
+  border-color: #efcaca;
+}
+
+.rk-pengajuanSaya .rk-statusTop {
+  flex-wrap: wrap;
+}
+
+.rk-pengajuanSaya .rk-kv {
+  grid-template-columns: minmax(150px, 0.42fr) minmax(0, 1fr);
+  gap: 10px 16px;
+}
+
+.rk-pengajuanSaya .rk-kv dt {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: rgba(29, 42, 58, 0.76);
+  overflow-wrap: anywhere;
+}
+
+.rk-pengajuanSaya .rk-kv dt svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--rk-primary);
+}
+
+.rk-pengajuanSaya .rk-kv dd {
+  color: var(--rk-text);
+  opacity: 1;
+  overflow-wrap: anywhere;
+}
+
+.rk-pengajuanSaya .rk-dataFormTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--rk-text);
+  font-weight: 950;
+}
+
+.rk-pengajuanSaya .rk-dataFormTitle svg {
+  color: var(--rk-primary);
+}
+
+.rk-pengajuanSaya .rk-modalFoot {
+  padding: 13px 20px;
+  border-top-color: rgba(11, 79, 124, 0.08);
+  background: #f8fbfe;
+}
+
+.rk-pengajuanSaya .rk-lockedInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--rk-muted);
+  font-size: 12px;
+  font-weight: 750;
+  margin-right: auto;
+}
+
+.rk-pengajuanSaya .rk-lockedInfo svg {
+  flex: 0 0 auto;
+  color: var(--rk-primary);
+}
+
+.rk-pengajuanSaya .rk-editModal {
+  width: min(760px, 100%);
+}
+
+.rk-pengajuanSaya .rk-editInfo {
+  padding: 11px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #f2d7a8;
+  border-radius: 12px;
+  color: #7a4a00;
+  background: #fffaf0;
+  font-size: 13px;
+}
+
+.rk-pengajuanSaya .rk-editInfo svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.rk-pengajuanSaya .rk-editGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rk-pengajuanSaya .rk-editField {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.rk-pengajuanSaya .rk-editField.isWide {
+  grid-column: 1 / -1;
+}
+
+.rk-pengajuanSaya .rk-editField label {
+  color: var(--rk-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.rk-pengajuanSaya .rk-editField input,
+.rk-pengajuanSaya .rk-editField textarea,
+.rk-pengajuanSaya .rk-editField select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(11, 79, 124, 0.2);
+  border-radius: 10px;
+  color: var(--rk-text);
+  background: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.rk-pengajuanSaya .rk-editField textarea {
+  resize: vertical;
+}
+
+.rk-pengajuanSaya .rk-editField input:focus,
+.rk-pengajuanSaya .rk-editField textarea:focus,
+.rk-pengajuanSaya .rk-editField select:focus {
+  border-color: var(--rk-primary);
+  box-shadow: 0 0 0 3px rgba(30, 136, 200, 0.12);
+}
+
+@media (max-width: 760px) {
+  .rk-pengajuanSaya {
+    padding: 32px 0 50px;
+  }
+
+  .rk-pengajuanSaya .rk-mySubRow {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .rk-pengajuanSaya .rk-mySubActions {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    width: 100%;
+    max-width: none;
+  }
+
+  .rk-pengajuanSaya .rk-kv {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .rk-pengajuanSaya .rk-kv dd {
+    margin-bottom: 8px;
+  }
+
+  .rk-pengajuanSaya .rk-editGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-pengajuanSaya .rk-editField.isWide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .rk-pengajuanSaya .rk-summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-pengajuanSaya .rk-modalOverlay {
+    align-items: flex-end;
+    padding: 8px;
+  }
+
+  .rk-pengajuanSaya .rk-modal {
+    max-height: calc(100vh - 16px);
+    border-radius: 20px;
+  }
+
+  .rk-pengajuanSaya .rk-modalHead,
+  .rk-pengajuanSaya .rk-modalBody,
+  .rk-pengajuanSaya .rk-modalFoot {
+    padding-inline: 15px;
+  }
+
+  .rk-pengajuanSaya .rk-mySubActions .rk-mySubBadge,
+  .rk-pengajuanSaya .rk-mySubActions .rk-miniBtn2 {
+    width: 100%;
+  }
+
+  .rk-pengajuanSaya .rk-pengajuanNotice {
+    top: 74px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-pengajuanSaya .rk-miniBtn2 {
+    transition: none !important;
+  }
+}

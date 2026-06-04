@@ -4,8 +4,8 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 430px;
-  padding: 56px 0 40px;
+  min-height: 340px;
+  padding: 48px 0 42px;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.94);
   background: linear-gradient(135deg, rgba(6, 28, 50, 0.96), rgba(11, 79, 124, 0.9));
@@ -27,8 +27,8 @@
   z-index: 1;
   max-width: none;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 1.05fr);
+  gap: 36px;
   align-items: center;
   box-sizing: border-box;
 }
@@ -68,7 +68,7 @@
 }
 
 .rk-pageLayanan .rk-pageTitle {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   color: rgba(255, 255, 255, 0.98);
   font-size: clamp(40px, 3.5vw, 52px);
   font-weight: 800;
@@ -79,78 +79,17 @@
 
 .rk-pageLayanan .rk-pageSubtitle {
   margin: 0;
-  max-width: 480px;
+  max-width: 560px;
   color: rgba(235, 245, 255, 0.88);
   font-size: 16px;
   font-weight: 650;
   line-height: 1.75;
 }
 
-.rk-pageLayanan .rk-heroActions {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 18px;
-  margin-top: 28px;
-}
-
-.rk-pageLayanan .rk-heroBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 50px;
-  max-width: 100%;
-  padding: 13px 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.96);
-  font-size: 14px;
-  font-weight: 950;
-  letter-spacing: 0;
-  line-height: 1;
-  text-decoration: none;
-  white-space: nowrap;
-  gap: 10px;
-  transition:
-    transform 180ms ease,
-    background 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.rk-pageLayanan .rk-heroBtn:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.2);
-}
-
-.rk-pageLayanan .rk-heroBtnPrimary {
-  min-width: 184px;
-  border-color: rgba(186, 230, 253, 0.34);
-  background: linear-gradient(135deg, #22c6ff 0%, #0ea5e9 48%, #0758cf 100%);
-  box-shadow: 0 18px 42px rgba(14, 165, 233, 0.28);
-}
-
-.rk-pageLayanan .rk-heroBtnPrimary:hover {
-  background: linear-gradient(135deg, #67d8ff 0%, #0ea5e9 48%, #0758cf 100%);
-  box-shadow: 0 24px 52px rgba(14, 165, 233, 0.36);
-}
-
-.rk-pageLayanan .rk-heroBtnSecondary {
-  min-width: 174px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(240, 249, 255, 0.95);
-  border-color: rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
 .rk-pageLayanan .rk-heroVisual {
   position: relative;
   width: 100%;
-  max-width: 620px;
+  max-width: 560px;
   min-width: 0;
   margin-left: auto;
 }
@@ -158,12 +97,12 @@
 .rk-pageLayanan .rk-heroVisualFrame {
   position: relative;
   width: 100%;
-  height: 320px;
+  height: 250px;
   overflow: hidden;
-  border-radius: 26px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
   transform: translateZ(0);
   transition:
     transform 220ms ease,
@@ -200,122 +139,8 @@
   transform: scale(1.02);
 }
 
-.rk-pageLayanan .rk-heroVisualCard {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  z-index: 2;
-  padding: 18px 20px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.52);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 45px rgba(16, 52, 83, 0.18);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.rk-pageLayanan .rk-heroVisualCard::before {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 12px;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(14, 165, 233, 0.78), rgba(125, 211, 252, 0.28), rgba(255, 255, 255, 0));
-}
-
-.rk-pageLayanan .rk-heroVisualLabel {
-  margin-top: 4px;
-  color: rgba(11, 79, 124, 0.9);
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.rk-pageLayanan .rk-heroVisualTitle {
-  margin-top: 8px;
-  color: rgba(29, 42, 58, 0.94);
-  font-size: 17px;
-  font-weight: 950;
-  letter-spacing: 0;
-  line-height: 1.3;
-}
-
-.rk-layananQuickInfo {
-  position: relative;
-  z-index: 3;
-  margin-top: 0;
-  padding: 38px 0 0;
-}
-
-/* Let global .rk-container control max-width/gutters (same as Galeri/Kontak). */
-
-.rk-layananInfoGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
-  transform: translateY(0);
-}
-
-.rk-layananInfoCard {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-  height: 86px;
-  min-height: 86px;
-  min-width: 0;
-  padding: 15px 16px;
-  border-radius: 22px;
-  border: 1px solid rgba(11, 79, 124, 0.1);
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 12px 28px rgba(16, 52, 83, 0.1);
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
-}
-
-.rk-layananInfoCard:hover {
-  transform: translateY(-2px);
-  border-color: rgba(11, 79, 124, 0.18);
-  box-shadow: 0 18px 38px rgba(16, 52, 83, 0.13);
-}
-
-.rk-layananInfoIcon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid rgba(11, 79, 124, 0.12);
-  background: linear-gradient(135deg, rgba(30, 136, 200, 0.14), rgba(197, 167, 84, 0.08));
-  color: rgba(11, 79, 124, 0.96);
-}
-
-.rk-layananInfoTitle {
-  color: rgba(29, 42, 58, 0.96);
-  font-size: 14px;
-  font-weight: 950;
-  letter-spacing: 0;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.rk-layananInfoDesc {
-  margin-top: 4px;
-  color: var(--rk-muted);
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.45;
-}
-
 .rk-pageLayanan .rk-pageSection {
-  padding: 40px 0 56px;
+  padding: 48px 0 60px;
 }
 
 .rk-pageLayanan #daftar-layanan {
@@ -325,7 +150,7 @@
 .rk-layananGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
 .rk-layananCard {
@@ -334,10 +159,10 @@
   min-width: 0;
   min-height: 245px;
   padding: 18px;
-  border-radius: 22px;
+  border-radius: var(--rk-radius-md);
   border: 1px solid rgba(11, 79, 124, 0.1);
   background: var(--rk-surface);
-  box-shadow: 0 12px 28px rgba(16, 52, 83, 0.08);
+  box-shadow: var(--rk-shadow-soft);
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -390,12 +215,32 @@
   padding-top: 18px;
 }
 
-.rk-pageLayanan .rk-miniBtn {
-  min-height: 40px;
-  padding: 10px 14px;
-  border-color: rgba(11, 79, 124, 0.18);
-  background: #ffffff;
-  box-shadow: 0 8px 18px rgba(16, 52, 83, 0.06);
+.rk-layananBtn {
+  min-height: 42px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 79, 124, 0.14);
+  background: linear-gradient(135deg, var(--rk-secondary), var(--rk-primary));
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(11, 79, 124, 0.18);
+  font-size: 13px;
+  font-weight: 950;
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-layananBtn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #166fa8, #073f65);
+  box-shadow: 0 18px 36px rgba(11, 79, 124, 0.24);
 }
 
 @media (max-width: 1180px) {
@@ -413,22 +258,6 @@
     font-size: 15px;
   }
 
-  .rk-pageLayanan .rk-heroActions {
-    gap: 12px;
-  }
-
-  .rk-pageLayanan .rk-heroBtn {
-    padding: 12px 18px;
-  }
-
-  .rk-pageLayanan .rk-heroVisualCard {
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
-    padding: 16px 16px;
-  }
-
-  .rk-layananInfoGrid,
   .rk-layananGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -453,87 +282,39 @@
     max-width: 100%;
   }
 
-  .rk-pageLayanan .rk-heroActions {
-    flex-wrap: wrap;
-    align-items: stretch;
-  }
-
-  .rk-pageLayanan .rk-heroBtn {
-    flex: 1 1 220px;
-  }
-
-  .rk-layananInfoGrid {
-    gap: 16px;
-  }
-
-  .rk-layananQuickInfo {
-    margin-bottom: -18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .rk-pageLayanan .rk-pageKicker {
-    margin-bottom: 14px;
-    padding: 8px 11px;
-    font-size: 10px;
-  }
-
   .rk-pageLayanan .rk-pageSubtitle {
     font-size: 14px;
     line-height: 1.7;
   }
+}
 
-  .rk-pageLayanan .rk-heroActions {
-    gap: 10px;
-    margin-top: 24px;
+@media (max-width: 480px) {
+  .rk-pageLayanan .rk-pageHeader {
+    min-height: auto;
+    padding: 38px 0 34px;
   }
 
-  .rk-pageLayanan .rk-heroBtn {
-    width: 100%;
-    min-width: 0;
+  .rk-pageLayanan .rk-heroVisualFrame {
+    height: 210px;
   }
 
-  .rk-pageLayanan .rk-heroVisualCard {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    padding: 14px;
-    border-radius: 18px;
-  }
-
-  .rk-pageLayanan .rk-heroVisualLabel {
-    font-size: 10px;
-  }
-
-  .rk-pageLayanan .rk-heroVisualTitle {
-    font-size: 15px;
-  }
-
-  .rk-layananInfoGrid,
   .rk-layananGrid {
     grid-template-columns: 1fr;
-  }
-
-  .rk-layananInfoCard {
-    height: auto;
-    min-height: 86px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rk-pageLayanan .rk-heroBtn,
   .rk-pageLayanan .rk-heroVisualFrame,
   .rk-pageLayanan .rk-heroVisualFrame img,
-  .rk-layananInfoCard,
-  .rk-layananCard {
+  .rk-layananCard,
+  .rk-layananBtn {
     transition: none !important;
   }
 
-  .rk-pageLayanan .rk-heroBtn:hover,
   .rk-pageLayanan .rk-heroVisual:hover .rk-heroVisualFrame,
   .rk-pageLayanan .rk-heroVisual:hover .rk-heroVisualFrame img,
-  .rk-layananInfoCard:hover,
-  .rk-layananCard:hover {
+  .rk-layananCard:hover,
+  .rk-layananBtn:hover {
     transform: none !important;
   }
 }

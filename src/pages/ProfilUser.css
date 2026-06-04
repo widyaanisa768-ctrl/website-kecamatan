@@ -1,0 +1,616 @@
+.rk-profileUserPage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 4% 26%, rgba(30, 136, 200, 0.16) 0 28px, transparent 29px),
+    radial-gradient(circle at 97% 18%, rgba(255, 255, 255, 0.94) 0 30px, transparent 31px),
+    radial-gradient(circle at 91% 17%, rgba(255, 255, 255, 0.74) 0 20px, transparent 21px),
+    linear-gradient(180deg, #eef8ff 0%, #f7fbff 36%, #ffffff 100%),
+    var(--rk-bg);
+}
+
+.rk-profileUserPage::before,
+.rk-profileUserPage::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.rk-profileUserPage::before {
+  left: -8vw;
+  right: -8vw;
+  bottom: -160px;
+  height: 40px;
+  background:
+    radial-gradient(44% 76% at 12% 42%, rgba(30, 136, 200, 0.14), transparent 72%),
+    radial-gradient(36% 62% at 82% 18%, rgba(30, 136, 200, 0.13), transparent 74%),
+    linear-gradient(135deg, rgba(210, 237, 255, 0.82), rgba(247, 252, 255, 0.7));
+  clip-path: polygon(0 32%, 8% 26%, 18% 38%, 30% 56%, 44% 62%, 56% 74%, 72% 64%, 86% 48%, 100% 40%, 100% 100%, 0 100%);
+}
+
+.rk-profileUserPage::after {
+  right: 28px;
+  bottom: 126px;
+  width: 148px;
+  height: 148px;
+  opacity: 0.26;
+  background-image: radial-gradient(rgba(30, 136, 200, 0.44) 2px, transparent 2px);
+  background-size: 17px 17px;
+}
+
+.rk-profileUserHero {
+  position: relative;
+  min-height: 218px;
+  padding: 34px 0 72px;
+  color: var(--rk-text);
+  overflow: hidden;
+  background:
+    radial-gradient(42% 90% at 78% 100%, rgba(30, 136, 200, 0.23), transparent 68%),
+    linear-gradient(98deg, rgba(235, 248, 255, 0.98) 0%, rgba(224, 243, 255, 0.94) 58%, rgba(245, 251, 255, 0.9) 100%);
+}
+
+.rk-profileUserHero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 78% 42%, rgba(30, 136, 200, 0.13) 0 110px, transparent 112px),
+    radial-gradient(circle at 90% 24%, rgba(255, 255, 255, 0.8) 0 24px, transparent 25px),
+    radial-gradient(circle at 84% 31%, rgba(255, 255, 255, 0.58) 0 15px, transparent 16px),
+    radial-gradient(circle at 11% 82%, rgba(30, 136, 200, 0.1) 0 58px, transparent 60px);
+  pointer-events: none;
+}
+
+.rk-profileUserHero::after {
+  content: '';
+  position: absolute;
+  left: -8vw;
+  right: -8vw;
+  bottom: -46px;
+  height: 104px;
+  background:
+    radial-gradient(45% 95% at 16% 0%, rgba(255, 255, 255, 0.95), transparent 72%),
+    radial-gradient(48% 95% at 78% 10%, rgba(214, 239, 255, 0.88), transparent 76%),
+    linear-gradient(180deg, rgba(218, 240, 255, 0.7), rgba(255, 255, 255, 0.96));
+  clip-path: polygon(0 36%, 12% 24%, 24% 34%, 38% 18%, 52% 34%, 66% 18%, 82% 26%, 100% 14%, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+.rk-profileUserHeroInner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+}
+
+.rk-profileUserHeroInner::before {
+  content: '';
+  position: absolute;
+  right: 24px;
+  top: 8px;
+  width: min(340px, 34vw);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.86), transparent 28%),
+    radial-gradient(circle at 50% 50%, rgba(30, 136, 200, 0.16), rgba(30, 136, 200, 0.04) 58%, transparent 70%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.rk-profileUserHeroInner::after {
+  content: '';
+  position: absolute;
+  right: 86px;
+  left: auto;
+  top: 34px;
+  width: 132px;
+  height: 96px;
+  opacity: 0.44;
+  background-image: radial-gradient(rgba(11, 79, 124, 0.28) 2px, transparent 2px);
+  background-size: 15px 15px;
+  pointer-events: none;
+}
+
+.rk-profileUserHero .rk-eyebrow {
+  margin-bottom: 12px;
+  color: #0b5f98;
+  letter-spacing: 0.35px;
+  font-size: 12px;
+}
+
+.rk-profileUserTitle {
+  margin: 0 0 10px;
+  font-size: clamp(34px, 4vw, 50px);
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: 0;
+  color: var(--rk-text);
+}
+
+.rk-profileUserSubtitle {
+  max-width: 600px;
+  margin: 0;
+  color: var(--rk-muted);
+  line-height: 1.55;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rk-profileUserSection {
+  position: relative;
+  z-index: 1;
+  margin-top: -54px;
+  padding: 0 0 52px;
+}
+
+.rk-profileUserGrid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.rk-profileUserSummary,
+.rk-profileUserFormCard {
+  border: 1px solid rgba(16, 52, 83, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92)),
+    radial-gradient(circle at 0% 0%, rgba(30, 136, 200, 0.12), transparent 36%);
+  box-shadow:
+    0 24px 54px rgba(16, 52, 83, 0.12),
+    0 8px 20px rgba(16, 52, 83, 0.06);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.rk-profileUserSummary {
+  position: sticky;
+  top: 94px;
+  overflow: hidden;
+  padding: 30px 28px 26px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.rk-profileUserSummary::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 118px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.72), transparent 34%),
+    linear-gradient(135deg, rgba(224, 243, 255, 0.95), rgba(255, 255, 255, 0.2));
+  pointer-events: none;
+}
+
+.rk-profileUserSummary > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rk-profileUserAvatarWrap {
+  width: 124px;
+  height: 124px;
+  border-radius: 999px;
+  padding: 5px;
+  background: linear-gradient(135deg, rgba(30, 136, 200, 0.92), rgba(11, 79, 124, 0.92));
+  box-shadow: 0 18px 34px rgba(16, 52, 83, 0.18);
+}
+
+.rk-profileUserAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+
+.rk-profileUserAvatar.isFallback {
+  color: #ffffff;
+  font-size: 34px;
+  font-weight: 950;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.32), transparent 34%),
+    linear-gradient(135deg, rgba(30, 136, 200, 0.95), rgba(11, 79, 124, 0.95));
+}
+
+.rk-profileUserName {
+  margin: 8px 0 0;
+  max-width: 100%;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 950;
+  text-align: center;
+  color: var(--rk-text);
+  overflow-wrap: anywhere;
+}
+
+.rk-profileUserUsername {
+  margin: 0;
+  color: var(--rk-muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.rk-profileUserInfoList {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.rk-profileUserInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: rgba(11, 79, 124, 0.045);
+  border: 1px solid rgba(11, 79, 124, 0.1);
+  color: rgba(29, 42, 58, 0.86);
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.rk-profileUserInfo svg {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  color: var(--rk-primary);
+  margin-top: 2px;
+}
+
+.rk-profileUserInfo span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rk-profileUserFormCard {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 32px 28px;
+}
+
+.rk-profileUserFormCard::before {
+  content: '';
+  position: absolute;
+  top: -84px;
+  right: -76px;
+  width: 210px;
+  height: 210px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(30, 136, 200, 0.12), rgba(30, 136, 200, 0) 68%);
+  pointer-events: none;
+}
+
+.rk-profileUserFormCard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rk-profileUserFormHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rk-profileUserFormTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: 0;
+  color: var(--rk-text);
+}
+
+.rk-profileUserAvatarBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 79, 124, 0.2);
+  background: rgba(11, 79, 124, 0.055);
+  color: var(--rk-primary);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-profileUserAvatarBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(11, 79, 124, 0.08);
+  box-shadow: 0 14px 28px rgba(16, 52, 83, 0.12);
+}
+
+.rk-profileUserAvatarBtn input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rk-profileUserNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(30, 136, 200, 0.08);
+  border: 1px solid rgba(30, 136, 200, 0.18);
+  color: rgba(11, 79, 124, 0.96);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.rk-profileUserNotice svg {
+  flex: 0 0 auto;
+}
+
+.rk-profileUserFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rk-profileUserField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rk-profileUserField.isWide {
+  grid-column: 1 / -1;
+}
+
+.rk-profileUserField > span {
+  color: rgba(29, 42, 58, 0.88);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.rk-profileUserInputWrap {
+  position: relative;
+  min-width: 0;
+}
+
+.rk-profileUserInputWrap svg {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 17px;
+  height: 17px;
+  transform: translateY(-50%);
+  color: rgba(29, 42, 58, 0.52);
+  pointer-events: none;
+}
+
+.rk-profileUserField input,
+.rk-profileUserField textarea {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 52, 83, 0.15);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--rk-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.rk-profileUserField input {
+  min-height: 52px;
+  padding: 12px 14px 12px 44px;
+}
+
+.rk-profileUserField textarea {
+  resize: vertical;
+  min-height: 116px;
+  padding: 13px;
+  line-height: 1.65;
+}
+
+.rk-profileUserField input:focus,
+.rk-profileUserField textarea:focus {
+  border-color: rgba(30, 136, 200, 0.55);
+  box-shadow: 0 0 0 4px rgba(30, 136, 200, 0.14);
+  background: #ffffff;
+}
+
+.rk-profileUserField input[readonly] {
+  color: rgba(29, 42, 58, 0.68);
+  background: rgba(245, 248, 252, 0.92);
+}
+
+.rk-profileUserActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.rk-profileUserSave {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--rk-secondary), var(--rk-primary));
+  box-shadow: 0 16px 30px rgba(11, 79, 124, 0.22);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 950;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-profileUserSave:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 18px 36px rgba(11, 79, 124, 0.26);
+}
+
+@media (max-width: 900px) {
+  .rk-profileUserHero {
+    min-height: 208px;
+    padding-bottom: 68px;
+  }
+
+  .rk-profileUserHeroInner {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .rk-profileUserHeroInner::before {
+    width: min(260px, 42vw);
+    margin-top: 0;
+  }
+
+  .rk-profileUserHeroInner::after {
+    right: 0;
+    top: 20px;
+  }
+
+  .rk-profileUserGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-profileUserSummary {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .rk-profileUserHero {
+    min-height: 0;
+    padding: 26px 0 62px;
+  }
+
+  .rk-profileUserHeroInner {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .rk-profileUserHeroInner::before {
+    right: -72px;
+    top: 8px;
+    width: 230px;
+    opacity: 0.48;
+  }
+
+  .rk-profileUserHeroInner::after {
+    display: none;
+  }
+
+  .rk-profileUserSection {
+    margin-top: -38px;
+    padding-bottom: 40px;
+  }
+
+  .rk-profileUserSummary,
+  .rk-profileUserFormCard {
+    border-radius: 20px;
+  }
+
+  .rk-profileUserSummary {
+    padding: 24px 20px 22px;
+  }
+
+  .rk-profileUserFormCard {
+    padding: 22px 20px;
+  }
+
+  .rk-profileUserFormHead {
+    display: grid;
+  }
+
+  .rk-profileUserAvatarBtn {
+    width: 100%;
+  }
+
+  .rk-profileUserFields {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-profileUserActions {
+    justify-content: stretch;
+  }
+
+  .rk-profileUserSave {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .rk-profileUserHero {
+    padding: 24px 0 56px;
+  }
+
+  .rk-profileUserHeroInner::before {
+    aspect-ratio: 1.65;
+    width: 210px;
+  }
+
+  .rk-profileUserTitle {
+    font-size: 32px;
+  }
+
+  .rk-profileUserSubtitle {
+    font-size: 13px;
+  }
+
+  .rk-profileUserAvatarWrap {
+    width: 112px;
+    height: 112px;
+  }
+
+  .rk-profileUserName {
+    font-size: 20px;
+  }
+
+  .rk-profileUserFormTitle {
+    font-size: 23px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-profileUserAvatarBtn,
+  .rk-profileUserField input,
+  .rk-profileUserField textarea,
+  .rk-profileUserSave {
+    transition: none !important;
+  }
+}

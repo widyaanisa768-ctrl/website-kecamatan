@@ -1,7 +1,31 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { STATUS, getAuth } from '../lib/rkLocal'
-import { getDetailPengajuan, getPengajuanSaya } from '../services/pengajuanService'
+import {
+  FiAlertCircle,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiDownload,
+  FiEdit2,
+  FiEye,
+  FiFileText,
+  FiInfo,
+  FiLoader,
+  FiSave,
+  FiShield,
+  FiTrash2,
+  FiUser,
+  FiX,
+} from 'react-icons/fi'
+import { getAuth } from '../lib/rkLocal'
+import {
+  deletePengajuan,
+  getDetailPengajuan,
+  getPengajuanId,
+  getPengajuanSaya,
+  updatePengajuan,
+} from '../services/pengajuanService'
+import './PengajuanSaya.css'
 
 function safeParse(raw, fallback = null) {
   try {
@@ -40,50 +64,236 @@ function formatDateTime(date) {
   }
 }
 
-function isEditable(status) {
-  return status === STATUS.MENUNGGU || status === STATUS.PERLU_PERBAIKAN || status === STATUS.DITOLAK
+function statusKind(status) {
+  const value = String(status || '').trim().toLowerCase()
+  if (value.includes('tolak') || value.includes('perbaikan')) return 'reject'
+  if (value.includes('selesai')) return 'done'
+  if (value.includes('setuju') || value.includes('diterima')) return 'approve'
+  if (value.includes('proses')) return 'process'
+  if (value.includes('menunggu') || value.includes('verifikasi')) return 'waiting'
+  return 'unknown'
+}
+
+function canManagePengajuan(status) {
+  const value = String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+  return value === 'menunggu' || value === 'menunggu verifikasi'
 }
 
 function statusLabel(status) {
-  if (status === STATUS.MENUNGGU) return 'Menunggu verifikasi'
-  if (status === STATUS.DIPROSES) return 'Sedang diproses'
-  if (status === STATUS.DISETUJUI) return 'Diterima'
-  if (status === STATUS.SELESAI) return 'Selesai'
-  if (status === STATUS.PERLU_PERBAIKAN) return 'Ditolak'
-  if (status === STATUS.DITOLAK) return 'Ditolak'
+  const kind = statusKind(status)
+  if (kind === 'waiting') return 'Menunggu Verifikasi'
+  if (kind === 'process') return 'Diproses'
+  if (kind === 'approve') return 'Disetujui'
+  if (kind === 'done') return 'Selesai'
+  if (kind === 'reject') return 'Ditolak'
   return status || '-'
 }
 
 function badgeClass(status) {
-  if (status === STATUS.MENUNGGU) return 'is-waiting'
-  if (status === STATUS.DIPROSES) return 'is-process'
-  if (status === STATUS.DISETUJUI) return 'is-approve'
-  if (status === STATUS.SELESAI) return 'is-done'
-  if (status === STATUS.PERLU_PERBAIKAN || status === STATUS.DITOLAK) return 'is-reject'
-  return ''
+  return `is-${statusKind(status)}`
 }
 
 function statusMessage(status) {
-  if (status === STATUS.MENUNGGU) return 'Pengajuan Anda sudah berhasil dikirim dan sedang menunggu verifikasi petugas.'
-  if (status === STATUS.DIPROSES) return 'Pengajuan Anda sedang diproses oleh petugas.'
-  if (status === STATUS.DISETUJUI) return 'Pengajuan Anda telah diterima.'
-  if (status === STATUS.SELESAI) return 'Dokumen Anda sudah selesai dan dapat diunduh.'
-  if (status === STATUS.PERLU_PERBAIKAN) return 'Pengajuan Anda ditolak. Silakan cek catatan petugas.'
-  if (status === STATUS.DITOLAK) return 'Pengajuan Anda ditolak. Silakan cek catatan petugas.'
+  const kind = statusKind(status)
+  if (kind === 'waiting') return 'Pengajuan berhasil dikirim dan sedang menunggu verifikasi petugas.'
+  if (kind === 'process') return 'Pengajuan sedang diproses oleh petugas.'
+  if (kind === 'approve') return 'Pengajuan telah disetujui oleh petugas.'
+  if (kind === 'done') return 'Dokumen sudah selesai dan dapat diunduh.'
+  if (kind === 'reject') return 'Pengajuan ditolak atau perlu diperbaiki. Silakan periksa catatan petugas.'
   return ''
 }
 
-function downloadHasilSurat(hasilSurat) {
-  if (!hasilSurat?.content || !hasilSurat?.filename) return
-  const blob = new Blob([hasilSurat.content], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
+const HIDDEN_DATA_KEYS = new Set([
+  '__endpoint',
+  'created_by',
+  'created_at',
+  'createdat',
+  'updated_at',
+  'updatedat',
+  'created',
+  'tanggal_pengajuan',
+  'tanggalpengajuan',
+  'tanggal_update',
+  'tanggalupdate',
+  'id_pengajuan',
+  'status',
+  'status_pengajuan',
+  'statuspengajuan',
+  'id',
+  '_id',
+  'uuid',
+  'pengajuan_id',
+  'jenis_layanan',
+  'layanan',
+  'layanan_path',
+  'layananpath',
+  'service',
+  'service_key',
+  'servicekey',
+  'title',
+  'endpoint',
+  'user_id',
+  'userid',
+  'id_user',
+  'pemohon_id',
+  'masyarakat_id',
+  'dokumen',
+  'dokumen_meta',
+  'dokumenmeta',
+  'data_form',
+  'dataform',
+  'data',
+  'file_hasil',
+  'dokumen_hasil',
+  'surat_hasil',
+  'url_hasil',
+  'hasil_url',
+  'file_url',
+  'hasil_surat',
+  'hasilsurat',
+  'catatan_petugas',
+  'catatanpetugas',
+  'alasan_penolakan',
+  'alasanpenolakan',
+])
+
+const LABEL_OVERRIDES = {
+  no_hp: 'Nomor HP',
+  nomor_hp: 'Nomor HP',
+  nik: 'NIK',
+  jenis_layanan: 'Jenis Layanan',
+  nama_pemohon: 'Nama Pemohon',
+  nama_peneliti: 'Nama Peneliti',
+  lokasi_penelitian: 'Lokasi Penelitian',
+  waktu_penelitian: 'Waktu Penelitian',
+}
+
+function humanizeLabel(key) {
+  const normalized = String(key || '').trim().toLowerCase()
+  if (LABEL_OVERRIDES[normalized]) return LABEL_OVERRIDES[normalized]
+  return normalized
+    .replace(/^__/, '')
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function formatDataValue(value) {
+  if (Array.isArray(value)) return value.map(formatDataValue).join(', ')
+  if (value && typeof value === 'object') {
+    if (value.name) return String(value.name)
+    return Object.entries(value)
+      .map(([key, nested]) => `${humanizeLabel(key)}: ${formatDataValue(nested)}`)
+      .join(', ')
+  }
+  return String(value)
+}
+
+const RESULT_FILE_KEYS = [
+  'file_hasil',
+  'dokumen_hasil',
+  'surat_hasil',
+  'url_hasil',
+  'hasil_url',
+  'file_url',
+  'hasilSurat',
+  'hasil_surat',
+]
+
+function getResultFile(item) {
+  if (!item || typeof item !== 'object') return null
+  for (const key of RESULT_FILE_KEYS) {
+    const value = item[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (value && typeof value === 'object') {
+      const url = value.url || value.href || value.path || value.download_url || value.file_url || ''
+      if (String(url).trim() || value.content) return value
+    }
+  }
+  return null
+}
+
+function triggerResultDownload(resultFile) {
+  if (!resultFile) return
+  let url = ''
+  let revokeAfter = false
+  let filename = ''
+
+  if (typeof resultFile === 'string') {
+    url = resultFile
+  } else if (resultFile.content) {
+    const blob = new Blob([resultFile.content], { type: resultFile.type || 'application/octet-stream' })
+    url = URL.createObjectURL(blob)
+    revokeAfter = true
+    filename = resultFile.filename || resultFile.name || 'surat-hasil'
+  } else {
+    url = resultFile.url || resultFile.href || resultFile.path || resultFile.download_url || resultFile.file_url || ''
+    filename = resultFile.filename || resultFile.name || ''
+  }
+
+  if (!url) return
   const a = document.createElement('a')
   a.href = url
-  a.download = hasilSurat.filename
+  if (filename) a.download = filename
+  if (/^https?:\/\//i.test(url)) {
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+  }
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  if (revokeAfter) URL.revokeObjectURL(url)
+}
+
+function getRejectReason(item) {
+  return (
+    item?.alasan_penolakan ||
+    item?.alasanPenolakan ||
+    item?.catatan_petugas ||
+    item?.catatanPetugas ||
+    item?.catatan ||
+    item?.alasan ||
+    ''
+  )
+}
+
+function isSafeEditableEntry(key, value) {
+  const normalizedKey = String(key || '').trim().toLowerCase()
+  if (!normalizedKey || normalizedKey.startsWith('__') || HIDDEN_DATA_KEYS.has(normalizedKey)) return false
+  if (/(^|_)(id|uuid)$/.test(normalizedKey)) return false
+  if (normalizedKey.includes('file') || normalizedKey.includes('dokumen') || normalizedKey.includes('hasil')) return false
+  return ['string', 'number', 'boolean'].includes(typeof value) || value === null
+}
+
+function getEditableSource(item) {
+  if (item?.data_form && typeof item.data_form === 'object' && !Array.isArray(item.data_form)) {
+    return { type: 'data_form', data: item.data_form }
+  }
+  if (item?.data && typeof item.data === 'object' && !Array.isArray(item.data)) {
+    return { type: 'data', data: item.data }
+  }
+  return { type: 'item', data: item || {} }
+}
+
+function inputTypeFor(key, value) {
+  const normalizedKey = String(key || '').toLowerCase()
+  if (typeof value === 'number') return 'number'
+  if (normalizedKey.includes('email')) return 'email'
+  if (normalizedKey === 'no_hp' || normalizedKey.includes('telepon')) return 'tel'
+  if ((normalizedKey.includes('tanggal') || normalizedKey.includes('waktu')) && /^\d{4}-\d{2}-\d{2}/.test(String(value || ''))) {
+    return 'date'
+  }
+  return 'text'
+}
+
+function isTextareaField(key) {
+  const value = String(key || '').toLowerCase()
+  return value.includes('alamat') || value.includes('keterangan') || value.includes('catatan') || value.includes('deskripsi')
 }
 
 export default function PengajuanSaya({ variant = 'default' } = {}) {
@@ -91,8 +301,34 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const auth = getAuth()
   const [items, setItems] = useState([])
   const [active, setActive] = useState(null)
+  const [editItem, setEditItem] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [editSourceType, setEditSourceType] = useState('item')
   const [loading, setLoading] = useState(false)
+  const [actionBusy, setActionBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState(null)
+
+  const refreshItems = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await getPengajuanSaya()
+      if (!res?.success) {
+        setItems([])
+        setError(res?.message || 'Gagal memuat pengajuan.')
+        return false
+      }
+      setItems(res.items || [])
+      return true
+    } catch (err) {
+      setItems([])
+      setError(err?.message || 'Gagal memuat pengajuan.')
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     const token = getStoredToken()
@@ -102,34 +338,20 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
       return undefined
     }
 
-    const refresh = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const res = await getPengajuanSaya()
-        if (!res?.success) {
-          setItems([])
-          setError(res?.message || 'Gagal memuat pengajuan.')
-          return
-        }
-        setItems(res.items || [])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    void refresh()
-    window.addEventListener('focus', refresh)
-    window.addEventListener('storage', refresh)
+    void refreshItems()
+    window.addEventListener('focus', refreshItems)
+    window.addEventListener('storage', refreshItems)
     return () => {
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener('storage', refresh)
+      window.removeEventListener('focus', refreshItems)
+      window.removeEventListener('storage', refreshItems)
     }
-  }, [navigate])
+  }, [navigate, refreshItems])
 
-  function getId(item) {
-    return item?.id || item?._id || item?.pengajuan_id || item?.uuid || ''
-  }
+  useEffect(() => {
+    if (!notice) return undefined
+    const timeoutId = window.setTimeout(() => setNotice(null), 4500)
+    return () => window.clearTimeout(timeoutId)
+  }, [notice])
 
   function getLayanan(item) {
     return item?.jenis_layanan || item?.layanan || item?.service || item?.title || '-'
@@ -166,7 +388,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   }
 
   function getStatus(item) {
-    return item?.status || item?.status_pengajuan || item?.statusPengajuan || STATUS.MENUNGGU
+    return item?.status || item?.status_pengajuan || item?.statusPengajuan || ''
   }
 
   const visibleItems = useMemo(() => {
@@ -246,26 +468,33 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
 
   const counts = useMemo(() => {
     const list = Array.isArray(visibleItems) ? visibleItems : []
-    const isWaiting = (s) => s === STATUS.MENUNGGU
-    const isProcess = (s) => s === STATUS.DIPROSES
-    const isDone = (s) => s === STATUS.SELESAI || s === STATUS.DISETUJUI
     return {
       total: list.length,
-      menunggu: list.filter((it) => isWaiting(getStatus(it))).length,
-      diproses: list.filter((it) => isProcess(getStatus(it))).length,
-      selesai: list.filter((it) => isDone(getStatus(it))).length,
+      menunggu: list.filter((it) => statusKind(getStatus(it)) === 'waiting').length,
+      diproses: list.filter((it) => statusKind(getStatus(it)) === 'process').length,
+      selesai: list.filter((it) => ['done', 'approve'].includes(statusKind(getStatus(it)))).length,
     }
   }, [visibleItems])
 
   const activeStatus = getStatus(active)
-  const canEdit = isEditable(activeStatus)
-  const canDownload = activeStatus === STATUS.SELESAI && !!active?.hasilSurat?.filename
+  const activeKind = statusKind(activeStatus)
+  const activeCanManage = canManagePengajuan(activeStatus)
+  const activeResultFile = getResultFile(active)
+  const activeCanDownload = ['done', 'approve'].includes(activeKind) && !!activeResultFile
+  const activeRejectReason = getRejectReason(active)
 
   const dataEntries = useMemo(() => {
     if (!active || typeof active !== 'object') return []
     const data = active?.data_form || active?.data
     const source = data && typeof data === 'object' ? data : active
-    return Object.entries(source).filter(([, v]) => v !== undefined && v !== null && String(v).trim?.() !== '')
+    return Object.entries(source).filter(([key, value]) => {
+      const normalizedKey = String(key || '').toLowerCase()
+      if (normalizedKey.startsWith('__') || HIDDEN_DATA_KEYS.has(normalizedKey)) return false
+      if (value === undefined || value === null) return false
+      if (typeof value === 'string' && !value.trim()) return false
+      if (source === active && typeof value === 'object') return false
+      return true
+    })
   }, [active])
 
   function close() {
@@ -273,21 +502,115 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   }
 
   function onDetail(item) {
-    const id = getId(item)
+    const id = getPengajuanId(item)
     if (!id) {
       setActive(item)
       return
     }
 
     void (async () => {
-      const res = await getDetailPengajuan(id)
-      if (res?.success) setActive(res.data || item)
-      else setActive(item)
+      try {
+        const res = await getDetailPengajuan(id)
+        if (res?.success) setActive(res.data || item)
+        else setActive(item)
+      } catch {
+        setActive(item)
+      }
     })()
   }
 
+  function openEdit(item) {
+    if (!canManagePengajuan(getStatus(item))) {
+      setNotice({ type: 'error', message: 'Pengajuan hanya dapat diedit saat Menunggu Verifikasi.' })
+      return
+    }
+
+    const source = getEditableSource(item)
+    const entries = Object.entries(source.data).filter(([key, value]) => isSafeEditableEntry(key, value))
+    if (entries.length === 0) {
+      setNotice({ type: 'error', message: 'Tidak ada data pengajuan yang aman untuk diedit.' })
+      return
+    }
+
+    setEditItem(item)
+    setEditSourceType(source.type)
+    setEditForm(Object.fromEntries(entries))
+    setActive(null)
+  }
+
+  function closeEdit() {
+    if (actionBusy) return
+    setEditItem(null)
+    setEditForm({})
+    setEditSourceType('item')
+  }
+
+  function setEditValue(key, value) {
+    setEditForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function onEditSubmit(event) {
+    event.preventDefault()
+    if (!editItem || !canManagePengajuan(getStatus(editItem))) {
+      setNotice({ type: 'error', message: 'Pengajuan hanya dapat diedit saat Menunggu Verifikasi.' })
+      return
+    }
+
+    const id = getPengajuanId(editItem)
+    const endpoint = editItem?.__endpoint || ''
+    let payloadEdit = { ...editForm }
+    if (editSourceType === 'data_form') {
+      payloadEdit = { data_form: { ...editForm } }
+      for (const [key, value] of Object.entries(editForm)) {
+        if (Object.prototype.hasOwnProperty.call(editItem, key)) payloadEdit[key] = value
+      }
+    }
+
+    setActionBusy(true)
+    try {
+      const res = await updatePengajuan(endpoint, id, payloadEdit)
+      if (!res?.success) {
+        setNotice({ type: 'error', message: res?.message || 'Gagal memperbarui pengajuan.' })
+        return
+      }
+      setEditItem(null)
+      setEditForm({})
+      setNotice({ type: 'success', message: res?.message || 'Pengajuan berhasil diperbarui.' })
+      await refreshItems()
+    } catch (err) {
+      setNotice({ type: 'error', message: err?.message || 'Gagal memperbarui pengajuan.' })
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function onDelete(item) {
+    if (!canManagePengajuan(getStatus(item))) {
+      setNotice({ type: 'error', message: 'Pengajuan hanya dapat dihapus saat Menunggu Verifikasi.' })
+      return
+    }
+    if (!window.confirm('Yakin ingin menghapus pengajuan ini?')) return
+
+    setActionBusy(true)
+    try {
+      const res = await deletePengajuan(item?.__endpoint || '', getPengajuanId(item))
+      if (!res?.success) {
+        setNotice({ type: 'error', message: res?.message || 'Gagal menghapus pengajuan.' })
+        return
+      }
+      setActive(null)
+      setEditItem(null)
+      setNotice({ type: 'success', message: res?.message || 'Pengajuan berhasil dihapus.' })
+      await refreshItems()
+    } catch (err) {
+      setNotice({ type: 'error', message: err?.message || 'Gagal menghapus pengajuan.' })
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   return (
-    <section className="rk-pageSection" aria-label="Riwayat pengajuan saya">
+    <section className="rk-pageSection rk-pengajuanSaya" aria-label="Riwayat pengajuan saya">
       <style>{`
         .rk-mySubWrap { display: grid; gap: 14px; }
         .rk-mySubHead { display:flex; align-items:flex-end; justify-content:space-between; gap: 12px; }
@@ -337,6 +660,16 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         @media (max-width: 520px) { .rk-summaryGrid { grid-template-columns: 1fr; } .rk-mySubRow { align-items:flex-start; } }
       `}</style>
 
+      {notice ? (
+        <div className={`rk-pengajuanNotice is-${notice.type || 'info'}`} role="status" aria-live="polite">
+          {notice.type === 'success' ? <FiCheckCircle aria-hidden="true" /> : <FiAlertCircle aria-hidden="true" />}
+          <span>{notice.message}</span>
+          <button type="button" aria-label="Tutup notifikasi" onClick={() => setNotice(null)}>
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
+
       <div className="rk-container">
         <div className="rk-mySubWrap">
           {variant === 'default' ? (
@@ -350,24 +683,36 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
           ) : (
             <div className="rk-summaryGrid" aria-label="Ringkasan status pengajuan">
               <div className="rk-summaryCard">
-                <div className="rk-summaryLabel">Total Pengajuan</div>
-                <div className="rk-summaryValue">{loading ? '—' : counts.total}</div>
-                <div className="rk-summaryHint">Semua layanan</div>
+                <span className="rk-summaryIcon"><FiFileText aria-hidden="true" /></span>
+                <div>
+                  <div className="rk-summaryLabel">Total Pengajuan</div>
+                  <div className="rk-summaryValue">{loading ? '—' : counts.total}</div>
+                  <div className="rk-summaryHint">Semua layanan</div>
+                </div>
               </div>
               <div className="rk-summaryCard isWaiting">
-                <div className="rk-summaryLabel">Menunggu Verifikasi</div>
-                <div className="rk-summaryValue">{loading ? '—' : counts.menunggu}</div>
-                <div className="rk-summaryHint">Belum diproses</div>
+                <span className="rk-summaryIcon"><FiClock aria-hidden="true" /></span>
+                <div>
+                  <div className="rk-summaryLabel">Menunggu Verifikasi</div>
+                  <div className="rk-summaryValue">{loading ? '—' : counts.menunggu}</div>
+                  <div className="rk-summaryHint">Belum diproses</div>
+                </div>
               </div>
               <div className="rk-summaryCard isProcess">
-                <div className="rk-summaryLabel">Diproses</div>
-                <div className="rk-summaryValue">{loading ? '—' : counts.diproses}</div>
-                <div className="rk-summaryHint">Sedang berjalan</div>
+                <span className="rk-summaryIcon"><FiLoader aria-hidden="true" /></span>
+                <div>
+                  <div className="rk-summaryLabel">Diproses</div>
+                  <div className="rk-summaryValue">{loading ? '—' : counts.diproses}</div>
+                  <div className="rk-summaryHint">Sedang berjalan</div>
+                </div>
               </div>
               <div className="rk-summaryCard isDone">
-                <div className="rk-summaryLabel">Selesai / Disetujui</div>
-                <div className="rk-summaryValue">{loading ? '—' : counts.selesai}</div>
-                <div className="rk-summaryHint">Sudah final</div>
+                <span className="rk-summaryIcon"><FiCheckCircle aria-hidden="true" /></span>
+                <div>
+                  <div className="rk-summaryLabel">Selesai / Disetujui</div>
+                  <div className="rk-summaryValue">{loading ? '—' : counts.selesai}</div>
+                  <div className="rk-summaryHint">Sudah final</div>
+                </div>
               </div>
             </div>
           )}
@@ -383,26 +728,62 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                 <div style={{ fontSize: 13, opacity: 0.85 }}>Silakan ajukan layanan online terlebih dahulu, lalu status akan muncul di sini.</div>
               </div>
             ) : (
-              visibleItems.map((item) => (
-                <div key={getId(item) || JSON.stringify(item)} className="rk-mySubRow">
-                  <div className="rk-mySubMeta">
-                    <div className="rk-mySubName">{getNama(item)}</div>
-                    {getId(item) ? <div className="rk-mySubNo">No: {getId(item)}</div> : null}
-                    <div className="rk-mySubSub">
-                      {getLayanan(item)} • {formatDateTime(getCreatedAt(item))}
+              visibleItems.map((item) => {
+                const itemStatus = getStatus(item)
+                const itemKind = statusKind(itemStatus)
+                const canManage = canManagePengajuan(itemStatus)
+                const resultFile = getResultFile(item)
+                const canDownloadResult = ['done', 'approve'].includes(itemKind) && !!resultFile
+                const rejectReason = getRejectReason(item)
+
+                return (
+                  <div key={getPengajuanId(item) || JSON.stringify(item)} className="rk-mySubRow">
+                    <span className="rk-mySubServiceIcon" aria-hidden="true"><FiFileText /></span>
+                    <div className="rk-mySubMeta">
+                      <div className="rk-mySubName">{getNama(item)}</div>
+                      {getPengajuanId(item) ? <div className="rk-mySubNo">No: {getPengajuanId(item)}</div> : null}
+                      <div className="rk-mySubSub">
+                        {getLayanan(item)} • {formatDateTime(getCreatedAt(item))}
+                      </div>
+                      {itemKind === 'process' ? <div className="rk-rowStatusInfo">Pengajuan sedang diproses petugas.</div> : null}
+                      {itemKind === 'reject' && rejectReason ? (
+                        <div className="rk-rowStatusInfo isReject">Alasan penolakan: {rejectReason}</div>
+                      ) : null}
+                      {['done', 'approve'].includes(itemKind) && !resultFile ? (
+                        <div className="rk-rowStatusInfo">Dokumen hasil belum tersedia.</div>
+                      ) : null}
+                    </div>
+
+                    <div className="rk-mySubActions">
+                      <span className={`rk-mySubBadge ${badgeClass(itemStatus)}`} title={itemStatus}>
+                        {statusLabel(itemStatus)}
+                      </span>
+                      <button type="button" className="rk-miniBtn2 isDetail" onClick={() => onDetail(item)}>
+                        <FiEye aria-hidden="true" />
+                        Detail
+                      </button>
+                      {canManage ? (
+                        <>
+                          <button type="button" className="rk-miniBtn2 isEdit" onClick={() => openEdit(item)} disabled={actionBusy}>
+                            <FiEdit2 aria-hidden="true" />
+                            Edit
+                          </button>
+                          <button type="button" className="rk-miniBtn2 isDelete" onClick={() => void onDelete(item)} disabled={actionBusy}>
+                            <FiTrash2 aria-hidden="true" />
+                            Hapus
+                          </button>
+                        </>
+                      ) : null}
+                      {canDownloadResult ? (
+                        <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(resultFile)}>
+                          <FiDownload aria-hidden="true" />
+                          Unduh Surat
+                        </button>
+                      ) : null}
                     </div>
                   </div>
-
-                  <div className="rk-mySubActions">
-                    <span className={`rk-mySubBadge ${badgeClass(getStatus(item))}`} title={getStatus(item)}>
-                      {statusLabel(getStatus(item))}
-                    </span>
-                    <button type="button" className="rk-miniBtn2" onClick={() => onDetail(item)}>
-                      Detail
-                    </button>
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
@@ -415,54 +796,59 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               <div>
                 <div className="rk-modalTitle">Detail Pengajuan</div>
                 <div style={{ marginTop: 4, opacity: 0.9, fontSize: 13 }}>
-                  {getId(active)} • {getLayanan(active)}
+                  {getPengajuanId(active)} • {getLayanan(active)}
                 </div>
               </div>
               <button type="button" className="rk-miniBtn2" onClick={close}>
+                <FiX aria-hidden="true" />
                 Tutup
               </button>
             </div>
 
             <div className="rk-modalBody">
-              <div className={`rk-statusBox ${activeStatus === STATUS.DITOLAK || activeStatus === STATUS.PERLU_PERBAIKAN ? 'isReject' : ''}`}>
+              <div className={`rk-statusBox is-${activeKind}`}>
                 <div className="rk-statusTop">
-                  <div style={{ fontWeight: 900, color: '#111' }}>Status: {statusLabel(activeStatus)}</div>
-                  {canDownload ? (
-                    <button type="button" className="rk-miniBtn2" onClick={() => downloadHasilSurat(active.hasilSurat)}>
-                      Unduh Dokumen
+                  <span className={`rk-mySubBadge ${badgeClass(activeStatus)}`}>{statusLabel(activeStatus)}</span>
+                  {activeCanDownload ? (
+                    <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
+                      <FiDownload aria-hidden="true" />
+                      Unduh Surat
                     </button>
                   ) : null}
                 </div>
                 <div style={{ marginTop: 6, opacity: 0.95 }}>{statusMessage(activeStatus)}</div>
-                {(activeStatus === STATUS.DITOLAK || activeStatus === STATUS.PERLU_PERBAIKAN) && active?.catatanPetugas ? (
+                {activeKind === 'reject' && activeRejectReason ? (
                   <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,.08)' }}>
-                    <div style={{ fontWeight: 900, color: '#111' }}>Catatan Petugas</div>
-                    <div style={{ marginTop: 4, opacity: 0.95 }}>{active.catatanPetugas}</div>
+                    <div style={{ fontWeight: 900, color: '#111' }}>Alasan Penolakan</div>
+                    <div style={{ marginTop: 4, opacity: 0.95 }}>{activeRejectReason}</div>
                   </div>
+                ) : null}
+                {['done', 'approve'].includes(activeKind) && !activeResultFile ? (
+                  <div className="rk-resultUnavailable">Dokumen hasil belum tersedia.</div>
                 ) : null}
               </div>
 
               <div className="rk-mySubCard" aria-label="Ringkasan data pengajuan">
                 <dl className="rk-kv">
-                  <dt>Tanggal</dt>
+                  <dt><FiCalendar aria-hidden="true" /> Tanggal</dt>
                   <dd>{formatDateTime(getCreatedAt(active))}</dd>
-                  <dt>Terakhir Update</dt>
+                  <dt><FiClock aria-hidden="true" /> Terakhir Update</dt>
                   <dd>{formatDateTime(getUpdatedAt(active))}</dd>
-                  <dt>Keterangan</dt>
+                  <dt><FiInfo aria-hidden="true" /> Keterangan</dt>
                   <dd>{active?.keterangan || active?.keteranganPemohon || '-'}</dd>
                 </dl>
               </div>
 
               <div className="rk-mySubCard" aria-label="Data form">
-                <div style={{ fontWeight: 900, color: '#111', marginBottom: 8 }}>Data Form</div>
+                <div className="rk-dataFormTitle"><FiUser aria-hidden="true" /> Data Pemohon</div>
                 {dataEntries.length === 0 ? (
                   <div style={{ opacity: 0.9 }}>Data form tersimpan belum tersedia (versi pengajuan lama).</div>
                 ) : (
                   <dl className="rk-kv">
                     {dataEntries.map(([k, v]) => (
                       <div key={k} style={{ display: 'contents' }}>
-                        <dt>{k}</dt>
-                        <dd>{String(v)}</dd>
+                        <dt>{humanizeLabel(k)}</dt>
+                        <dd>{formatDataValue(v)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -471,17 +857,105 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
             </div>
 
             <div className="rk-modalFoot">
-              {canEdit ? (
-                <button type="button" className="rk-miniBtn2" disabled>
-                  Edit/Hapus belum tersedia
+              {activeCanManage ? (
+                <>
+                  <button type="button" className="rk-miniBtn2 isEdit" onClick={() => openEdit(active)} disabled={actionBusy}>
+                    <FiEdit2 aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button type="button" className="rk-miniBtn2 isDelete" onClick={() => void onDelete(active)} disabled={actionBusy}>
+                    <FiTrash2 aria-hidden="true" />
+                    Hapus
+                  </button>
+                </>
+              ) : null}
+              {activeKind === 'process' ? (
+                <div className="rk-lockedInfo"><FiShield aria-hidden="true" /> Pengajuan sedang diproses petugas.</div>
+              ) : null}
+              {['done', 'approve'].includes(activeKind) && activeCanDownload ? (
+                <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
+                  <FiDownload aria-hidden="true" />
+                  Unduh Surat
                 </button>
-              ) : (
-                <button type="button" className="rk-miniBtn2" disabled>
-                  Status terkunci setelah diproses
-                </button>
-              )}
+              ) : null}
+              {['done', 'approve'].includes(activeKind) && !activeResultFile ? (
+                <div className="rk-lockedInfo"><FiInfo aria-hidden="true" /> Dokumen hasil belum tersedia.</div>
+              ) : null}
+              {activeKind === 'reject' ? (
+                <div className="rk-lockedInfo"><FiAlertCircle aria-hidden="true" /> Pengajuan ditolak dan tidak dapat diubah.</div>
+              ) : null}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {editItem ? (
+        <div className="rk-modalOverlay" role="dialog" aria-modal="true" aria-labelledby="rk-editPengajuanTitle">
+          <form className="rk-modal rk-editModal" onSubmit={onEditSubmit}>
+            <div className="rk-modalHead">
+              <div>
+                <div id="rk-editPengajuanTitle" className="rk-modalTitle">Edit Pengajuan</div>
+                <div className="rk-modalSubtitle">
+                  {getPengajuanId(editItem)} • {getLayanan(editItem)}
+                </div>
+              </div>
+              <button type="button" className="rk-miniBtn2" onClick={closeEdit} disabled={actionBusy}>
+                <FiX aria-hidden="true" />
+                Tutup
+              </button>
+            </div>
+
+            <div className="rk-modalBody">
+              <div className="rk-editInfo">
+                <FiInfo aria-hidden="true" />
+                Data dapat diubah selama status masih Menunggu Verifikasi.
+              </div>
+              <div className="rk-editGrid">
+                {Object.entries(editForm).map(([key, value]) => (
+                  <div className={`rk-editField ${isTextareaField(key) ? 'isWide' : ''}`} key={key}>
+                    <label htmlFor={`edit-${key}`}>{humanizeLabel(key)}</label>
+                    {typeof value === 'boolean' ? (
+                      <select
+                        id={`edit-${key}`}
+                        value={String(value)}
+                        onChange={(event) => setEditValue(key, event.target.value === 'true')}
+                        disabled={actionBusy}
+                      >
+                        <option value="true">Ya</option>
+                        <option value="false">Tidak</option>
+                      </select>
+                    ) : isTextareaField(key) ? (
+                      <textarea
+                        id={`edit-${key}`}
+                        value={value ?? ''}
+                        onChange={(event) => setEditValue(key, event.target.value)}
+                        rows={3}
+                        disabled={actionBusy}
+                      />
+                    ) : (
+                      <input
+                        id={`edit-${key}`}
+                        type={inputTypeFor(key, value)}
+                        value={inputTypeFor(key, value) === 'date' ? String(value || '').slice(0, 10) : value ?? ''}
+                        onChange={(event) => setEditValue(key, event.target.value)}
+                        disabled={actionBusy}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rk-modalFoot">
+              <button type="button" className="rk-miniBtn2" onClick={closeEdit} disabled={actionBusy}>
+                Batal
+              </button>
+              <button type="submit" className="rk-miniBtn2 isSave" disabled={actionBusy}>
+                {actionBusy ? <FiLoader aria-hidden="true" /> : <FiSave aria-hidden="true" />}
+                {actionBusy ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </form>
         </div>
       ) : null}
     </section>

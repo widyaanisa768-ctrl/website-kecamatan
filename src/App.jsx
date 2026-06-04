@@ -3,6 +3,7 @@ import Login from './pages/login'
 import Register from './pages/register'
 import HomeModern from './pages/HomeModern'
 import Profil from './pages/Profil'
+import ProfilUser from './pages/ProfilUser'
 import Layanan from './pages/Layanan'
 import Galeri from './pages/Galeri'
 import Kontak from './pages/Kontak'
@@ -47,6 +48,14 @@ function App() {
         {/* Halaman publik */}
         <Route path="/home" element={<HomeModern />} />
         <Route path="/profil" element={<Profil />} />
+        <Route
+          path="/profil-saya"
+          element={
+            <RequireMasyarakat>
+              <ProfilUser />
+            </RequireMasyarakat>
+          }
+        />
         <Route
           path="/layanan"
           element={

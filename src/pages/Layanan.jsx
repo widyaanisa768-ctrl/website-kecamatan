@@ -70,17 +70,6 @@ export default function Layanan() {
     []
   )
 
-  const scrollToDaftarLayanan = (e) => {
-    e.preventDefault()
-    const targetId = 'daftar-layanan'
-    const target = document.getElementById(targetId)
-    if (!target) return
-
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    window.history?.replaceState?.(null, '', `#${targetId}`)
-    target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
-  }
-
   return (
     <div className="rk-portal rk-pageLayanan">
       <Navbar />
@@ -89,28 +78,10 @@ export default function Layanan() {
         <header className="rk-pageHeader" aria-label="Layanan Online">
           <div className="rk-container rk-pageHeaderInner rk-layananHero">
             <div className="rk-layananHeroLeft">
-              <p className="rk-pageKicker">Layanan</p>
               <h1 className="rk-pageTitle">Layanan Online</h1>
               <p className="rk-pageSubtitle">
-                Pilih layanan administrasi yang tersedia, ajukan secara online, dan pantau statusnya melalui akun Anda.
+                Pilih layanan administrasi yang tersedia dan ajukan secara online melalui akun Anda.
               </p>
-
-              <div className="rk-heroActions" aria-label="Aksi cepat layanan">
-                <a
-                  className="rk-heroBtn rk-heroBtnPrimary"
-                  href="#daftar-layanan"
-                  onClick={scrollToDaftarLayanan}
-                >
-                  Ajukan Layanan <FiArrowRight aria-hidden="true" />
-                </a>
-                <a
-                  className="rk-heroBtn rk-heroBtnSecondary"
-                  href="#daftar-layanan"
-                  onClick={scrollToDaftarLayanan}
-                >
-                  Lihat Persyaratan
-                </a>
-              </div>
             </div>
 
             <div className="rk-layananHeroRight" aria-hidden="true">
@@ -118,57 +89,10 @@ export default function Layanan() {
                 <div className="rk-heroVisualFrame">
                   <img src="/images/kantor1.png" alt="" loading="lazy" />
                 </div>
-                <div className="rk-heroVisualCard">
-                  <div className="rk-heroVisualLabel">Pelayanan Terpadu</div>
-                  <div className="rk-heroVisualTitle">Tertib, aman, dan terverifikasi.</div>
-                </div>
               </div>
             </div>
           </div>
         </header>
-
-        <section className="rk-layananQuickInfo" aria-label="Ringkasan layanan">
-          <div className="rk-container">
-            <div className="rk-layananInfoGrid">
-              <div className="rk-layananInfoCard">
-                <div className="rk-layananInfoIcon" aria-hidden="true">
-                  <FiFileText />
-                </div>
-                <div>
-                  <div className="rk-layananInfoTitle">8 Jenis Layanan</div>
-                  <div className="rk-layananInfoDesc">Administrasi utama kecamatan.</div>
-                </div>
-              </div>
-              <div className="rk-layananInfoCard">
-                <div className="rk-layananInfoIcon" aria-hidden="true">
-                  <FiArrowRight />
-                </div>
-                <div>
-                  <div className="rk-layananInfoTitle">Pengajuan Online</div>
-                  <div className="rk-layananInfoDesc">Isi formulir &amp; unggah dokumen.</div>
-                </div>
-              </div>
-              <div className="rk-layananInfoCard">
-                <div className="rk-layananInfoIcon" aria-hidden="true">
-                  <FiSearch />
-                </div>
-                <div>
-                  <div className="rk-layananInfoTitle">Pantau Status</div>
-                  <div className="rk-layananInfoDesc">Lihat progres verifikasi petugas.</div>
-                </div>
-              </div>
-              <div className="rk-layananInfoCard">
-                <div className="rk-layananInfoIcon" aria-hidden="true">
-                  <FiCheckCircle />
-                </div>
-                <div>
-                  <div className="rk-layananInfoTitle">Dokumen Terverifikasi</div>
-                  <div className="rk-layananInfoDesc">Lebih rapi dan mudah ditelusuri.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <section id="daftar-layanan" className="rk-pageSection" aria-label="Daftar layanan">
           <div className="rk-container">
@@ -185,8 +109,8 @@ export default function Layanan() {
                     </div>
                     <p className="rk-layananDesc">{service.desc}</p>
                     <div className="rk-layananActions">
-                      <Link to={service.to} className="rk-miniBtn">
-                        Lihat Detail <FiArrowRight aria-hidden="true" />
+                      <Link to={service.to} className="rk-layananBtn">
+                        Ajukan Layanan <FiArrowRight aria-hidden="true" />
                       </Link>
                     </div>
                   </article>

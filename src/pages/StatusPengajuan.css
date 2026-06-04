@@ -1,0 +1,151 @@
+.rk-statusPengajuanPage {
+  background:
+    radial-gradient(circle at 10% 28%, rgba(30, 136, 200, 0.1), transparent 28%),
+    var(--rk-bg);
+}
+
+.rk-statusPengajuanPage .rk-statusHero {
+  min-height: 286px;
+  padding: 44px 0 54px;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(30, 136, 200, 0.28), transparent 32%),
+    linear-gradient(135deg, rgba(6, 28, 50, 0.98), rgba(11, 79, 124, 0.92));
+}
+
+.rk-statusPengajuanPage .rk-statusHero::after {
+  background:
+    radial-gradient(circle at 18% 32%, rgba(30, 136, 200, 0.2), transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.1), transparent 34%);
+}
+
+.rk-statusPengajuanPage .rk-pageHeaderInner {
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.rk-statusPengajuanPage .rk-statusHeroIcon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.rk-statusPengajuanPage .rk-statusHeroIcon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.rk-statusPengajuanPage .rk-pageKicker {
+  margin-bottom: 10px;
+}
+
+.rk-statusPengajuanPage .rk-pageTitle {
+  margin-bottom: 10px;
+  white-space: normal;
+  font-size: clamp(32px, 3.5vw, 46px);
+}
+
+.rk-statusPengajuanPage .rk-pageSubtitle {
+  max-width: 660px;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.rk-statusHeroActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rk-statusHeroBtn {
+  min-height: 44px;
+  padding: 11px 15px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-statusHeroBtn.isPrimary {
+  color: var(--rk-primary);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.rk-statusHeroBtn.isNew {
+  color: #ffffff;
+  border-color: #2797d6;
+  background: #147fbd;
+}
+
+.rk-statusHeroBtn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+}
+
+.rk-statusHeroBtn.isPrimary:hover {
+  background: #ffffff;
+}
+
+.rk-statusHeroBtn.isNew:hover {
+  background: #0b6da8;
+}
+
+@media (max-width: 900px) {
+  .rk-statusPengajuanPage .rk-pageHeaderInner {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .rk-statusHeroActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .rk-statusPengajuanPage .rk-statusHero {
+    min-height: auto;
+    padding: 34px 0 40px;
+  }
+
+  .rk-statusPengajuanPage .rk-pageHeaderInner {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .rk-statusPengajuanPage .rk-statusHeroIcon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .rk-statusHeroActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rk-statusHeroBtn {
+    transition: none !important;
+  }
+}

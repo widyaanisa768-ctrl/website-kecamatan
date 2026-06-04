@@ -64,7 +64,11 @@ function parseIdFromCreateResponse(data) {
   if (typeof data === 'string') return ''
   const base = typeof data === 'object' ? data : {}
   const inner = base.data && typeof base.data === 'object' ? base.data : base
-  const id = inner.id || inner._id || inner.pengajuan_id || inner.uuid || ''
+  return getPengajuanId(inner)
+}
+
+export function getPengajuanId(item) {
+  const id = item?.id || item?._id || item?.pengajuan_id || item?.uuid || ''
   return id ? String(id) : ''
 }
 
@@ -95,6 +99,58 @@ export async function uploadDokumenPengajuan(endpoint, id, dokumenPayload) {
   })
   if (!res.ok) return { success: false, status: res.status, message: pickMessage(res) || 'Gagal upload dokumen.' }
   return { success: true, status: res.status, data: res.data, message: pickMessage(res) || 'Dokumen berhasil diunggah.' }
+}
+
+export async function updatePengajuan(endpoint, id, payload) {
+  if (!endpoint || !id) {
+    return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
+  }
+
+  try {
+    const path = `${endpoint}/${encodeURIComponent(id)}`
+    let res = await apiRequest(path, {
+      method: 'PUT',
+      body: payload,
+      withAuth: true,
+    })
+
+    if (!res.ok && [404, 405, 501].includes(res.status)) {
+      res = await apiRequest(path, {
+        method: 'PATCH',
+        body: payload,
+        withAuth: true,
+      })
+    }
+
+    if (!res.ok) {
+      return { success: false, status: res.status, data: res.data, message: pickMessage(res) || 'Gagal memperbarui pengajuan.' }
+    }
+
+    return { success: true, status: res.status, data: res.data, message: pickMessage(res) || 'Pengajuan berhasil diperbarui.' }
+  } catch (err) {
+    return { success: false, status: 0, data: null, message: err?.message || 'Gagal memperbarui pengajuan.' }
+  }
+}
+
+export async function deletePengajuan(endpoint, id) {
+  if (!endpoint || !id) {
+    return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
+  }
+
+  try {
+    const res = await apiRequest(`${endpoint}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      withAuth: true,
+    })
+
+    if (!res.ok) {
+      return { success: false, status: res.status, data: res.data, message: pickMessage(res) || 'Gagal menghapus pengajuan.' }
+    }
+
+    return { success: true, status: res.status, data: res.data, message: pickMessage(res) || 'Pengajuan berhasil dihapus.' }
+  } catch (err) {
+    return { success: false, status: 0, data: null, message: err?.message || 'Gagal menghapus pengajuan.' }
+  }
 }
 
 export async function getPengajuanSaya() {
@@ -137,7 +193,7 @@ export async function getDetailPengajuan(id) {
   // Detail per layanan belum disepakati di backend; fallback pakai list gabungan lalu cari id.
   const res = await getPengajuanSaya()
   if (!res?.success) return { success: false, status: res?.status || 0, message: res?.message || 'Gagal memuat pengajuan.' }
-  const found = (res.items || []).find((it) => String(it?.id || it?._id || it?.pengajuan_id || it?.uuid || '') === String(id))
+  const found = (res.items || []).find((it) => getPengajuanId(it) === String(id))
   if (!found) return { success: false, status: 404, message: 'Detail pengajuan tidak ditemukan.' }
   return { success: true, status: 200, data: found }
 }

@@ -88,10 +88,48 @@ const GALLERY_ITEMS = [
   },
 ]
 
+const ID_MONTHS = {
+  januari: 0,
+  februari: 1,
+  maret: 2,
+  april: 3,
+  mei: 4,
+  juni: 5,
+  juli: 6,
+  agustus: 7,
+  september: 8,
+  oktober: 9,
+  november: 10,
+  desember: 11,
+}
+
+function getGalleryTime(item) {
+  const rawDate = item?.date || item?.tanggal || item?.created_at || item?.createdAt || ''
+  if (!rawDate) return 0
+
+  const parsed = new Date(rawDate).getTime()
+  if (Number.isFinite(parsed)) return parsed
+
+  const match = String(rawDate)
+    .trim()
+    .toLowerCase()
+    .match(/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/)
+  if (!match) return 0
+
+  const [, day, monthName, year] = match
+  const month = ID_MONTHS[monthName]
+  if (month === undefined) return 0
+  return new Date(Number(year), month, Number(day)).getTime()
+}
+
 export default function Galeri() {
   const [selected, setSelected] = useState(null)
 
   const heroThumbs = useMemo(() => GALLERY_ITEMS.slice(0, 4), [])
+  const limitedGalleryItems = useMemo(
+    () => [...GALLERY_ITEMS].sort((a, b) => getGalleryTime(b) - getGalleryTime(a)).slice(0, 6),
+    []
+  )
 
   useEffect(() => {
     if (!selected) return undefined
@@ -142,7 +180,7 @@ export default function Galeri() {
         <section className="rk-pageSection" aria-label="Grid galeri">
           <div className="rk-container">
             <div className="rk-galleryGridFull">
-              {GALLERY_ITEMS.map((item) => (
+              {limitedGalleryItems.map((item) => (
                 <article key={item.title} className="rk-galleryCard">
                   <div className="rk-galleryMedia" aria-hidden="true">
                     <img src={item.img} alt="" loading="lazy" />

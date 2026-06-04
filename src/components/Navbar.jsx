@@ -20,6 +20,12 @@ function readToken() {
   return trimmed
 }
 
+function getInitials(label) {
+  const parts = String(label || 'User').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
+}
+
 export default function Navbar() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -37,7 +43,9 @@ export default function Navbar() {
   })
   const [token, setToken] = useState(() => readToken())
 
-  const userLabel = (user?.name || user?.nama_lengkap || user?.username || '').trim()
+  const userLabel = (user?.name || user?.nama_lengkap || user?.nama || user?.username || '').trim()
+  const userAvatar = user?.avatar || user?.photo || user?.foto || ''
+  const userInitials = getInitials(userLabel || user?.username)
 
   const auth = useMemo(() => {
     try {
@@ -58,7 +66,7 @@ export default function Navbar() {
     } catch {
       return user?.role || ''
     }
-  }, [user])
+  }, [user, auth])
 
   const isLoggedIn = !!auth || (!!token && !!user && !!userLabel)
   const visibleNavItems = useMemo(
@@ -123,9 +131,11 @@ export default function Navbar() {
     syncAuth()
     window.addEventListener('focus', syncAuth)
     window.addEventListener('storage', syncAuth)
+    window.addEventListener('rk-auth-updated', syncAuth)
     return () => {
       window.removeEventListener('focus', syncAuth)
       window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('rk-auth-updated', syncAuth)
     }
   }, [])
 
@@ -185,6 +195,9 @@ export default function Navbar() {
                 aria-expanded={userMenuOpen}
                 onClick={() => setUserMenuOpen((v) => !v)}
               >
+                <span className="rk-userAvatar" aria-hidden="true">
+                  {userAvatar ? <img src={userAvatar} alt="" /> : userInitials}
+                </span>
                 <span className="rk-userPillText" title={userLabel}>
                   {userLabel}
                 </span>
@@ -192,6 +205,26 @@ export default function Navbar() {
               </button>
 
               <div className={`rk-userDropdown ${userMenuOpen ? 'isOpen' : ''}`} role="menu" aria-label="Menu akun">
+                {role === 'masyarakat' ? (
+                  <>
+                    <Link
+                      to="/profil-saya"
+                      className="rk-userDropdownItem"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Profil Saya
+                    </Link>
+                    <Link
+                      to="/status-pengajuan"
+                      className="rk-userDropdownItem"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Status Pengajuan
+                    </Link>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   className="rk-userDropdownItem isDanger"
@@ -247,8 +280,21 @@ export default function Navbar() {
             {isLoggedIn ? (
               <>
                 <div className="rk-mobileUser" aria-label="Akun">
-                  {userLabel}
+                  <span className="rk-mobileUserAvatar" aria-hidden="true">
+                    {userAvatar ? <img src={userAvatar} alt="" /> : userInitials}
+                  </span>
+                  <span>{userLabel}</span>
                 </div>
+                {role === 'masyarakat' ? (
+                  <>
+                    <NavLink to="/profil-saya" className="rk-mobileLink" onClick={() => setMenuOpen(false)}>
+                      Profil Saya
+                    </NavLink>
+                    <NavLink to="/status-pengajuan" className="rk-mobileLink" onClick={() => setMenuOpen(false)}>
+                      Status Pengajuan
+                    </NavLink>
+                  </>
+                ) : null}
                 <button type="button" className="rk-mobileLink isLogout" onClick={handleLogout}>
                   Logout
                 </button>
