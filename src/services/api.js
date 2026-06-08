@@ -17,7 +17,10 @@ function buildUrl(path) {
   if (/^https?:\/\//i.test(path)) return path
 
   if (!BASE_URL) return path.startsWith('/') ? path : `/${path}`
-  const normalized = path.startsWith('/') ? path : `/${path}`
+  let normalized = path.startsWith('/') ? path : `/${path}`
+  if (BASE_URL.endsWith('/api') && normalized.startsWith('/api/')) {
+    normalized = normalized.slice('/api'.length)
+  }
   return `${BASE_URL}${normalized}`
 }
 
@@ -42,6 +45,7 @@ export async function apiRequest(path, options = {}) {
   } = options
 
   const finalUrl = buildUrl(path)
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
   if (IS_DEV) {
     if (!BASE_URL) {
@@ -52,10 +56,9 @@ export async function apiRequest(path, options = {}) {
     console.log('[api] request body:', body === undefined ? null : body)
   }
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(extraHeaders || {}),
-  }
+  const headers = { ...(extraHeaders || {}) }
+  const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')
+  if (!isFormData && !hasContentType) headers['Content-Type'] = 'application/json'
 
   if (withAuth) {
     const token = getStoredToken()
@@ -73,7 +76,7 @@ export async function apiRequest(path, options = {}) {
     res = await fetch(finalUrl, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: controller?.signal || signal,
     })
   } catch (err) {

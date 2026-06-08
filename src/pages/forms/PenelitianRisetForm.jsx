@@ -145,7 +145,7 @@ export default function PenelitianRisetForm() {
       setBusy(true)
       try {
         // Backend endpoint ini hanya menerima field spesifik penelitian (tanpa payload umum).
-        const res = await apiRequest('/rekomendasi_penelitian', {
+        const res = await apiRequest('/api/rekomendasi_penelitian', {
           method: 'POST',
           withAuth: true,
           body: {

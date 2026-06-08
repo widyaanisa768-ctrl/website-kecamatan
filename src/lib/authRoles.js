@@ -1,7 +1,7 @@
 export const LOCAL_ROLE_ACCOUNTS = {
   petugas: {
-    username: 'petugas',
-    password: 'petugas123',
+    username: 'Adara123',
+    password: 'Ica12345',
     role: 'petugas',
     name: 'Petugas',
     jabatan: 'Petugas Pelayanan Terpadu',

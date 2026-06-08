@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
-import { clearAuth, getAuth } from '../lib/rkLocal'
+import { getAuth } from '../lib/rkLocal'
+import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
 import './Navbar.css'
 
 const NAV_ITEMS = [
@@ -139,15 +140,11 @@ export default function Navbar() {
     }
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      window.localStorage.removeItem('accessToken')
-      window.localStorage.removeItem('user')
-      window.localStorage.removeItem('token')
-      window.localStorage.removeItem('rk_auth')
-      window.localStorage.removeItem('role')
-      clearAuth()
+      await remoteLogout()
     } finally {
+      clearAuthArtifacts()
       setUser(null)
       setToken('')
       setMenuOpen(false)

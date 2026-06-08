@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import SidebarPetugas from '../components/SidebarPetugas'
-import { STATUS, listSubmissions } from '../lib/rkLocal'
+import { getAuth } from '../lib/rkLocal'
+import {
+  getPengajuanCreatedAt,
+  getPengajuanId,
+  getPengajuanLayanan,
+  getPengajuanNamaPemohon,
+  getPengajuanNikPemohon,
+  getPengajuanStatusKind,
+  getSemuaPengajuanPetugas,
+  normalizePengajuanStatus,
+  SERVICE_ROUTES,
+} from '../services/pengajuanService'
 import '../styles/petugas-ui.css'
 
+const STATUS_OPTIONS = ['Semua', 'Menunggu Verifikasi', 'Perlu Perbaikan', 'Diproses', 'Disetujui', 'Selesai', 'Ditolak']
+const BACKEND_EMPTY_MESSAGE =
+  'Data pengajuan belum dapat dimuat. Pastikan akun petugas sudah terhubung ke backend.'
+
 function formatTanggalPendekID(date) {
+  if (!date) return '-'
   try {
     return new Date(date).toLocaleDateString('id-ID', {
       day: '2-digit',
@@ -30,21 +46,23 @@ function formatTanggalID(date) {
 }
 
 function getStatusClass(status) {
-  switch (status) {
-    case STATUS.MENUNGGU:
-      return 'ptg-badge ptg-badge--waiting'
-    case STATUS.PERLU_PERBAIKAN:
-      return 'ptg-badge ptg-badge--reject'
-    case STATUS.DIPROSES:
-      return 'ptg-badge ptg-badge--process'
-    case STATUS.DISETUJUI:
-    case STATUS.SELESAI:
-      return 'ptg-badge ptg-badge--done'
-    case STATUS.DITOLAK:
-      return 'ptg-badge ptg-badge--reject'
-    default:
-      return 'ptg-badge'
-  }
+  const kind = getPengajuanStatusKind(status)
+  if (kind === 'menunggu') return 'ptg-badge ptg-badge--waiting'
+  if (kind === 'diproses') return 'ptg-badge ptg-badge--process'
+  if (kind === 'selesai') return 'ptg-badge ptg-badge--done'
+  if (kind === 'ditolak' || kind === 'perlu_perbaikan') return 'ptg-badge ptg-badge--reject'
+  return 'ptg-badge'
+}
+
+function getInitials(name) {
+  const parts = String(name || 'Petugas').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
+}
+
+function toTime(value) {
+  const t = new Date(value || 0).getTime()
+  return Number.isFinite(t) ? t : 0
 }
 
 export default function DaftarPengajuanPetugas() {
@@ -52,58 +70,75 @@ export default function DaftarPengajuanPetugas() {
   const location = useLocation()
   const today = useMemo(() => new Date(), [])
 
-  const [searchName, setSearchName] = useState('')
   const initialStatusFilter =
-    new URLSearchParams(location.search).get('filter') === 'menunggu' ? STATUS.MENUNGGU : 'Semua'
+    new URLSearchParams(location.search).get('filter') === 'menunggu' ? 'Menunggu Verifikasi' : 'Semua'
+
+  const [searchName, setSearchName] = useState('')
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter)
   const [layananFilter, setLayananFilter] = useState('Semua')
-
-  const [submissions, setSubmissions] = useState(() => listSubmissions())
+  const [submissions, setSubmissions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [auth, setAuthState] = useState(() => getAuth())
+  const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
 
   useEffect(() => {
-    const refresh = () => setSubmissions(listSubmissions())
+    let alive = true
+    const refresh = async () => {
+      setLoading(true)
+      const res = await getSemuaPengajuanPetugas()
+      if (!alive) return
+      if (res?.success) {
+        setSubmissions(res.items || [])
+        setError('')
+      } else {
+        setSubmissions([])
+        setError(res?.message || 'Gagal memuat data pengajuan.')
+      }
+      setLoading(false)
+    }
+
+    refresh()
     window.addEventListener('focus', refresh)
-    window.addEventListener('storage', refresh)
     return () => {
+      alive = false
       window.removeEventListener('focus', refresh)
-      window.removeEventListener('storage', refresh)
     }
   }, [])
 
-  const petugas = {
-    nama: 'Widya Anisa',
-    jabatan: 'Petugas Pelayanan Terpadu',
-    unit: 'Kantor Camat Rantau Kopar',
-  }
+  useEffect(() => {
+    const syncAuth = () => setAuthState(getAuth())
+    syncAuth()
+    window.addEventListener('focus', syncAuth)
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('rk-auth-updated', syncAuth)
+    return () => {
+      window.removeEventListener('focus', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('rk-auth-updated', syncAuth)
+    }
+  }, [])
 
   const layananOptions = useMemo(() => {
-    const set = new Set(submissions.map((s) => s?.layanan).filter(Boolean))
+    const set = new Set(SERVICE_ROUTES.map((svc) => svc.jenis_layanan))
+    submissions.map((s) => getPengajuanLayanan(s)).filter((v) => v && v !== '-').forEach((v) => set.add(v))
     return ['Semua', ...Array.from(set)]
   }, [submissions])
 
-  const statusOptions = useMemo(
-    () => [
-      'Semua',
-      STATUS.MENUNGGU,
-      STATUS.PERLU_PERBAIKAN,
-      STATUS.DIPROSES,
-      STATUS.DISETUJUI,
-      STATUS.SELESAI,
-      STATUS.DITOLAK,
-    ],
-    []
-  )
-
-  const filteredSubmissions = (() => {
+  const filteredSubmissions = useMemo(() => {
     const term = searchName.trim().toLowerCase()
     const filtered = submissions.filter((row) => {
-      const matchNama = term.length === 0 || (row?.pemohon?.nama || '').toLowerCase().includes(term)
-      const matchStatus = statusFilter === 'Semua' || row.status === statusFilter
-      const matchLayanan = layananFilter === 'Semua' || row.layanan === layananFilter
-      return matchNama && matchStatus && matchLayanan
+      const nama = getPengajuanNamaPemohon(row).toLowerCase()
+      const layanan = getPengajuanLayanan(row)
+      const id = getPengajuanId(row).toLowerCase()
+      const status = normalizePengajuanStatus(row)
+      const matchSearch = term.length === 0 || nama.includes(term) || layanan.toLowerCase().includes(term) || id.includes(term)
+      const matchStatus = statusFilter === 'Semua' || status === statusFilter
+      const matchLayanan = layananFilter === 'Semua' || layanan === layananFilter
+      return matchSearch && matchStatus && matchLayanan
     })
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  })()
+    return filtered.sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
+  }, [layananFilter, searchName, statusFilter, submissions])
 
   function resetFilter() {
     setSearchName('')
@@ -136,38 +171,20 @@ export default function DaftarPengajuanPetugas() {
                 <input
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
-                  placeholder="Cari nama pemohon..."
-                  aria-label="Cari nama pemohon"
+                  placeholder="Cari nama pemohon atau layanan..."
+                  aria-label="Cari nama pemohon atau layanan"
                 />
               </div>
             </div>
 
             <div className="ptg-topbarRight" aria-label="Profil petugas">
-              <button type="button" className="ptg-iconBtn ptg-bell" aria-label="Notifikasi">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="2" />
-                </svg>
-              </button>
-
               <div className="ptg-profile" aria-label="Profil petugas">
                 <div className="ptg-profileMeta">
-                  <strong>{petugas.nama}</strong>
-                  <span>{petugas.jabatan}</span>
+                  <strong>{auth?.name || auth?.nama || 'Petugas'}</strong>
+                  <span>{auth?.jabatan || 'Petugas Pelayanan Terpadu'}</span>
                 </div>
-                <div className="ptg-avatar" title={petugas.unit} aria-hidden="true">
-                  {petugas.nama
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((w) => w[0])
-                    .join('')
-                    .toUpperCase()}
+                <div className="ptg-avatar" title={auth?.unit || 'Kantor Camat Rantau Kopar'} aria-hidden="true">
+                  {avatar ? <img src={avatar} alt="" /> : getInitials(auth?.name || auth?.nama)}
                 </div>
               </div>
             </div>
@@ -193,7 +210,7 @@ export default function DaftarPengajuanPetugas() {
                       onChange={(e) => setStatusFilter(e.target.value)}
                       aria-label="Filter status"
                     >
-                      {statusOptions.map((opt) => (
+                      {STATUS_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
                         </option>
@@ -226,16 +243,16 @@ export default function DaftarPengajuanPetugas() {
 
                 <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <div className="ptg-subtle">
-                    Status: <strong>{statusFilter}</strong> • Layanan: <strong>{layananFilter}</strong>
+                    Status: <strong>{statusFilter}</strong> | Layanan: <strong>{layananFilter}</strong>
                   </div>
-                  <div className="ptg-subtle">Data dummy lokal • Tanpa backend</div>
+                  <div className="ptg-subtle">Urutan data mengikuti tanggal pengajuan terbaru.</div>
                 </div>
               </section>
 
               <section className="ptg-card ptg-section" aria-label="Tabel daftar pengajuan">
                 <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
                   <h2>Data Pengajuan</h2>
-                  <div className="ptg-subtle">Urut terbaru → terlama</div>
+                  <div className="ptg-subtle">Urut terbaru ke terlama</div>
                 </div>
                 <div className="ptg-divider" />
 
@@ -256,46 +273,57 @@ export default function DaftarPengajuanPetugas() {
                       {filteredSubmissions.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="ptg-empty">
-                            Data tidak ditemukan. Coba ubah kata kunci atau reset filter.
+                            {loading
+                              ? 'Memuat data pengajuan...'
+                              : error || BACKEND_EMPTY_MESSAGE}
                           </td>
                         </tr>
                       ) : (
-                        filteredSubmissions.map((row, idx) => (
-                          <tr key={row.id}>
-                            <td>{idx + 1}</td>
-                            <td>
-                              <div style={{ fontWeight: 800 }}>{row?.pemohon?.nama || '-'}</div>
-                              <div className="ptg-id">{row.id}</div>
-                            </td>
-                            <td style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
-                              {row?.pemohon?.nik || '-'}
-                            </td>
-                            <td>{row.layanan}</td>
-                            <td>{formatTanggalPendekID(row.createdAt)}</td>
-                            <td>
-                              <span className={getStatusClass(row.status)}>{row.status}</span>
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                className="ptg-btn ptg-btnIcon"
-                                aria-label="Detail pengajuan"
-                                title="Detail"
-                                onClick={() => navigate(`/petugas/pengajuan/${row.id}`, { state: { submission: row } })}
-                              >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                  <path
-                                    d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinejoin="round"
-                                  />
-                                  <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" />
-                                </svg>
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                        filteredSubmissions.map((row, idx) => {
+                          const id = getPengajuanId(row)
+                          const status = normalizePengajuanStatus(row)
+                          return (
+                            <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
+                              <td>{idx + 1}</td>
+                              <td>
+                                <div style={{ fontWeight: 800 }}>{getPengajuanNamaPemohon(row)}</div>
+                                <div className="ptg-id">{id || '-'}</div>
+                              </td>
+                              <td style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+                                {getPengajuanNikPemohon(row)}
+                              </td>
+                              <td>{getPengajuanLayanan(row)}</td>
+                              <td>{formatTanggalPendekID(getPengajuanCreatedAt(row))}</td>
+                              <td>
+                                <span className={getStatusClass(status)}>{status}</span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="ptg-btn ptg-btnIcon"
+                                  aria-label="Detail pengajuan"
+                                  title="Detail"
+                                  disabled={!id}
+                                  onClick={() =>
+                                    navigate(`/petugas/pengajuan/${encodeURIComponent(id)}`, {
+                                      state: { submission: row, endpoint: row.__endpoint },
+                                    })
+                                  }
+                                >
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path
+                                      d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinejoin="round"
+                                    />
+                                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>

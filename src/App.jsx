@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './pages/login'
 import Register from './pages/register'
 import HomeModern from './pages/HomeModern'
@@ -11,6 +12,7 @@ import StatusPengajuan from './pages/StatusPengajuan'
 import DashboardPetugas from './pages/DashboardPetugas'
 import DaftarPengajuanPetugas from './pages/DaftarPengajuanPetugas'
 import DetailPengajuanPetugas from './pages/DetailPengajuanPetugas'
+import ProfilPetugas from './pages/ProfilPetugas'
 import KelolaDataMasyarakat from './pages/KelolaDataMasyarakat'
 import AhliWarisForm from './pages/forms/AhliWarisForm'
 import RekomendasiKerjaForm from './pages/forms/RekomendasiKerjaForm'
@@ -20,7 +22,8 @@ import AktaKelahiranForm from './pages/forms/AktaKelahiranForm'
 import KartuKeluargaForm from './pages/forms/KartuKeluargaForm'
 import SuratTanahForm from './pages/forms/SuratTanahForm'
 import YayasanOrmasForm from './pages/forms/YayasanOrmasForm'
-import { clearAuth, getAuth } from './lib/rkLocal'
+import { getAuth } from './lib/rkLocal'
+import { clearAuthArtifacts, logout as remoteLogout } from './services/authService'
 
 function RequirePetugas({ children }) {
   const auth = getAuth()
@@ -35,8 +38,22 @@ function RequireMasyarakat({ children }) {
 }
 
 function Logout() {
-  clearAuth()
-  return <Navigate to="/login" replace />
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      await remoteLogout()
+      clearAuthArtifacts()
+      if (alive) navigate('/login', { replace: true })
+    })()
+
+    return () => {
+      alive = false
+    }
+  }, [navigate])
+
+  return null
 }
 
 function App() {
@@ -189,6 +206,14 @@ function App() {
           element={
             <RequirePetugas>
               <KelolaDataMasyarakat />
+            </RequirePetugas>
+          }
+        />
+        <Route
+          path="/petugas/profil"
+          element={
+            <RequirePetugas>
+              <ProfilPetugas />
             </RequirePetugas>
           }
         />
