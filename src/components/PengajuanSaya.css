@@ -173,7 +173,6 @@
   border-color: #b9e2f8;
 }
 
-.rk-pengajuanSaya .rk-mySubBadge.is-approve,
 .rk-pengajuanSaya .rk-mySubBadge.is-done {
   color: #166534;
   background: #edf9f0;
@@ -382,7 +381,6 @@
   border-color: #c7e8f8;
 }
 
-.rk-pengajuanSaya .rk-statusBox.is-approve,
 .rk-pengajuanSaya .rk-statusBox.is-done {
   background: #f0faf3;
   border-color: #c5e8cc;

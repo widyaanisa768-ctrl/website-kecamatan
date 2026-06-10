@@ -15,7 +15,7 @@ import {
 } from '../services/pengajuanService'
 import '../styles/petugas-ui.css'
 
-const STATUS_OPTIONS = ['Semua', 'Menunggu Verifikasi', 'Perlu Perbaikan', 'Diproses', 'Disetujui', 'Selesai', 'Ditolak']
+const STATUS_OPTIONS = ['Semua', 'Menunggu Verifikasi', 'Diproses', 'Selesai', 'Ditolak']
 const BACKEND_EMPTY_MESSAGE =
   'Data pengajuan belum dapat dimuat. Pastikan akun petugas sudah terhubung ke backend.'
 
@@ -50,7 +50,7 @@ function getStatusClass(status) {
   if (kind === 'menunggu') return 'ptg-badge ptg-badge--waiting'
   if (kind === 'diproses') return 'ptg-badge ptg-badge--process'
   if (kind === 'selesai') return 'ptg-badge ptg-badge--done'
-  if (kind === 'ditolak' || kind === 'perlu_perbaikan') return 'ptg-badge ptg-badge--reject'
+  if (kind === 'ditolak') return 'ptg-badge ptg-badge--reject'
   return 'ptg-badge'
 }
 
@@ -87,6 +87,7 @@ export default function DaftarPengajuanPetugas() {
     const refresh = async () => {
       setLoading(true)
       const res = await getSemuaPengajuanPetugas()
+      console.log('[PETUGAS DATA]', res.items?.length, res.items)
       if (!alive) return
       if (res?.success) {
         setSubmissions(res.items || [])

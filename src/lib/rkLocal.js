@@ -4,9 +4,7 @@ const NOTIF_PREFIX = 'rk_notif_v1:'
 
 export const STATUS = {
   MENUNGGU: 'Menunggu Verifikasi',
-  PERLU_PERBAIKAN: 'Perlu Perbaikan',
   DIPROSES: 'Diproses',
-  DISETUJUI: 'Disetujui',
   SELESAI: 'Selesai',
   DITOLAK: 'Ditolak',
 }
@@ -187,11 +185,11 @@ function seedDummySubmissionsIfEmpty(username) {
       updatedAt: days(2),
     },
     {
-      demoKey: 'STATUS:DISETUJUI',
+      demoKey: 'STATUS:SELESAI-SETUJU',
       layanan: 'Rekomendasi Kerja',
       layananPath: '/layanan/rekomendasi-kerja',
       data: { nama_pemohon: 'Andi', alamat: 'Alamat dummy', nik: '1111222233334444', no_hp: '08120000000', keterangan: 'Keterangan dummy' },
-      status: STATUS.DISETUJUI,
+      status: STATUS.SELESAI,
       catatanPetugas: '',
       hasilSurat: null,
       createdAt: days(6),

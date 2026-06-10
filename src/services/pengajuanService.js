@@ -14,18 +14,36 @@ function unwrapItems(data) {
   if (typeof data !== 'object') return []
 
   const directKeys = ['data', 'items', 'result', 'rows', 'pengajuan', 'submissions', 'records', 'list']
+  const directItems = []
   for (const key of directKeys) {
     const value = data[key]
-    if (Array.isArray(value)) return value
+    if (Array.isArray(value)) directItems.push(...value)
   }
+  if (directItems.length > 0) return directItems
 
+  const nestedItems = []
   for (const key of directKeys) {
     const value = data[key]
     if (value && typeof value === 'object') {
       const nested = unwrapItems(value)
-      if (nested.length > 0) return nested
+      if (nested.length > 0) nestedItems.push(...nested)
     }
   }
+  if (nestedItems.length > 0) return nestedItems
+
+  const objectValueItems = []
+  Object.entries(data).forEach(([key, value]) => {
+    if (directKeys.includes(key)) return
+    if (Array.isArray(value)) {
+      objectValueItems.push(...value)
+      return
+    }
+    if (value && typeof value === 'object') {
+      const nested = unwrapItems(value)
+      if (nested.length > 0) objectValueItems.push(...nested)
+    }
+  })
+  if (objectValueItems.length > 0) return objectValueItems
 
   return []
 }
@@ -94,7 +112,7 @@ function normalizeText(value) {
   return String(value || '')
     .trim()
     .toLowerCase()
-    .replace(/[-_]+/g, ' ')
+    .replace(/[-_/]+/g, ' ')
     .replace(/\s+/g, ' ')
 }
 
@@ -181,19 +199,6 @@ function normalizeLocalSubmission(item) {
   }
 }
 
-function isDemoLocalSubmission(item) {
-  return Boolean(item?.__rk_demo_v1 || item?.demoKey || String(getPengajuanId(item) || '').startsWith('DMO-'))
-}
-
-function readLocalFallbackItems() {
-  // fallback demo sementara sampai endpoint petugas backend tersedia
-  return readLocalSubmissionsRaw()
-    .filter((item) => !isDemoLocalSubmission(item))
-    .map(normalizeLocalSubmission)
-    .filter(Boolean)
-    .sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
-}
-
 function isBackendAuthError(res) {
   const message = normalizeText(pickMessage(res))
   return res?.status === 401 || res?.status === 403 || message.includes('token tidak ditemukan') || message.includes('unauthorized')
@@ -214,8 +219,8 @@ function normalizePengajuanItem(item, svc) {
     id_pengajuan: item?.id_pengajuan || id,
     pengajuan_id: item?.pengajuan_id || id,
     jenis_layanan: item?.jenis_layanan || item?.jenisLayanan || item?.layanan || svc?.jenis_layanan || '',
-    status: item?.status || status,
-    status_pengajuan: item?.status_pengajuan || status,
+    status,
+    status_pengajuan: status,
     created_at: item?.created_at || createdAt,
     createdAt: item?.createdAt || createdAt,
     __endpoint: item?.__endpoint || svc?.endpoint || '',
@@ -230,6 +235,8 @@ export function getPengajuanStatus(itemOrStatus) {
 export function normalizePengajuanStatus(itemOrStatus) {
   const raw = getPengajuanStatus(itemOrStatus)
   const key = normalizeText(raw)
+  if (key.includes('setuju') || key.includes('diterima')) return 'Selesai'
+  if (key.includes('revisi') || key.includes('perbaikan')) return 'Ditolak'
   const aliases = {
     menunggu: 'Menunggu Verifikasi',
     'menunggu verifikasi': 'Menunggu Verifikasi',
@@ -237,14 +244,10 @@ export function normalizePengajuanStatus(itemOrStatus) {
     diproses: 'Diproses',
     proses: 'Diproses',
     'dalam proses': 'Diproses',
-    disetujui: 'Disetujui',
-    approved: 'Disetujui',
     selesai: 'Selesai',
     done: 'Selesai',
     ditolak: 'Ditolak',
     rejected: 'Ditolak',
-    'perlu perbaikan': 'Perlu Perbaikan',
-    revisi: 'Perlu Perbaikan',
   }
 
   return aliases[key] || String(raw || 'Menunggu Verifikasi').trim()
@@ -255,9 +258,8 @@ export function getPengajuanStatusKind(itemOrStatus) {
   const key = normalizeText(status)
   if (key === 'menunggu verifikasi' || key === 'menunggu') return 'menunggu'
   if (key === 'diproses' || key === 'dalam proses') return 'diproses'
-  if (key === 'disetujui' || key === 'selesai') return 'selesai'
+  if (key === 'selesai') return 'selesai'
   if (key === 'ditolak') return 'ditolak'
-  if (key === 'perlu perbaikan') return 'perlu_perbaikan'
   return 'lainnya'
 }
 
@@ -484,16 +486,9 @@ export async function getPengajuanSaya() {
 
 export async function getSemuaPengajuanPetugas() {
   // Data petugas butuh token backend asli. Login petugas lokal saat ini hanya membuka akses UI sementara.
-  const useLocalFallback = () => {
-    // fallback demo sementara sampai endpoint petugas backend tersedia
-    const localItems = readLocalFallbackItems()
-    if (localItems.length === 0) return null
-    return { success: true, status: 200, items: localItems, source: 'local-demo' }
-  }
-
-  try {
-    const results = await Promise.all(
-      SERVICE_ROUTES.map(async (svc) => {
+  const results = await Promise.all(
+    SERVICE_ROUTES.map(async (svc) => {
+      try {
         const res = await apiRequest(svc.endpoint, { method: 'GET', withAuth: true })
         if (!res.ok) {
           if (res.status === 404) return { ok: true, status: res.status, items: [], svc }
@@ -508,53 +503,51 @@ export async function getSemuaPengajuanPetugas() {
 
         const items = unwrapItems(res.data).map((it) => normalizePengajuanItem(it, svc))
         return { ok: true, status: res.status, items, svc }
-      })
-    )
-
-    const okOnes = results.filter((r) => r.ok)
-    const merged = okOnes.flatMap((r) => r.items || [])
-    const failed = results.filter((r) => !r.ok)
-    const authErr = failed.find((r) => r.authError)
-
-    if (merged.length > 0) {
-      merged.sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
-      return { success: true, status: 200, items: merged, source: 'backend' }
-    }
-
-    if (okOnes.length === 0) {
-      const fallback = useLocalFallback()
-      if (fallback) return fallback
-      const firstErr = results.find((r) => !r.ok)
-      return { success: false, status: firstErr?.status || 0, items: [], message: firstErr?.message || 'Gagal memuat pengajuan.' }
-    }
-
-    if (authErr) {
-      const fallback = useLocalFallback()
-      if (fallback) return fallback
-      return { success: false, status: authErr.status || 0, items: [], message: PETUGAS_BACKEND_AUTH_MESSAGE }
-    }
-
-    const blockingError = failed.find((r) => r.status !== 404)
-    if (blockingError) {
-      const fallback = useLocalFallback()
-      if (fallback) return fallback
-      return {
-        success: false,
-        status: blockingError.status || 0,
-        items: [],
-        message: blockingError.message || 'Sebagian data pengajuan belum dapat dimuat dari backend.',
+      } catch (err) {
+        return {
+          ok: false,
+          status: 0,
+          items: [],
+          message: err?.message || `Gagal memuat ${svc.key}.`,
+          authError: false,
+          svc,
+        }
       }
-    }
+    })
+  )
 
-    const fallback = useLocalFallback()
-    if (fallback) return fallback
+  const okOnes = results.filter((r) => r.ok)
+  const seen = new Set()
+  const merged = okOnes.flatMap((r) => r.items || []).filter((item) => {
+    const id = getPengajuanId(item)
+    const key = `${item?.__endpoint || ''}|${id || JSON.stringify(item)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  const failed = results.filter((r) => !r.ok)
+  const authErr = failed.find((r) => r.authError)
 
-    return { success: true, status: 200, items: [], source: 'backend' }
-  } catch {
-    const fallback = useLocalFallback()
-    if (fallback) return fallback
-    return { success: false, status: 0, items: [], message: PETUGAS_BACKEND_AUTH_MESSAGE }
+  if (merged.length > 0) {
+    merged.sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
+    return { success: true, status: 200, items: merged, source: 'backend' }
   }
+
+  if (authErr) {
+    return { success: false, status: authErr.status || 0, items: [], message: PETUGAS_BACKEND_AUTH_MESSAGE }
+  }
+
+  const blockingError = failed.find((r) => r.status !== 404)
+  if (blockingError && okOnes.length === 0) {
+    return {
+      success: false,
+      status: blockingError.status || 0,
+      items: [],
+      message: blockingError.message || 'Sebagian data pengajuan belum dapat dimuat dari backend.',
+    }
+  }
+
+  return { success: true, status: 200, items: [], source: 'backend' }
 }
 
 export async function getDetailPengajuan(id) {

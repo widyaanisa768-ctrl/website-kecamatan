@@ -66,9 +66,9 @@ function formatDateTime(date) {
 
 function statusKind(status) {
   const value = String(status || '').trim().toLowerCase()
-  if (value.includes('tolak') || value.includes('perbaikan')) return 'reject'
+  if (value.includes('tolak')) return 'reject'
   if (value.includes('selesai')) return 'done'
-  if (value.includes('setuju') || value.includes('diterima')) return 'approve'
+  if (value.includes('setuju') || value.includes('diterima')) return 'done'
   if (value.includes('proses')) return 'process'
   if (value.includes('menunggu') || value.includes('verifikasi')) return 'waiting'
   return 'unknown'
@@ -87,7 +87,6 @@ function statusLabel(status) {
   const kind = statusKind(status)
   if (kind === 'waiting') return 'Menunggu Verifikasi'
   if (kind === 'process') return 'Diproses'
-  if (kind === 'approve') return 'Disetujui'
   if (kind === 'done') return 'Selesai'
   if (kind === 'reject') return 'Ditolak'
   return status || '-'
@@ -101,9 +100,8 @@ function statusMessage(status) {
   const kind = statusKind(status)
   if (kind === 'waiting') return 'Pengajuan berhasil dikirim dan sedang menunggu verifikasi petugas.'
   if (kind === 'process') return 'Pengajuan sedang diproses oleh petugas.'
-  if (kind === 'approve') return 'Pengajuan telah disetujui oleh petugas.'
-  if (kind === 'done') return 'Dokumen sudah selesai dan dapat diunduh.'
-  if (kind === 'reject') return 'Pengajuan ditolak atau perlu diperbaiki. Silakan periksa catatan petugas.'
+  if (kind === 'done') return 'Pengajuan selesai dan dokumen dapat diunduh.'
+  if (kind === 'reject') return 'Pengajuan ditolak. Silakan periksa catatan petugas.'
   return ''
 }
 
@@ -472,7 +470,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
       total: list.length,
       menunggu: list.filter((it) => statusKind(getStatus(it)) === 'waiting').length,
       diproses: list.filter((it) => statusKind(getStatus(it)) === 'process').length,
-      selesai: list.filter((it) => ['done', 'approve'].includes(statusKind(getStatus(it)))).length,
+      selesai: list.filter((it) => statusKind(getStatus(it)) === 'done').length,
     }
   }, [visibleItems])
 
@@ -480,7 +478,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const activeKind = statusKind(activeStatus)
   const activeCanManage = canManagePengajuan(activeStatus)
   const activeResultFile = getResultFile(active)
-  const activeCanDownload = ['done', 'approve'].includes(activeKind) && !!activeResultFile
+  const activeCanDownload = activeKind === 'done' && !!activeResultFile
   const activeRejectReason = getRejectReason(active)
 
   const dataEntries = useMemo(() => {
@@ -627,7 +625,6 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         .rk-mySubBadge.is-waiting { background: rgba(245, 158, 11, .12); border-color: rgba(245, 158, 11, .28); color: #7a4a00; }
         .rk-mySubBadge.is-process { background: rgba(59, 130, 246, .12); border-color: rgba(59, 130, 246, .28); color: #0b3a7a; }
         .rk-mySubBadge.is-reject { background: rgba(220, 38, 38, .12); border-color: rgba(220, 38, 38, .28); color: #7a0b0b; }
-        .rk-mySubBadge.is-approve { background: rgba(16, 185, 129, .12); border-color: rgba(16, 185, 129, .28); color: #065f46; }
         .rk-mySubBadge.is-done { background: rgba(34, 197, 94, .12); border-color: rgba(34, 197, 94, .28); color: #14532d; }
         .rk-mySubActions { display:flex; align-items:center; gap: 8px; flex-shrink: 0; }
         .rk-miniBtn2 { display:inline-flex; align-items:center; justify-content:center; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); background: #fff; cursor: pointer; font-weight: 800; font-size: 13px; line-height: 1.1; color: var(--rk-text, #1d2a3a) !important; -webkit-text-fill-color: var(--rk-text, #1d2a3a) !important; opacity: 1 !important; visibility: visible !important; }
@@ -709,7 +706,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               <div className="rk-summaryCard isDone">
                 <span className="rk-summaryIcon"><FiCheckCircle aria-hidden="true" /></span>
                 <div>
-                  <div className="rk-summaryLabel">Selesai / Disetujui</div>
+                  <div className="rk-summaryLabel">Selesai</div>
                   <div className="rk-summaryValue">{loading ? '—' : counts.selesai}</div>
                   <div className="rk-summaryHint">Sudah final</div>
                 </div>
@@ -733,7 +730,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                 const itemKind = statusKind(itemStatus)
                 const canManage = canManagePengajuan(itemStatus)
                 const resultFile = getResultFile(item)
-                const canDownloadResult = ['done', 'approve'].includes(itemKind) && !!resultFile
+                const canDownloadResult = itemKind === 'done' && !!resultFile
                 const rejectReason = getRejectReason(item)
 
                 return (
@@ -749,7 +746,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                       {itemKind === 'reject' && rejectReason ? (
                         <div className="rk-rowStatusInfo isReject">Alasan penolakan: {rejectReason}</div>
                       ) : null}
-                      {['done', 'approve'].includes(itemKind) && !resultFile ? (
+                      {itemKind === 'done' && !resultFile ? (
                         <div className="rk-rowStatusInfo">Dokumen hasil belum tersedia.</div>
                       ) : null}
                     </div>
@@ -823,7 +820,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                     <div style={{ marginTop: 4, opacity: 0.95 }}>{activeRejectReason}</div>
                   </div>
                 ) : null}
-                {['done', 'approve'].includes(activeKind) && !activeResultFile ? (
+                {activeKind === 'done' && !activeResultFile ? (
                   <div className="rk-resultUnavailable">Dokumen hasil belum tersedia.</div>
                 ) : null}
               </div>
@@ -872,13 +869,13 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               {activeKind === 'process' ? (
                 <div className="rk-lockedInfo"><FiShield aria-hidden="true" /> Pengajuan sedang diproses petugas.</div>
               ) : null}
-              {['done', 'approve'].includes(activeKind) && activeCanDownload ? (
+              {activeKind === 'done' && activeCanDownload ? (
                 <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
                   <FiDownload aria-hidden="true" />
                   Unduh Surat
                 </button>
               ) : null}
-              {['done', 'approve'].includes(activeKind) && !activeResultFile ? (
+              {activeKind === 'done' && !activeResultFile ? (
                 <div className="rk-lockedInfo"><FiInfo aria-hidden="true" /> Dokumen hasil belum tersedia.</div>
               ) : null}
               {activeKind === 'reject' ? (

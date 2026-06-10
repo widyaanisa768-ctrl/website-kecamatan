@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FiBell } from 'react-icons/fi'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { getAuth } from '../lib/rkLocal'
 import {
@@ -47,7 +48,7 @@ function getStatusClass(status) {
   if (kind === 'menunggu') return 'ptg-badge ptg-badge--waiting'
   if (kind === 'diproses') return 'ptg-badge ptg-badge--process'
   if (kind === 'selesai') return 'ptg-badge ptg-badge--done'
-  if (kind === 'ditolak' || kind === 'perlu_perbaikan') return 'ptg-badge ptg-badge--reject'
+  if (kind === 'ditolak') return 'ptg-badge ptg-badge--reject'
   return 'ptg-badge'
 }
 
@@ -77,6 +78,7 @@ function DashboardPetugas() {
     const refresh = async () => {
       setLoading(true)
       const res = await getSemuaPengajuanPetugas()
+      console.log('[PETUGAS DATA]', res.items?.length, res.items)
       if (!alive) return
       if (res?.success) {
         setSubmissions(res.items || [])
@@ -128,7 +130,7 @@ function DashboardPetugas() {
     () => [
       { id: 'A1', text: `${stats.menunggu} pengajuan menunggu verifikasi` },
       { id: 'A2', text: `${stats.diproses} pengajuan sedang diproses` },
-      { id: 'A3', text: `${stats.selesai} pengajuan selesai atau disetujui` },
+      { id: 'A3', text: `${stats.selesai} pengajuan selesai` },
     ],
     [stats]
   )
@@ -152,21 +154,11 @@ function DashboardPetugas() {
               <p>{formatTanggalID(today)}</p>
             </div>
 
-            <div className="ptg-topbarSearch" aria-label="Pencarian">
-              <div className="ptg-search">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M10.5 19a8.5 8.5 0 1 1 0-17 8.5 8.5 0 0 1 0 17Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                  <path d="M21 21l-4.4-4.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <input placeholder="Cari pengajuan, pemohon, atau layanan..." aria-label="Cari pengajuan" />
-              </div>
-            </div>
-
             <div className="ptg-topbarRight" aria-label="Profil petugas">
+              <button type="button" className="ptg-iconBtn ptg-bellBtn" aria-label="Notifikasi">
+                <FiBell aria-hidden="true" />
+              </button>
+
               <div className="ptg-profile" aria-label="Profil petugas">
                 <div className="ptg-profileMeta">
                   <strong>{auth?.name || auth?.nama || 'Petugas'}</strong>
@@ -238,7 +230,7 @@ function DashboardPetugas() {
                     </svg>
                   </div>
                   <div className="ptg-statMeta">
-                    <span>Selesai/Disetujui</span>
+                    <span>Selesai</span>
                     <strong>{stats.selesai}</strong>
                   </div>
                 </div>

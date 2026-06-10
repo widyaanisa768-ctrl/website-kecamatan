@@ -10,6 +10,9 @@ import Galeri from './pages/Galeri'
 import Kontak from './pages/Kontak'
 import StatusPengajuan from './pages/StatusPengajuan'
 import DashboardPetugas from './pages/DashboardPetugas'
+import DashboardKepalaCamat from './pages/DashboardKepalaCamat'
+import LaporanKepalaCamat from './pages/LaporanKepalaCamat'
+import ProfilKepalaCamat from './pages/ProfilKepalaCamat'
 import DaftarPengajuanPetugas from './pages/DaftarPengajuanPetugas'
 import DetailPengajuanPetugas from './pages/DetailPengajuanPetugas'
 import ProfilPetugas from './pages/ProfilPetugas'
@@ -28,6 +31,12 @@ import { clearAuthArtifacts, logout as remoteLogout } from './services/authServi
 function RequirePetugas({ children }) {
   const auth = getAuth()
   if (!auth || auth.role !== 'petugas') return <Navigate to="/login-petugas" replace />
+  return children
+}
+
+function RequireKepalaCamat({ children }) {
+  const auth = getAuth()
+  if (!auth || auth.role !== 'kepala_camat') return <Navigate to="/login?role=kepala_camat" replace />
   return children
 }
 
@@ -218,6 +227,34 @@ function App() {
           }
         />
         <Route path="/kelola-data-masyarakat" element={<Navigate to="/petugas/masyarakat" replace />} />
+
+        {/* Kepala Camat */}
+        <Route path="/kepala-camat" element={<Navigate to="/dashboard-kepala-camat" replace />} />
+        <Route path="/kepala-camat/dashboard" element={<Navigate to="/dashboard-kepala-camat" replace />} />
+        <Route
+          path="/kepala-camat/laporan"
+          element={
+            <RequireKepalaCamat>
+              <LaporanKepalaCamat />
+            </RequireKepalaCamat>
+          }
+        />
+        <Route
+          path="/kepala-camat/profil"
+          element={
+            <RequireKepalaCamat>
+              <ProfilKepalaCamat />
+            </RequireKepalaCamat>
+          }
+        />
+        <Route
+          path="/dashboard-kepala-camat"
+          element={
+            <RequireKepalaCamat>
+              <DashboardKepalaCamat />
+            </RequireKepalaCamat>
+          }
+        />
 
         <Route path="/logout" element={<Logout />} />
         <Route path="/login" element={<Login />} />
