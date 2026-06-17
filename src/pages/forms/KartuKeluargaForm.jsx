@@ -3,9 +3,19 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiPhone, FiUploadCloud, FiUser
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import ValidationAlert from '../../components/ValidationAlert'
 import './KartuKeluargaForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
-import { createPengajuan } from '../../services/pengajuanService'
+import {
+  buildDokumenPayload,
+  FILE_TYPE_PRESETS,
+  handleBackendValidationError,
+  validateNoHpField,
+  validateNikField,
+  validateFileField,
+  validateRequiredText,
+} from '../../lib/formValidation'
+import { createPengajuanWithDokumen } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_pemohon: '',
@@ -14,13 +24,52 @@ const INITIAL = {
   no_hp: '',
 }
 
-const INITIAL_FILES = {
-  suratKeteranganRt: null,
-  pengantarLurah: null,
-  suratNikah: null,
-  kk: null,
-  lampiranWniTambahan: null,
-}
+const FILE_FIELDS = [
+  {
+    key: 'suratKeteranganRt',
+    backendKey: 'surat_keterangan_rt',
+    label: 'Surat Keterangan RT',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'pengantarLurah',
+    backendKey: 'pengantar_lurah_penghulu',
+    label: 'Pengantar Lurah / Penghulu',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'suratNikah',
+    backendKey: 'surat_nikah',
+    label: 'Fotocopy Surat Nikah',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'kk',
+    backendKey: 'kartu_keluarga',
+    label: 'Fotocopy dan Asli Kartu Keluarga',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'lampiranWniTambahan',
+    backendKey: 'akta_kelahiran_dan_suket_wni_tionghoa',
+    label: 'Lampiran tambahan WNI keturunan Tionghoa',
+    required: false,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+]
+
+const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, field]))
+
+const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
 function normalizeData(data) {
   const base = data && typeof data === 'object' ? data : {}
@@ -38,29 +87,26 @@ export default function KartuKeluargaForm() {
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
+  const [validationErrors, setValidationErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const requiredFiles = useMemo(() => ['suratKeteranganRt', 'pengantarLurah', 'suratNikah', 'kk'], [])
+  const requiredFiles = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
 
   useEffect(() => {
     setNotice('')
   }, [])
 
+  useEffect(() => {
+    if (validationErrors.length > 0) setValidationErrors([])
+  }, [form, files])
+
   const validators = useMemo(
     () => ({
-      nama_pemohon: (v) => (v.trim() ? '' : 'Nama pemohon wajib diisi.'),
-      alamat: (v) => (v.trim() ? '' : 'Alamat wajib diisi.'),
-      nik: (v) => {
-        if (!v.trim()) return 'NIK wajib diisi.'
-        if (!/^\d+$/.test(v)) return 'NIK hanya boleh angka.'
-        return ''
-      },
-      no_hp: (v) => {
-        if (!v.trim()) return 'No HP wajib diisi.'
-        if (!/^\d+$/.test(v)) return 'No HP hanya boleh angka.'
-        return ''
-      },
+      nama_pemohon: (v) => validateRequiredText(v, 'Nama pemohon'),
+      alamat: (v) => validateRequiredText(v, 'Alamat'),
+      nik: validateNikField,
+      no_hp: validateNoHpField,
     }),
     []
   )
@@ -79,14 +125,13 @@ export default function KartuKeluargaForm() {
 
   const pickFile = (key) => (e) => {
     const picked = e.target.files?.[0] ?? null
+    const field = FILE_FIELD_MAP[key]
     setFiles((prev) => ({ ...prev, [key]: picked }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
-      if (picked) {
-        const { [key]: _removed, ...rest } = prev
-        return rest
-      }
-      return prev
+      const msg = validateFileField(picked, field)
+      if (msg) return { ...prev, [key]: msg }
+      const { [key]: _removed, ...rest } = prev
+      return rest
     })
   }
 
@@ -96,11 +141,12 @@ export default function KartuKeluargaForm() {
       const msg = validators[key]?.(form[key]) || ''
       if (msg) nextErrors[key] = msg
     }
-    for (const key of requiredFiles) {
-      const hasNew = !!files[key]
-      if (!hasNew) nextErrors[key] = 'Wajib diunggah.'
-    }
+    FILE_FIELDS.forEach((field) => {
+      const msg = validateFileField(files[field.key], field)
+      if (msg) nextErrors[field.key] = msg
+    })
     setErrors(nextErrors)
+    setValidationErrors(Object.values(nextErrors))
     return Object.keys(nextErrors).length === 0
   }
 
@@ -113,13 +159,7 @@ export default function KartuKeluargaForm() {
       layanan: 'Rekomendasi Kartu Keluarga',
       layananPath: '/layanan/kartu-keluarga',
       data: { ...form },
-      dokumen: {
-        suratKeteranganRt: files.suratKeteranganRt,
-        pengantarLurahPenghulu: files.pengantarLurah,
-        fotocopySuratNikah: files.suratNikah,
-        fotocopyDanAsliKk: files.kk,
-        lampiranTambahanWniKeturunanTionghoa: files.lampiranWniTambahan,
-      },
+      dokumen: buildDokumenPayload(files, FILE_FIELDS),
     }
 
     void (async () => {
@@ -132,10 +172,14 @@ export default function KartuKeluargaForm() {
 
       setBusy(true)
       try {
+        if (import.meta.env.DEV) {
+          console.log('files state', files)
+        }
         const keteranganPemohon = `Nama: ${form.nama_pemohon} • NIK: ${form.nik} • HP: ${form.no_hp}`
         const dokumen_meta = mergeDokumenMeta({}, payload.dokumen)
 
-        const res = await createPengajuan({
+        const res = await createPengajuanWithDokumen({
+          endpoint: '/api/rekomendasi_kartu_keluarga',
           jenis_layanan: payload.layanan,
           nama_pemohon: form.nama_pemohon,
           nik: form.nik,
@@ -145,15 +189,19 @@ export default function KartuKeluargaForm() {
           keterangan: keteranganPemohon,
           tanggal_pengajuan: new Date().toISOString(),
           dokumen_meta,
+          data: payload.data,
           data_form: payload.data,
           layanan_path: payload.layananPath,
+          layananPath: payload.layananPath,
+          dokumen: payload.dokumen,
         })
 
         if (!res?.success) {
-          setNotice(res?.message || 'Gagal mengirim pengajuan.')
+          setValidationErrors(handleBackendValidationError(res, res?.message || 'Gagal mengirim pengajuan.'))
           return
         }
 
+        setValidationErrors([])
         setNotice(res?.message || 'Pengajuan berhasil dikirim.')
         window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
       } finally {
@@ -178,6 +226,8 @@ export default function KartuKeluargaForm() {
         <section className="rk-formSection" aria-label="Form rekomendasi kartu keluarga">
           <div className="rk-container">
             <form className="rk-formCard" onSubmit={onSubmit}>
+              <ValidationAlert errors={validationErrors} />
+
               <div className="rk-formCardHead">
                 <div className="rk-formCardIcon" aria-hidden="true">
                   <FiUser />
@@ -283,7 +333,7 @@ export default function KartuKeluargaForm() {
                     id="suratRt"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.suratKeteranganRt.accept}
                     onChange={pickFile('suratKeteranganRt')}
                   />
                   {files.suratKeteranganRt ? <div className="rk-picked">{files.suratKeteranganRt.name}</div> : null}
@@ -298,7 +348,7 @@ export default function KartuKeluargaForm() {
                     id="pengantarLurah"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.pengantarLurah.accept}
                     onChange={pickFile('pengantarLurah')}
                   />
                   {files.pengantarLurah ? <div className="rk-picked">{files.pengantarLurah.name}</div> : null}
@@ -313,7 +363,7 @@ export default function KartuKeluargaForm() {
                     id="suratNikah"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.suratNikah.accept}
                     onChange={pickFile('suratNikah')}
                   />
                   {files.suratNikah ? <div className="rk-picked">{files.suratNikah.name}</div> : null}
@@ -324,7 +374,7 @@ export default function KartuKeluargaForm() {
                   <label className="rk-label" htmlFor="kk">
                     Fotocopy dan Asli Kartu Keluarga <span className="rk-required">*</span>
                   </label>
-                  <input id="kk" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('kk')} />
+                  <input id="kk" className="rk-file" type="file" accept={FILE_FIELD_MAP.kk.accept} onChange={pickFile('kk')} />
                   {files.kk ? <div className="rk-picked">{files.kk.name}</div> : null}
                   {errors.kk ? <div className="rk-error">{errors.kk}</div> : null}
                 </div>
@@ -337,7 +387,7 @@ export default function KartuKeluargaForm() {
                     id="lampiranWni"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.lampiranWniTambahan.accept}
                     onChange={pickFile('lampiranWniTambahan')}
                   />
                   {files.lampiranWniTambahan ? <div className="rk-picked">{files.lampiranWniTambahan.name}</div> : null}

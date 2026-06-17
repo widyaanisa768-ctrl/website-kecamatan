@@ -3,9 +3,17 @@ import { FiArrowRight, FiCheckCircle, FiClipboard, FiFileText, FiUploadCloud } f
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import ValidationAlert from '../../components/ValidationAlert'
 import './PenelitianRisetForm.css'
-import { getAuth } from '../../lib/rkLocal'
-import { apiRequest } from '../../services/api'
+import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
+import {
+  buildDokumenPayload,
+  FILE_TYPE_PRESETS,
+  handleBackendValidationError,
+  validateFileField,
+  validateRequiredText,
+} from '../../lib/formValidation'
+import { createPengajuanWithDokumen } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_peneliti: '',
@@ -15,11 +23,36 @@ const INITIAL = {
   waktu_penelitian: '',
 }
 
-const INITIAL_FILES = {
-  ktp: null,
-  ktm: null,
-  suratRekomendasi: null,
-}
+const FILE_FIELDS = [
+  {
+    key: 'ktp',
+    backendKey: 'ktp_mahasiswa',
+    label: 'Fotocopy KTP Mahasiswa 1 lembar',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+  {
+    key: 'ktm',
+    backendKey: 'ktm_mahasiswa',
+    label: 'Fotocopy Kartu Tanda Mahasiswa (KTM) 1 lembar',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+  {
+    key: 'suratRekomendasi',
+    backendKey: 'surat_rekomendasi_riset_univ_kesbangpol',
+    label: 'Surat rekomendasi riset',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+]
+
+const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, field]))
+
+const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
 function normalizeData(data) {
   const base = data && typeof data === 'object' ? data : {}
@@ -32,30 +65,13 @@ function normalizeData(data) {
   }
 }
 
-function pickBackendMessage(res) {
-  const data = res?.data
-  if (!data) return res?.status ? `HTTP ${res.status}` : 'Terjadi kesalahan.'
-  if (typeof data === 'string') return data
-  if (typeof data !== 'object') return 'Terjadi kesalahan.'
-
-  const baseMsg = data.message || data.error || data.msg || ''
-  const details = Array.isArray(data.errors)
-    ? data.errors
-        .map((e) => (typeof e === 'string' ? e : e?.message || e?.msg || e?.error || ''))
-        .filter(Boolean)
-        .slice(0, 6)
-    : []
-
-  if (baseMsg && details.length) return `${baseMsg}: ${details.join(', ')}`
-  return baseMsg || `HTTP ${res?.status || ''}`.trim()
-}
-
 export default function PenelitianRisetForm() {
   const navigate = useNavigate()
 
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
+  const [validationErrors, setValidationErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -63,16 +79,17 @@ export default function PenelitianRisetForm() {
     setNotice('')
   }, [])
 
+  useEffect(() => {
+    if (validationErrors.length > 0) setValidationErrors([])
+  }, [form, files])
+
   const validators = useMemo(
     () => ({
-      nama_peneliti: (v) => (v.trim() ? '' : 'Nama peneliti wajib diisi.'),
-      instansi: (v) => (v.trim() ? '' : 'Instansi wajib diisi.'),
-      topik_penelitian: (v) => (v.trim() ? '' : 'Topik penelitian wajib diisi.'),
-      lokasi_penelitian: (v) => (v.trim() ? '' : 'Lokasi penelitian wajib diisi.'),
-      waktu_penelitian: (v) => (v ? '' : 'Waktu penelitian wajib diisi.'),
-      ktp: (f) => (f ? '' : 'Fotocopy KTP wajib diunggah.'),
-      ktm: (f) => (f ? '' : 'Fotocopy KTM wajib diunggah.'),
-      suratRekomendasi: (f) => (f ? '' : 'Surat rekomendasi riset wajib diunggah.'),
+      nama_peneliti: (v) => validateRequiredText(v, 'Nama peneliti'),
+      instansi: (v) => validateRequiredText(v, 'Instansi'),
+      topik_penelitian: (v) => validateRequiredText(v, 'Topik penelitian'),
+      lokasi_penelitian: (v) => validateRequiredText(v, 'Lokasi penelitian'),
+      waktu_penelitian: (v) => validateRequiredText(v, 'Waktu penelitian'),
     }),
     []
   )
@@ -91,10 +108,10 @@ export default function PenelitianRisetForm() {
 
   const pickFile = (key) => (e) => {
     const picked = e.target.files?.[0] ?? null
+    const field = FILE_FIELD_MAP[key]
     setFiles((prev) => ({ ...prev, [key]: picked }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
-      const msg = validators[key]?.(picked) || ''
+      const msg = validateFileField(picked, field)
       if (msg) return { ...prev, [key]: msg }
       const { [key]: _removed, ...rest } = prev
       return rest
@@ -107,14 +124,12 @@ export default function PenelitianRisetForm() {
       const msg = validators[key]?.(form[key]) || ''
       if (msg) nextErrors[key] = msg
     }
-    for (const key of Object.keys(INITIAL_FILES)) {
-      const hasNew = !!files[key]
-      if (!hasNew) {
-        const msg = validators[key]?.(null) || 'Wajib diunggah.'
-        nextErrors[key] = msg
-      }
-    }
+    FILE_FIELDS.forEach((field) => {
+      const msg = validateFileField(files[field.key], field)
+      if (msg) nextErrors[field.key] = msg
+    })
     setErrors(nextErrors)
+    setValidationErrors(Object.values(nextErrors))
     return Object.keys(nextErrors).length === 0
   }
 
@@ -127,11 +142,7 @@ export default function PenelitianRisetForm() {
       layanan: 'Rekomendasi Penelitian / Riset',
       layananPath: '/layanan/penelitian-riset',
       data: { ...form },
-      dokumen: {
-        fotocopyKtpMahasiswa: files.ktp,
-        fotocopyKtm: files.ktm,
-        suratRekomendasi: files.suratRekomendasi,
-      },
+      dokumen: buildDokumenPayload(files, FILE_FIELDS),
     }
 
     void (async () => {
@@ -144,27 +155,34 @@ export default function PenelitianRisetForm() {
 
       setBusy(true)
       try {
-        // Backend endpoint ini hanya menerima field spesifik penelitian (tanpa payload umum).
-        const res = await apiRequest('/api/rekomendasi_penelitian', {
-          method: 'POST',
-          withAuth: true,
-          body: {
-            nama_peneliti: form.nama_peneliti,
-            instansi: form.instansi,
-            topik_penelitian: form.topik_penelitian,
-            lokasi_penelitian: form.lokasi_penelitian,
-            waktu_penelitian: form.waktu_penelitian,
-          },
+        if (import.meta.env.DEV) {
+          console.log('files state', files)
+        }
+
+        const res = await createPengajuanWithDokumen({
+          endpoint: '/api/rekomendasi_penelitian',
+          jenis_layanan: payload.layanan,
+          nama_peneliti: form.nama_peneliti,
+          instansi: form.instansi,
+          topik_penelitian: form.topik_penelitian,
+          lokasi_penelitian: form.lokasi_penelitian,
+          waktu_penelitian: form.waktu_penelitian,
+          tanggal_pengajuan: new Date().toISOString(),
+          dokumen_meta: mergeDokumenMeta({}, payload.dokumen),
+          data: payload.data,
+          data_form: { ...form },
+          layanan_path: payload.layananPath,
+          layananPath: payload.layananPath,
+          dokumen: payload.dokumen,
         })
 
-        if (!res?.ok) {
-          setNotice(pickBackendMessage(res) || 'Gagal mengirim pengajuan.')
+        if (!res?.success) {
+          setValidationErrors(handleBackendValidationError(res, 'Gagal mengirim pengajuan.'))
           return
         }
 
-        const successMsg =
-          (res?.data && typeof res.data === 'object' && (res.data.message || res.data.msg)) || 'Pengajuan berhasil dikirim.'
-        setNotice(successMsg)
+        setValidationErrors([])
+        setNotice(res?.message || 'Pengajuan berhasil dikirim.')
         window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
       } finally {
         setBusy(false)
@@ -188,6 +206,8 @@ export default function PenelitianRisetForm() {
         <section className="rk-formSection" aria-label="Form penelitian atau riset">
           <div className="rk-container">
             <form className="rk-formCard" onSubmit={onSubmit}>
+              <ValidationAlert errors={validationErrors} />
+
               <div className="rk-formCardHead">
                 <div className="rk-formCardIcon" aria-hidden="true">
                   <FiClipboard />
@@ -297,7 +317,7 @@ export default function PenelitianRisetForm() {
                   <label className="rk-label" htmlFor="ktp">
                     Fotocopy KTP Mahasiswa 1 lembar <span className="rk-required">*</span>
                   </label>
-                  <input id="ktp" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('ktp')} />
+                  <input id="ktp" className="rk-file" type="file" accept={FILE_FIELD_MAP.ktp.accept} onChange={pickFile('ktp')} />
                   {files.ktp ? <div className="rk-picked">{files.ktp.name}</div> : null}
                   {errors.ktp ? <div className="rk-error">{errors.ktp}</div> : null}
                 </div>
@@ -306,7 +326,7 @@ export default function PenelitianRisetForm() {
                   <label className="rk-label" htmlFor="ktm">
                     Fotocopy Kartu Tanda Mahasiswa (KTM) 1 lembar <span className="rk-required">*</span>
                   </label>
-                  <input id="ktm" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('ktm')} />
+                  <input id="ktm" className="rk-file" type="file" accept={FILE_FIELD_MAP.ktm.accept} onChange={pickFile('ktm')} />
                   {files.ktm ? <div className="rk-picked">{files.ktm.name}</div> : null}
                   {errors.ktm ? <div className="rk-error">{errors.ktm}</div> : null}
                 </div>
@@ -320,7 +340,7 @@ export default function PenelitianRisetForm() {
                     id="suratRekomendasi"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.suratRekomendasi.accept}
                     onChange={pickFile('suratRekomendasi')}
                   />
                   {files.suratRekomendasi ? <div className="rk-picked">{files.suratRekomendasi.name}</div> : null}

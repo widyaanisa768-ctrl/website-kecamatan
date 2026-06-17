@@ -3,9 +3,19 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiPhone, FiUploadCloud, FiUser
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import ValidationAlert from '../../components/ValidationAlert'
 import './SuratTanahForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
-import { createPengajuan } from '../../services/pengajuanService'
+import {
+  buildDokumenPayload,
+  FILE_TYPE_PRESETS,
+  handleBackendValidationError,
+  validateNoHpField,
+  validateNikField,
+  validateFileField,
+  validateRequiredText,
+} from '../../lib/formValidation'
+import { createPengajuanWithDokumen } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_pemohon: '',
@@ -14,14 +24,60 @@ const INITIAL = {
   no_hp: '',
 }
 
-const INITIAL_FILES = {
-  alasHak: null,
-  ahliWaris: null,
-  ktp: null,
-  blangko: null,
-  fotoLokasi: null,
-  pbb: null,
-}
+const FILE_FIELDS = [
+  {
+    key: 'alasHak',
+    backendKey: 'surat_dasar_hak_kepemilikan_tanah',
+    label: 'Surat Dasar / Alas Hak Kepemilikan Tanah',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'ahliWaris',
+    backendKey: 'surat_keterangan_ahli_waris',
+    label: 'Surat Keterangan Ahli Waris',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'ktp',
+    backendKey: 'ktp',
+    label: 'Fotocopy KTP',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'blangko',
+    backendKey: 'blanko_skt_skgr_bermaterai',
+    label: 'Blangko SKT / SKGR yang bermaterai',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'fotoLokasi',
+    backendKey: 'foto_lokasi_tanah',
+    label: 'Foto Lokasi Tanah',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'pbb',
+    backendKey: 'bukti_pbb',
+    label: 'Bukti / Fotokopi Setoran PBB',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+]
+
+const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, field]))
+
+const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
 function normalizeData(data) {
   const base = data && typeof data === 'object' ? data : {}
@@ -39,29 +95,28 @@ export default function SuratTanahForm() {
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
+  const [validationErrors, setValidationErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const requiredFiles = useMemo(() => Object.keys(INITIAL_FILES), [])
+  const requiredFiles = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
 
   useEffect(() => {
     setNotice('')
   }, [])
 
+  useEffect(() => {
+    if (validationErrors.length > 0) {
+      setValidationErrors([])
+    }
+  }, [form, files])
+
   const validators = useMemo(
     () => ({
-      nama_pemohon: (v) => (v.trim() ? '' : 'Nama pemohon wajib diisi.'),
-      alamat: (v) => (v.trim() ? '' : 'Alamat wajib diisi.'),
-      nik: (v) => {
-        if (!v.trim()) return 'NIK wajib diisi.'
-        if (!/^\d+$/.test(v)) return 'NIK hanya boleh angka.'
-        return ''
-      },
-      no_hp: (v) => {
-        if (!v.trim()) return 'No HP wajib diisi.'
-        if (!/^\d+$/.test(v)) return 'No HP hanya boleh angka.'
-        return ''
-      },
+      nama_pemohon: (v) => validateRequiredText(v, 'Nama pemohon'),
+      alamat: (v) => validateRequiredText(v, 'Alamat'),
+      nik: validateNikField,
+      no_hp: validateNoHpField,
     }),
     []
   )
@@ -80,14 +135,13 @@ export default function SuratTanahForm() {
 
   const pickFile = (key) => (e) => {
     const picked = e.target.files?.[0] ?? null
+    const field = FILE_FIELD_MAP[key]
     setFiles((prev) => ({ ...prev, [key]: picked }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
-      if (picked) {
-        const { [key]: _removed, ...rest } = prev
-        return rest
-      }
-      return prev
+      const msg = validateFileField(picked, field)
+      if (msg) return { ...prev, [key]: msg }
+      const { [key]: _removed, ...rest } = prev
+      return rest
     })
   }
 
@@ -97,11 +151,12 @@ export default function SuratTanahForm() {
       const msg = validators[key]?.(form[key]) || ''
       if (msg) nextErrors[key] = msg
     }
-    for (const key of requiredFiles) {
-      const hasNew = !!files[key]
-      if (!hasNew) nextErrors[key] = 'Wajib diunggah.'
-    }
+    FILE_FIELDS.forEach((field) => {
+      const msg = validateFileField(files[field.key], field)
+      if (msg) nextErrors[field.key] = msg
+    })
     setErrors(nextErrors)
+    setValidationErrors(Object.values(nextErrors))
     return Object.keys(nextErrors).length === 0
   }
 
@@ -114,14 +169,7 @@ export default function SuratTanahForm() {
       layanan: 'Penerbitan Surat Tanah SKT / SKGR',
       layananPath: '/layanan/surat-tanah',
       ...form,
-      dokumen: {
-        suratDasarAlasHak: files.alasHak,
-        suratKeteranganAhliWaris: files.ahliWaris,
-        fotocopyKtp: files.ktp,
-        blangkoSktSkgrBermaterai: files.blangko,
-        fotoLokasiTanah: files.fotoLokasi,
-        buktiSetoranPbb: files.pbb,
-      },
+      dokumen: buildDokumenPayload(files, FILE_FIELDS),
     }
 
     void (async () => {
@@ -134,10 +182,14 @@ export default function SuratTanahForm() {
 
       setBusy(true)
       try {
+        if (import.meta.env.DEV) {
+          console.log('files state', files)
+        }
         const keteranganPemohon = `Nama: ${form.nama_pemohon} • NIK: ${form.nik} • HP: ${form.no_hp}`
         const dokumen_meta = mergeDokumenMeta({}, payload.dokumen)
 
-        const res = await createPengajuan({
+        const res = await createPengajuanWithDokumen({
+          endpoint: '/api/rekomendasi_surat_tanah',
           jenis_layanan: payload.layanan,
           nama_pemohon: form.nama_pemohon,
           nik: form.nik,
@@ -147,15 +199,19 @@ export default function SuratTanahForm() {
           keterangan: keteranganPemohon,
           tanggal_pengajuan: new Date().toISOString(),
           dokumen_meta,
+          data: { ...form },
           data_form: { ...form },
           layanan_path: payload.layananPath,
+          layananPath: payload.layananPath,
+          dokumen: payload.dokumen,
         })
 
         if (!res?.success) {
-          setNotice(res?.message || 'Gagal mengirim pengajuan.')
+          setValidationErrors(handleBackendValidationError(res, res?.message || 'Gagal mengirim pengajuan.'))
           return
         }
 
+        setValidationErrors([])
         setNotice(res?.message || 'Pengajuan berhasil dikirim.')
         window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
       } finally {
@@ -180,6 +236,8 @@ export default function SuratTanahForm() {
         <section className="rk-formSection" aria-label="Form surat tanah">
           <div className="rk-container">
             <form className="rk-formCard" onSubmit={onSubmit}>
+              <ValidationAlert errors={validationErrors} />
+
               <div className="rk-formCardHead">
                 <div className="rk-formCardIcon" aria-hidden="true">
                   <FiUser />
@@ -285,7 +343,7 @@ export default function SuratTanahForm() {
                     id="alasHak"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.alasHak.accept}
                     onChange={pickFile('alasHak')}
                   />
                   {files.alasHak ? <div className="rk-picked">{files.alasHak.name}</div> : null}
@@ -300,7 +358,7 @@ export default function SuratTanahForm() {
                     id="ahliWaris"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.ahliWaris.accept}
                     onChange={pickFile('ahliWaris')}
                   />
                   {files.ahliWaris ? <div className="rk-picked">{files.ahliWaris.name}</div> : null}
@@ -311,7 +369,7 @@ export default function SuratTanahForm() {
                   <label className="rk-label" htmlFor="ktp">
                     Fotocopy KTP <span className="rk-required">*</span>
                   </label>
-                  <input id="ktp" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('ktp')} />
+                  <input id="ktp" className="rk-file" type="file" accept={FILE_FIELD_MAP.ktp.accept} onChange={pickFile('ktp')} />
                   {files.ktp ? <div className="rk-picked">{files.ktp.name}</div> : null}
                   {errors.ktp ? <div className="rk-error">{errors.ktp}</div> : null}
                 </div>
@@ -324,7 +382,7 @@ export default function SuratTanahForm() {
                     id="blangko"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.blangko.accept}
                     onChange={pickFile('blangko')}
                   />
                   {files.blangko ? <div className="rk-picked">{files.blangko.name}</div> : null}
@@ -339,7 +397,7 @@ export default function SuratTanahForm() {
                     id="fotoLokasi"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.fotoLokasi.accept}
                     onChange={pickFile('fotoLokasi')}
                   />
                   {files.fotoLokasi ? <div className="rk-picked">{files.fotoLokasi.name}</div> : null}
@@ -350,7 +408,7 @@ export default function SuratTanahForm() {
                   <label className="rk-label" htmlFor="pbb">
                     Bukti / Fotokopi Setoran Pajak Bumi dan Bangunan (PBB) <span className="rk-required">*</span>
                   </label>
-                  <input id="pbb" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('pbb')} />
+                  <input id="pbb" className="rk-file" type="file" accept={FILE_FIELD_MAP.pbb.accept} onChange={pickFile('pbb')} />
                   {files.pbb ? <div className="rk-picked">{files.pbb.name}</div> : null}
                   {errors.pbb ? <div className="rk-error">{errors.pbb}</div> : null}
                 </div>

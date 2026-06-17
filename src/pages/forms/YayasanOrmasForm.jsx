@@ -3,9 +3,18 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiUploadCloud, FiUser } from '
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import ValidationAlert from '../../components/ValidationAlert'
 import './YayasanOrmasForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
-import { createPengajuan } from '../../services/pengajuanService'
+import {
+  buildDokumenPayload,
+  FILE_TYPE_PRESETS,
+  handleBackendValidationError,
+  validateNikField,
+  validateFileField,
+  validateRequiredText,
+} from '../../lib/formValidation'
+import { createPengajuanWithDokumen } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_pemohon: '',
@@ -15,14 +24,60 @@ const INITIAL = {
   alamat_lembaga: '',
 }
 
-const INITIAL_FILES = {
-  rekomLurah: null,
-  daftarGuruPengurus: null,
-  daftarAnakDidik: null,
-  fotoDokumentasi: null,
-  ktpPengurus: null,
-  aktaNotaris: null,
-}
+const FILE_FIELDS = [
+  {
+    key: 'rekomLurah',
+    backendKey: 'rekomendasi_lurah_penghulu_asli',
+    label: 'Rekomendasi dari Lurah / Penghulu',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'daftarGuruPengurus',
+    backendKey: 'daftar_nama_guru_pengurus',
+    label: 'Daftar Nama Guru / Pengurus',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'daftarAnakDidik',
+    backendKey: 'daftar_nama_anak_didik',
+    label: 'Daftar Nama Anak Didik',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'fotoDokumentasi',
+    backendKey: 'foto_dokumentasi_gedung_dan_musyawarah',
+    label: 'Foto dokumentasi gedung / hasil musyawarah',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'ktpPengurus',
+    backendKey: 'ktp_pengurus',
+    label: 'Fotocopy KTP Pengurus',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+  {
+    key: 'aktaNotaris',
+    backendKey: 'akta_notaris_pendirian',
+    label: 'Akta Notaris Pendirian',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
+  },
+]
+
+const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, field]))
+
+const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
 function normalizeData(data) {
   const base = data && typeof data === 'object' ? data : {}
@@ -41,26 +96,27 @@ export default function YayasanOrmasForm() {
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
+  const [validationErrors, setValidationErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const requiredFiles = useMemo(() => Object.keys(INITIAL_FILES), [])
+  const requiredFiles = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
 
   useEffect(() => {
     setNotice('')
   }, [])
 
+  useEffect(() => {
+    if (validationErrors.length > 0) setValidationErrors([])
+  }, [form, files])
+
   const validators = useMemo(
     () => ({
-      nama_pemohon: (v) => (v.trim() ? '' : 'Nama pemohon wajib diisi.'),
-      nik: (v) => {
-        if (!v.trim()) return 'NIK wajib diisi.'
-        if (!/^\d+$/.test(v)) return 'NIK hanya boleh angka.'
-        return ''
-      },
-      jabatan: (v) => (v.trim() ? '' : 'Jabatan wajib diisi.'),
-      nama_lembaga: (v) => (v.trim() ? '' : 'Nama lembaga wajib diisi.'),
-      alamat_lembaga: (v) => (v.trim() ? '' : 'Alamat lembaga wajib diisi.'),
+      nama_pemohon: (v) => validateRequiredText(v, 'Nama pemohon'),
+      nik: validateNikField,
+      jabatan: (v) => validateRequiredText(v, 'Jabatan'),
+      nama_lembaga: (v) => validateRequiredText(v, 'Nama lembaga'),
+      alamat_lembaga: (v) => validateRequiredText(v, 'Alamat lembaga'),
     }),
     []
   )
@@ -79,14 +135,13 @@ export default function YayasanOrmasForm() {
 
   const pickFile = (key) => (e) => {
     const picked = e.target.files?.[0] ?? null
+    const field = FILE_FIELD_MAP[key]
     setFiles((prev) => ({ ...prev, [key]: picked }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
-      if (picked) {
-        const { [key]: _removed, ...rest } = prev
-        return rest
-      }
-      return prev
+      const msg = validateFileField(picked, field)
+      if (msg) return { ...prev, [key]: msg }
+      const { [key]: _removed, ...rest } = prev
+      return rest
     })
   }
 
@@ -96,11 +151,12 @@ export default function YayasanOrmasForm() {
       const msg = validators[key]?.(form[key]) || ''
       if (msg) nextErrors[key] = msg
     }
-    for (const key of requiredFiles) {
-      const hasNew = !!files[key]
-      if (!hasNew) nextErrors[key] = 'Wajib diunggah.'
-    }
+    FILE_FIELDS.forEach((field) => {
+      const msg = validateFileField(files[field.key], field)
+      if (msg) nextErrors[field.key] = msg
+    })
     setErrors(nextErrors)
+    setValidationErrors(Object.values(nextErrors))
     return Object.keys(nextErrors).length === 0
   }
 
@@ -113,14 +169,7 @@ export default function YayasanOrmasForm() {
       layanan: 'Rekomendasi Yayasan, Sekolah, TPQ dan Ormas',
       layananPath: '/layanan/yayasan-ormas',
       data: { ...form },
-      dokumen: {
-        rekomendasiLurahPenghuluAsli: files.rekomLurah,
-        daftarNamaGuruPengurus: files.daftarGuruPengurus,
-        daftarNamaAnakDidik: files.daftarAnakDidik,
-        fotoDokumentasiGedungAtauMusyawarah: files.fotoDokumentasi,
-        fotocopyKtpPengurus: files.ktpPengurus,
-        aktaNotarisPendirian: files.aktaNotaris,
-      },
+      dokumen: buildDokumenPayload(files, FILE_FIELDS),
     }
 
     void (async () => {
@@ -133,10 +182,14 @@ export default function YayasanOrmasForm() {
 
       setBusy(true)
       try {
+        if (import.meta.env.DEV) {
+          console.log('files state', files)
+        }
         const keteranganPemohon = `Lembaga: ${form.nama_lembaga} • Pemohon: ${form.nama_pemohon} • Jabatan: ${form.jabatan}`
         const dokumen_meta = mergeDokumenMeta({}, payload.dokumen)
 
-        const res = await createPengajuan({
+        const res = await createPengajuanWithDokumen({
+          endpoint: '/api/rekomendasi_surat_yayasan',
           jenis_layanan: payload.layanan,
           nama_pemohon: form.nama_pemohon,
           nik: form.nik,
@@ -146,15 +199,19 @@ export default function YayasanOrmasForm() {
           keterangan: keteranganPemohon,
           tanggal_pengajuan: new Date().toISOString(),
           dokumen_meta,
+          data: payload.data,
           data_form: payload.data,
           layanan_path: payload.layananPath,
+          layananPath: payload.layananPath,
+          dokumen: payload.dokumen,
         })
 
         if (!res?.success) {
-          setNotice(res?.message || 'Gagal mengirim pengajuan.')
+          setValidationErrors(handleBackendValidationError(res, res?.message || 'Gagal mengirim pengajuan.'))
           return
         }
 
+        setValidationErrors([])
         setNotice(res?.message || 'Pengajuan berhasil dikirim.')
         window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
       } finally {
@@ -179,6 +236,8 @@ export default function YayasanOrmasForm() {
         <section className="rk-formSection" aria-label="Form yayasan atau ormas">
           <div className="rk-container">
             <form className="rk-formCard" onSubmit={onSubmit}>
+              <ValidationAlert errors={validationErrors} />
+
               <div className="rk-formCardHead">
                 <div className="rk-formCardIcon" aria-hidden="true">
                   <FiUser />
@@ -294,7 +353,7 @@ export default function YayasanOrmasForm() {
                     id="rekomLurah"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.rekomLurah.accept}
                     onChange={pickFile('rekomLurah')}
                   />
                   {files.rekomLurah ? <div className="rk-picked">{files.rekomLurah.name}</div> : null}
@@ -309,7 +368,7 @@ export default function YayasanOrmasForm() {
                     id="daftarGuruPengurus"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.daftarGuruPengurus.accept}
                     onChange={pickFile('daftarGuruPengurus')}
                   />
                   {files.daftarGuruPengurus ? <div className="rk-picked">{files.daftarGuruPengurus.name}</div> : null}
@@ -324,7 +383,7 @@ export default function YayasanOrmasForm() {
                     id="daftarAnakDidik"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.daftarAnakDidik.accept}
                     onChange={pickFile('daftarAnakDidik')}
                   />
                   {files.daftarAnakDidik ? <div className="rk-picked">{files.daftarAnakDidik.name}</div> : null}
@@ -339,7 +398,7 @@ export default function YayasanOrmasForm() {
                     id="fotoDok"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.fotoDokumentasi.accept}
                     onChange={pickFile('fotoDokumentasi')}
                   />
                   {files.fotoDokumentasi ? <div className="rk-picked">{files.fotoDokumentasi.name}</div> : null}
@@ -354,7 +413,7 @@ export default function YayasanOrmasForm() {
                     id="ktpPengurus"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.ktpPengurus.accept}
                     onChange={pickFile('ktpPengurus')}
                   />
                   {files.ktpPengurus ? <div className="rk-picked">{files.ktpPengurus.name}</div> : null}
@@ -369,7 +428,7 @@ export default function YayasanOrmasForm() {
                     id="aktaNotaris"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.aktaNotaris.accept}
                     onChange={pickFile('aktaNotaris')}
                   />
                   {files.aktaNotaris ? <div className="rk-picked">{files.aktaNotaris.name}</div> : null}

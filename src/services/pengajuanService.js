@@ -1,11 +1,21 @@
 import { apiRequest } from './api'
 
+const IS_DEV = !!import.meta.env.DEV
+
 function pickMessage(res) {
   const data = res?.data
   if (!data) return res?.ok ? '' : `HTTP ${res?.status || ''}`.trim()
   if (typeof data === 'string') return data
   if (typeof data === 'object') return data.message || data.error || data.msg || ''
   return ''
+}
+
+function pickErrors(res) {
+  const data = res?.data
+  if (!data || typeof data !== 'object') return []
+  if (Array.isArray(data.errors)) return data.errors
+  if (data.data && typeof data.data === 'object' && Array.isArray(data.data.errors)) return data.data.errors
+  return []
 }
 
 function unwrapItems(data) {
@@ -101,6 +111,21 @@ function parseIdFromCreateResponse(data) {
   const base = typeof data === 'object' ? data : {}
   const inner = base.data && typeof base.data === 'object' ? base.data : base
   return getPengajuanId(inner)
+}
+
+function buildDokumenFormData(dokumen = {}) {
+  const formData = new FormData()
+  const entries = Array.isArray(dokumen) ? dokumen : Object.entries(dokumen || {})
+  entries.forEach(([key, value]) => {
+    if (value) formData.append(key, value)
+  })
+  if (IS_DEV) {
+    for (const [key, value] of formData.entries()) {
+      const isFileObject = typeof File !== 'undefined' && value instanceof File
+      console.log('UPLOAD FIELD:', key, isFileObject, value?.name, value?.type, value?.size)
+    }
+  }
+  return formData
 }
 
 export function getPengajuanId(item) {
@@ -336,18 +361,41 @@ export async function createPengajuan(payload) {
   const endpoint = resolveEndpoint(payload)
   if (!endpoint) return { success: false, status: 400, message: 'Endpoint pengajuan tidak dikenali.' }
 
+  const formData = payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data) ? payload.data : {}
+  const dataForm =
+    payload?.data_form && typeof payload.data_form === 'object' && !Array.isArray(payload.data_form)
+      ? payload.data_form
+      : {}
+  const requestBody = {
+    ...payload,
+    ...formData,
+    ...dataForm,
+  }
+
   const res = await apiRequest(endpoint, {
     method: 'POST',
-    body: payload,
+    body: requestBody,
     withAuth: true,
   })
 
   if (!res.ok) {
-    return { success: false, status: res.status, message: pickMessage(res) || 'Gagal membuat pengajuan.' }
+    return {
+      success: false,
+      status: res.status,
+      message: pickMessage(res) || 'Gagal membuat pengajuan.',
+      errors: pickErrors(res),
+    }
   }
 
   const id = parseIdFromCreateResponse(res.data)
-  return { success: true, status: res.status, data: res.data, id, message: pickMessage(res) || 'Pengajuan berhasil dikirim.' }
+  return {
+    success: true,
+    status: res.status,
+    data: res.data,
+    id,
+    message: pickMessage(res) || 'Pengajuan berhasil dikirim.',
+    errors: [],
+  }
 }
 
 export async function uploadDokumenPengajuan(endpoint, id, dokumenPayload) {
@@ -357,8 +405,67 @@ export async function uploadDokumenPengajuan(endpoint, id, dokumenPayload) {
     body: dokumenPayload,
     withAuth: true,
   })
-  if (!res.ok) return { success: false, status: res.status, message: pickMessage(res) || 'Gagal upload dokumen.' }
-  return { success: true, status: res.status, data: res.data, message: pickMessage(res) || 'Dokumen berhasil diunggah.' }
+  if (!res.ok) {
+    return {
+      success: false,
+      status: res.status,
+      message: pickMessage(res) || 'Gagal upload dokumen.',
+      errors: pickErrors(res),
+    }
+  }
+  return {
+    success: true,
+    status: res.status,
+    data: res.data,
+    message: pickMessage(res) || 'Dokumen berhasil diunggah.',
+    errors: [],
+  }
+}
+
+export async function createPengajuanWithDokumen({ endpoint, dokumen = {}, ...payload }) {
+  const createRes = await createPengajuan(payload)
+  if (!createRes?.success) return createRes
+
+  const pengajuanId = createRes.id || parseIdFromCreateResponse(createRes.data)
+  if (IS_DEV) {
+    console.log('id_pengajuan', pengajuanId)
+  }
+  if (!pengajuanId) {
+    return {
+      success: false,
+      status: 500,
+      data: createRes.data,
+      message: 'ID pengajuan tidak ditemukan dari response backend.',
+      errors: [],
+    }
+  }
+
+  const uploadEndpoint = endpoint || resolveEndpoint(payload)
+  if (!uploadEndpoint) {
+    return {
+      success: false,
+      status: 400,
+      data: createRes.data,
+      message: 'Endpoint upload dokumen tidak dikenali.',
+      errors: [],
+    }
+  }
+
+  const uploadRes = await uploadDokumenPengajuan(uploadEndpoint, pengajuanId, buildDokumenFormData(dokumen))
+  if (!uploadRes?.success) return uploadRes
+
+  return {
+    success: true,
+    status: uploadRes.status || createRes.status,
+    data: {
+      create: createRes.data,
+      upload: uploadRes.data,
+      id_pengajuan: pengajuanId,
+    },
+    id: pengajuanId,
+    message: uploadRes.message || createRes.message || 'Pengajuan berhasil dikirim.',
+    errors: [],
+  }
 }
 
 export async function updatePengajuan(endpoint, id, payload) {

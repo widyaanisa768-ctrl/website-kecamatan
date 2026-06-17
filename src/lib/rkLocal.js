@@ -25,6 +25,7 @@ export function getAuth() {
 export function setAuth(nextAuth) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth))
+  window.dispatchEvent(new Event('rk-auth-updated'))
 }
 
 export function clearAuth() {

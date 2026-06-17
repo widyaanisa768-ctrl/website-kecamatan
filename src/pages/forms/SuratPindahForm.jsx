@@ -3,9 +3,17 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiInfo, FiUploadCloud } from '
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import ValidationAlert from '../../components/ValidationAlert'
 import './SuratPindahForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
-import { createPengajuan } from '../../services/pengajuanService'
+import {
+  buildDokumenPayload,
+  FILE_TYPE_PRESETS,
+  handleBackendValidationError,
+  validateFileField,
+  validateRequiredText,
+} from '../../lib/formValidation'
+import { createPengajuanWithDokumen } from '../../services/pengajuanService'
 
 const INITIAL = {
   nama_lengkap: '',
@@ -14,13 +22,52 @@ const INITIAL = {
   keterangan: '',
 }
 
-const INITIAL_FILES = {
-  suratPindah: null,
-  pasFoto: null,
-  kk: null,
-  ktp: null,
-  aktaKelahiranTionghoa: null,
-}
+const FILE_FIELDS = [
+  {
+    key: 'suratPindah',
+    backendKey: 'surat_keterangan_pindah_kelurahan',
+    label: 'Surat Keterangan Pindah',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+  {
+    key: 'pasFoto',
+    backendKey: 'pas_foto_3x4',
+    label: 'Pas Foto 3x4',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.IMAGE,
+  },
+  {
+    key: 'kk',
+    backendKey: 'kartu_keluarga',
+    label: 'Fotocopy dan Asli KK',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+  {
+    key: 'ktp',
+    backendKey: 'ktp',
+    label: 'Fotocopy KTP',
+    required: true,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+  {
+    key: 'aktaKelahiranTionghoa',
+    backendKey: 'akta_kelahiran_wni_tionghoa',
+    label: 'Fotocopy Akta Kelahiran',
+    required: false,
+    maxSizeMB: 2,
+    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+  },
+]
+
+const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, field]))
+
+const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
 function normalizeData(data) {
   const base = data && typeof data === 'object' ? data : {}
@@ -38,21 +85,28 @@ export default function SuratPindahForm() {
   const [form, setForm] = useState(INITIAL)
   const [files, setFiles] = useState(INITIAL_FILES)
   const [errors, setErrors] = useState({})
+  const [validationErrors, setValidationErrors] = useState([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const requiredFiles = useMemo(() => ['suratPindah', 'pasFoto', 'kk', 'ktp'], [])
+  const requiredFiles = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
 
   useEffect(() => {
     setNotice('')
   }, [])
+
+  useEffect(() => {
+    if (validationErrors.length > 0) {
+      setValidationErrors([])
+    }
+  }, [form, files])
 
   const setField = (key) => (e) => {
     const value = e.target.value
     setForm((prev) => ({ ...prev, [key]: value }))
     setErrors((prev) => {
       if (!prev[key]) return prev
-      const next = value.trim() ? '' : 'Wajib diisi.'
+      const next = validateRequiredText(value, key === 'nama_lengkap' ? 'Nama lengkap' : key === 'alamat_asal' ? 'Alamat asal' : key === 'alamat_pindah' ? 'Alamat pindah' : 'Keterangan')
       if (next) return { ...prev, [key]: next }
       const { [key]: _removed, ...rest } = prev
       return rest
@@ -61,27 +115,36 @@ export default function SuratPindahForm() {
 
   const pickFile = (key) => (e) => {
     const picked = e.target.files?.[0] ?? null
+    const field = FILE_FIELD_MAP[key]
     setFiles((prev) => ({ ...prev, [key]: picked }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
-      if (picked) {
-        const { [key]: _removed, ...rest } = prev
-        return rest
-      }
-      return prev
+      const msg = validateFileField(picked, field)
+      if (msg) return { ...prev, [key]: msg }
+      const { [key]: _removed, ...rest } = prev
+      return rest
     })
   }
 
   const validate = () => {
     const nextErrors = {}
     for (const key of Object.keys(INITIAL)) {
-      if (!form[key].trim()) nextErrors[key] = 'Wajib diisi.'
+      const label =
+        key === 'nama_lengkap'
+          ? 'Nama lengkap'
+          : key === 'alamat_asal'
+            ? 'Alamat asal'
+            : key === 'alamat_pindah'
+              ? 'Alamat pindah'
+              : 'Keterangan'
+      const msg = validateRequiredText(form[key], label)
+      if (msg) nextErrors[key] = msg
     }
     for (const key of requiredFiles) {
-      const hasNew = !!files[key]
-      if (!hasNew) nextErrors[key] = 'Wajib diunggah.'
+      const msg = validateFileField(files[key], FILE_FIELD_MAP[key])
+      if (msg) nextErrors[key] = msg
     }
     setErrors(nextErrors)
+    setValidationErrors(Object.values(nextErrors))
     return Object.keys(nextErrors).length === 0
   }
 
@@ -94,13 +157,7 @@ export default function SuratPindahForm() {
       layanan: 'Rekomendasi Surat Pindah',
       layananPath: '/layanan/surat-pindah',
       data: { ...form },
-      dokumen: {
-        suratKeteranganPindah: files.suratPindah,
-        pasFoto3x4: files.pasFoto,
-        kk: files.kk,
-        ktp: files.ktp,
-        aktaKelahiranOrangTuaWniTionghoa: files.aktaKelahiranTionghoa,
-      },
+      dokumen: buildDokumenPayload(files, FILE_FIELDS),
     }
 
     void (async () => {
@@ -113,10 +170,14 @@ export default function SuratPindahForm() {
 
       setBusy(true)
       try {
+        if (import.meta.env.DEV) {
+          console.log('files state', files)
+        }
         const keteranganPemohon = `Nama: ${form.nama_lengkap} • Alamat Asal: ${form.alamat_asal} • Alamat Pindah: ${form.alamat_pindah}`
         const dokumen_meta = mergeDokumenMeta({}, payload.dokumen)
 
-        const res = await createPengajuan({
+        const res = await createPengajuanWithDokumen({
+          endpoint: '/api/rekomendasi_surat_pindah',
           jenis_layanan: payload.layanan,
           nama_pemohon: form.nama_lengkap,
           nik: '',
@@ -126,15 +187,19 @@ export default function SuratPindahForm() {
           keterangan: form.keterangan ? `${keteranganPemohon} • ${form.keterangan}` : keteranganPemohon,
           tanggal_pengajuan: new Date().toISOString(),
           dokumen_meta,
+          data: payload.data,
           data_form: payload.data,
           layanan_path: payload.layananPath,
+          layananPath: payload.layananPath,
+          dokumen: payload.dokumen,
         })
 
         if (!res?.success) {
-          setNotice(res?.message || 'Gagal mengirim pengajuan.')
+          setValidationErrors(handleBackendValidationError(res, res?.message || 'Gagal mengirim pengajuan.'))
           return
         }
 
+        setValidationErrors([])
         setNotice(res?.message || 'Pengajuan berhasil dikirim.')
         window.setTimeout(() => navigate('/status-pengajuan', { replace: true }), 600)
       } finally {
@@ -159,6 +224,8 @@ export default function SuratPindahForm() {
         <section className="rk-formSection" aria-label="Form surat pindah">
           <div className="rk-container">
             <form className="rk-formCard" onSubmit={onSubmit}>
+              <ValidationAlert errors={validationErrors} />
+
               <div className="rk-formCardHead">
                 <div className="rk-formCardIcon" aria-hidden="true">
                   <FiFileText />
@@ -259,7 +326,7 @@ export default function SuratPindahForm() {
                     id="suratPindah"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.suratPindah.accept}
                     onChange={pickFile('suratPindah')}
                   />
                   {files.suratPindah ? <div className="rk-picked">{files.suratPindah.name}</div> : null}
@@ -274,7 +341,7 @@ export default function SuratPindahForm() {
                     id="pasFoto"
                     className="rk-file"
                     type="file"
-                    accept="image/*"
+                    accept={FILE_FIELD_MAP.pasFoto.accept}
                     onChange={pickFile('pasFoto')}
                   />
                   {files.pasFoto ? <div className="rk-picked">{files.pasFoto.name}</div> : null}
@@ -285,7 +352,7 @@ export default function SuratPindahForm() {
                   <label className="rk-label" htmlFor="kk">
                     Fotocopy dan Asli KK <span className="rk-required">*</span>
                   </label>
-                  <input id="kk" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('kk')} />
+                  <input id="kk" className="rk-file" type="file" accept={FILE_FIELD_MAP.kk.accept} onChange={pickFile('kk')} />
                   {files.kk ? <div className="rk-picked">{files.kk.name}</div> : null}
                   {errors.kk ? <div className="rk-error">{errors.kk}</div> : null}
                 </div>
@@ -294,7 +361,7 @@ export default function SuratPindahForm() {
                   <label className="rk-label" htmlFor="ktp">
                     Fotocopy KTP <span className="rk-required">*</span>
                   </label>
-                  <input id="ktp" className="rk-file" type="file" accept="image/*,.pdf" onChange={pickFile('ktp')} />
+                  <input id="ktp" className="rk-file" type="file" accept={FILE_FIELD_MAP.ktp.accept} onChange={pickFile('ktp')} />
                   {files.ktp ? <div className="rk-picked">{files.ktp.name}</div> : null}
                   {errors.ktp ? <div className="rk-error">{errors.ktp}</div> : null}
                 </div>
@@ -307,7 +374,7 @@ export default function SuratPindahForm() {
                     id="aktaKelahiranTionghoa"
                     className="rk-file"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={FILE_FIELD_MAP.aktaKelahiranTionghoa.accept}
                     onChange={pickFile('aktaKelahiranTionghoa')}
                   />
                   {files.aktaKelahiranTionghoa ? <div className="rk-picked">{files.aktaKelahiranTionghoa.name}</div> : null}

@@ -3,7 +3,7 @@ import { clearAuth } from '../lib/rkLocal'
 
 function normalizeAuthResponse(payload) {
   if (typeof payload === 'string') {
-    return { success: false, message: payload, token: '', accessToken: '', user: null }
+    return { success: false, message: payload, token: '', accessToken: '', user: null, errors: [] }
   }
 
   const base = payload && typeof payload === 'object' ? payload : {}
@@ -15,8 +15,13 @@ function normalizeAuthResponse(payload) {
   const user = data.user || base.user || null
   const success = typeof base.success === 'boolean' ? base.success : typeof data.success === 'boolean' ? data.success : !!token
   const message = base.message || data.message || ''
+  const errors = Array.isArray(base.errors)
+    ? base.errors
+    : Array.isArray(data.errors)
+      ? data.errors
+      : []
 
-  return { ...base, accessToken, token, user, success, message }
+  return { ...base, accessToken, token, user, success, message, errors }
 }
 
 function isHistoryLoginFailureMessage(message) {
@@ -99,7 +104,7 @@ export async function register({ nama_lengkap, username, email, password }) {
 
     if (!res.ok) return { success: false, status: res.status, message }
 
-    return { success: true, status: res.status, message: base.message || 'Registrasi berhasil! Silakan login.' }
+    return { success: true, status: res.status, message: base.message || 'Registrasi berhasil! Silakan login.', errors: [] }
   } catch (err) {
     const isAbort = err?.name === 'AbortError'
     if (import.meta.env.DEV) console.log('[authService] register error (raw):', err)
@@ -108,6 +113,7 @@ export async function register({ nama_lengkap, username, email, password }) {
       message: isAbort
         ? `AbortError: permintaan melebihi batas waktu (${(err && err.message) || 'timeout'}).`
         : `${err?.name || 'Error'}: ${err?.message || String(err)}`,
+      errors: [],
     }
   }
 }

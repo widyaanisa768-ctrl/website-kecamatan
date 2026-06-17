@@ -2,9 +2,39 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff, FiLock, FiShield, FiUser, FiZap } from 'react-icons/fi'
 import { setAuth } from '../lib/rkLocal'
-import { loginLocalRole } from '../lib/authRoles'
+import { getBackendErrors, validateLoginForm } from '../lib/formValidation'
+import { loginAnyLocalRole, loginLocalRole } from '../lib/authRoles'
 import { login } from '../services/authService'
 import './Auth.css'
+
+function normalizeRole(role) {
+  return String(role || '').trim().toLowerCase()
+}
+
+function buildBackendAuthUser(user, usernameInput, role) {
+  const source = user && typeof user === 'object' ? user : {}
+  const username = source.username || source.user_name || usernameInput
+  const name = source.name || source.nama || source.nama_lengkap || username
+
+  return {
+    ...source,
+    role,
+    username,
+    name,
+    nama: source.nama || name,
+  }
+}
+
+function saveBackendAuth(payload, authUser) {
+  const accessToken = payload?.accessToken || payload?.token || ''
+  const token = payload?.token || payload?.accessToken || ''
+
+  if (accessToken) window.localStorage.setItem('accessToken', accessToken)
+  if (token) window.localStorage.setItem('token', token)
+  window.localStorage.setItem('user', JSON.stringify(authUser))
+  window.localStorage.setItem('role', authUser.role)
+  setAuth(authUser)
+}
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -16,7 +46,7 @@ export default function LoginPage() {
     remember: false,
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [validationErrors, setValidationErrors] = useState([])
   const [busy, setBusy] = useState(false)
 
   const points = useMemo(
@@ -32,11 +62,10 @@ export default function LoginPage() {
   const isPetugasMode =
     location.pathname === '/login-petugas' || new URLSearchParams(location.search).get('role') === 'petugas'
   const isKepalaCamatMode = new URLSearchParams(location.search).get('role') === 'kepala_camat'
-  // Akun petugas lokal.
-  // Akun kepala camat lokal.
-  const localRoleMode = isPetugasMode ? 'petugas' : isKepalaCamatMode ? 'kepala_camat' : ''
+  // Akun kepala camat masih memakai login lokal.
+  const localRoleMode = isKepalaCamatMode ? 'kepala_camat' : ''
   const authPanelLabel =
-    localRoleMode === 'petugas'
+    isPetugasMode
       ? 'Login Petugas'
       : localRoleMode === 'kepala_camat'
         ? 'Login Kepala Camat'
@@ -49,8 +78,8 @@ export default function LoginPage() {
       [name]: type === 'checkbox' ? checked : value,
     }))
 
-    if (notice && (name === 'username' || name === 'password')) {
-      setNotice('')
+    if (validationErrors.length > 0 && (name === 'username' || name === 'password')) {
+      setValidationErrors([])
     }
   }
 
@@ -58,30 +87,63 @@ export default function LoginPage() {
     e.preventDefault()
 
     void (async () => {
-      if (!form.username || !form.password) {
-        setNotice('Username dan password wajib diisi.')
+      const frontendErrors = validateLoginForm(form)
+      if (frontendErrors.length > 0) {
+        setValidationErrors(frontendErrors)
         return
       }
 
       setBusy(true)
-      setNotice('')
+      setValidationErrors([])
 
-      const usernameInput = form.username
+      const usernameInput = form.username.trim()
       const passwordInput = form.password
 
+      const finishLocalLogin = (result) => {
+        const user = result.user
+        window.localStorage.setItem('user', JSON.stringify(user))
+        window.localStorage.setItem('role', user.role)
+        setAuth(user)
+        navigate(result.redirect, { replace: true })
+      }
+
       try {
-        if (localRoleMode) {
-          const result = loginLocalRole(usernameInput, passwordInput, localRoleMode)
-          if (!result?.success) {
-            setNotice(result?.message || 'Username atau password salah.')
+        if (isPetugasMode) {
+          const payload = await login(usernameInput, passwordInput)
+
+          if (!payload?.success) {
+            setValidationErrors(getBackendErrors(payload, 'Username atau password salah.'))
             return
           }
 
-          const user = result.user
-          window.localStorage.setItem('user', JSON.stringify(user))
-          window.localStorage.setItem('role', user.role)
-          setAuth({ role: user.role, username: user.username, name: user.name })
-          navigate(result.redirect, { replace: true })
+          const user = payload.user || null
+          const role = normalizeRole(user?.role)
+
+          if (role !== 'petugas') {
+            setValidationErrors(['Akun ini bukan akun petugas.'])
+            return
+          }
+
+          const authUser = buildBackendAuthUser(user, usernameInput, role)
+          saveBackendAuth(payload, authUser)
+          navigate('/dashboard-petugas', { replace: true })
+          return
+        }
+
+        if (localRoleMode) {
+          const result = loginLocalRole(usernameInput, passwordInput, localRoleMode)
+          if (!result?.success) {
+            setValidationErrors([result?.message || 'Username atau password salah.'])
+            return
+          }
+
+          finishLocalLogin(result)
+          return
+        }
+
+        const localResult = loginAnyLocalRole(usernameInput, passwordInput)
+        if (localResult?.success) {
+          finishLocalLogin(localResult)
           return
         }
 
@@ -89,7 +151,7 @@ export default function LoginPage() {
         const payload = await login(usernameInput, passwordInput)
 
         if (!payload?.success) {
-          setNotice(payload?.message || 'Login gagal.')
+          setValidationErrors(getBackendErrors(payload, 'Login gagal.'))
           return
         }
 
@@ -105,14 +167,13 @@ export default function LoginPage() {
         const name = user?.name || user?.nama || resolvedUsername
 
         setAuth({ role, username: resolvedUsername, name })
-        setNotice('')
 
         if (role === 'petugas') navigate('/petugas/dashboard', { replace: true })
         else if (role === 'kepala_camat') navigate('/dashboard-kepala-camat')
         else navigate('/layanan')
       } catch (err) {
         console.log('[login] error (raw):', err)
-        setNotice(`${err?.name || 'Error'}: ${err?.message || String(err)}`)
+        setValidationErrors([`${err?.name || 'Error'}: ${err?.message || String(err)}`])
       } finally {
         setBusy(false)
       }
@@ -159,11 +220,11 @@ export default function LoginPage() {
         </section>
 
         <section className="rk-authRight" aria-label={authPanelLabel}>
-          <div className="rk-authCard">
+          <div className="rk-authCard card bg-base-100 shadow-xl border border-base-200">
             <div className="rk-authCardHead">
               <h2 className="rk-authCardTitle">Selamat datang</h2>
               <p className="rk-authCardSubtitle">
-                {localRoleMode === 'petugas'
+                {isPetugasMode
                   ? ' sebagai petugas'
                   : localRoleMode === 'kepala_camat'
                     ? ' sebagai kepala camat'
@@ -182,14 +243,13 @@ export default function LoginPage() {
                   </span>
                   <input
                     id="rk-login-email"
-                    className="rk-authInput"
+                    className="rk-authInput input input-bordered w-full"
                     type="text"
                     name="username"
                     placeholder="Masukkan username"
                     value={form.username}
                     onChange={handleChange}
                     autoComplete="username"
-                    required
                   />
                 </div>
               </div>
@@ -204,14 +264,13 @@ export default function LoginPage() {
                   </span>
                   <input
                     id="rk-login-password"
-                    className="rk-authInput"
+                    className="rk-authInput input input-bordered w-full"
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     placeholder="Masukkan password"
                     value={form.password}
                     onChange={handleChange}
                     autoComplete="current-password"
-                    required
                   />
                   <button
                     type="button"
@@ -224,22 +283,28 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {notice ? (
-                <div className="rk-authNotice" role="status" aria-live="polite">
-                  {notice}
+              {validationErrors.length > 0 ? (
+                <div className="rk-authNotice alert alert-error" role="status" aria-live="polite">
+                  <strong className="block">Validasi gagal</strong>
+                  <div className="mt-2 grid gap-1">
+                    {validationErrors.map((err, index) => (
+                      <p key={index}>{err}</p>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
-              <button type="submit" className="rk-authSubmit" disabled={busy}>
-                <FiArrowRight aria-hidden="true" />
+              <button type="submit" className="rk-authSubmit btn btn-primary" disabled={busy}>
+                {busy ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <FiArrowRight aria-hidden="true" />}
                 {busy ? 'Memproses...' : 'Login'}
               </button>
+
             </form>
 
             <div className="rk-authFoot">
               Belum punya akun?{' '}
               <strong>
-                <Link className="rk-authLink" to="/register">
+                <Link className="rk-authLink link link-primary" to="/register">
                   Daftar di sini
                 </Link>
               </strong>

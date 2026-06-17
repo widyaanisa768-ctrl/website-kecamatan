@@ -81,6 +81,7 @@ function App() {
               <ProfilUser />
             </RequireMasyarakat>
           }
+
         />
         <Route
           path="/layanan"
@@ -261,8 +262,9 @@ function App() {
         <Route path="/login-petugas" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>
-    </BrowserRouter>
+          </BrowserRouter>
   )
 }
 
 export default App
+

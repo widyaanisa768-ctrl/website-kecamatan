@@ -12,6 +12,7 @@ import {
   FiZap,
 } from 'react-icons/fi'
 import { register } from '../services/authService'
+import { getBackendErrors, validateRegisterForm } from '../lib/formValidation'
 import './Auth.css'
 
 function Register() {
@@ -34,7 +35,8 @@ function Register() {
     password: '',
   })
 
-  const [message, setMessage] = useState('')
+  const [validationErrors, setValidationErrors] = useState([])
+  const [successMessage, setSuccessMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -45,24 +47,29 @@ function Register() {
       ...prev,
       [name]: value,
     }))
+
+    if (validationErrors.length > 0) {
+      setValidationErrors([])
+    }
+
+    if (successMessage) {
+      setSuccessMessage('')
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    setMessage('')
 
-    if (!formData.nama || !formData.username || !formData.email || !formData.password) {
-      setMessage('Semua field wajib diisi.')
-      return
-    }
-
-    if (formData.password.length < 6) {
-      setMessage('Password minimal 6 karakter.')
+    const frontendErrors = validateRegisterForm(formData)
+    if (frontendErrors.length > 0) {
+      setValidationErrors(frontendErrors)
       return
     }
 
     void (async () => {
       setBusy(true)
+      setValidationErrors([])
+      setSuccessMessage('')
       try {
         const payload = await register({
           nama_lengkap: formData.nama,
@@ -71,14 +78,16 @@ function Register() {
           password: formData.password,
         })
         if (!payload?.success) {
-          setMessage(payload?.message || 'Registrasi gagal.')
+          setValidationErrors(getBackendErrors(payload, 'Registrasi gagal.'))
           return
         }
 
-        setMessage(payload?.message || 'Registrasi berhasil! Silakan login.')
+        setSuccessMessage(payload?.message || 'Registrasi berhasil! Silakan login.')
         window.setTimeout(() => {
           navigate('/login', { replace: true })
         }, 800)
+      } catch (err) {
+        setValidationErrors([`${err?.name || 'Error'}: ${err?.message || String(err)}`])
       } finally {
         setBusy(false)
       }
@@ -125,7 +134,7 @@ function Register() {
         </section>
 
         <section className="rk-authRight" aria-label="Registrasi Akun Baru">
-          <div className="rk-authCard">
+          <div className="rk-authCard card bg-base-100 shadow-xl border border-base-200">
             <div className="rk-authCardHead">
               <h2 className="rk-authCardTitle">Buat Akun Baru</h2>
             </div>
@@ -142,7 +151,7 @@ function Register() {
                     </span>
                     <input
                       id="rk-reg-nama"
-                      className="rk-authInput"
+                      className="rk-authInput input input-bordered w-full"
                       type="text"
                       name="nama"
                       placeholder="Nama lengkap"
@@ -164,7 +173,7 @@ function Register() {
                     </span>
                     <input
                       id="rk-reg-username"
-                      className="rk-authInput"
+                      className="rk-authInput input input-bordered w-full"
                       type="text"
                       name="username"
                       placeholder="Username"
@@ -187,7 +196,7 @@ function Register() {
                   </span>
                   <input
                     id="rk-reg-email"
-                    className="rk-authInput"
+                    className="rk-authInput input input-bordered w-full"
                     type="email"
                     name="email"
                     placeholder="Masukkan email"
@@ -209,7 +218,7 @@ function Register() {
                   </span>
                   <input
                     id="rk-reg-password"
-                    className="rk-authInput"
+                    className="rk-authInput input input-bordered w-full"
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     placeholder="Password"
@@ -229,21 +238,36 @@ function Register() {
                 </div>
               </div>
 
-              <button type="submit" className="rk-authSubmit" disabled={busy}>
-                <FiArrowRight aria-hidden="true" />
+              <button type="submit" className="rk-authSubmit btn btn-primary" disabled={busy}>
+                {busy ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <FiArrowRight aria-hidden="true" />}
                 {busy ? 'Memproses...' : 'Register'}
               </button>
 
-              {message ? (
-                <p className="rk-authNotice" role="status" aria-live="polite">
-                  {message}
+              {validationErrors.length > 0 ? (
+                <div className="rk-authNotice alert alert-error" role="status" aria-live="polite">
+                  <strong className="block">Validasi gagal</strong>
+                  <div className="mt-2 grid gap-1">
+                    {validationErrors.map((err, index) => (
+                      <p key={index}>{err}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {successMessage ? (
+                <p
+                  className="rk-authNotice alert alert-success"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {successMessage}
                 </p>
               ) : null}
 
               <div className="rk-authFoot">
                 Sudah punya akun?{' '}
                 <strong>
-                  <Link className="rk-authLink" to="/login">
+                  <Link className="rk-authLink link link-primary" to="/login">
                     Login di sini
                   </Link>
                 </strong>

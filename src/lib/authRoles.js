@@ -48,3 +48,12 @@ export function loginLocalRole(username, password, mode) {
     redirect: account.redirect,
   }
 }
+
+export function loginAnyLocalRole(username, password) {
+  for (const role of Object.keys(LOCAL_ROLE_ACCOUNTS)) {
+    const result = loginLocalRole(username, password, role)
+    if (result?.success) return result
+  }
+
+  return { success: false, message: 'Username atau password salah.' }
+}
