@@ -91,12 +91,6 @@
   background: rgba(255, 255, 255, 0.94);
 }
 
-.rk-statusHeroBtn.isNew {
-  color: #ffffff;
-  border-color: #2797d6;
-  background: #147fbd;
-}
-
 .rk-statusHeroBtn:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.16);
@@ -105,10 +99,6 @@
 
 .rk-statusHeroBtn.isPrimary:hover {
   background: #ffffff;
-}
-
-.rk-statusHeroBtn.isNew:hover {
-  background: #0b6da8;
 }
 
 @media (max-width: 900px) {

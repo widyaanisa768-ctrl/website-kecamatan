@@ -21,11 +21,22 @@ import { getAuth } from '../lib/rkLocal'
 import {
   deletePengajuan,
   getDetailPengajuan,
+  getPengajuanDokumen,
   getPengajuanId,
   getPengajuanSaya,
   updatePengajuan,
+  uploadDokumenPengajuan,
 } from '../services/pengajuanService'
+import { handleBackendValidationError } from '../lib/formValidation'
+import {
+  buildDokumenFormDataFromFiles,
+  getDokumenConfigForPengajuan,
+  hasSelectedDokumenFiles,
+  validateSelectedDokumenFiles,
+} from '../lib/pengajuanDokumenConfig'
 import './PengajuanSaya.css'
+
+const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
 
 function safeParse(raw, fallback = null) {
   try {
@@ -66,7 +77,7 @@ function formatDateTime(date) {
 
 function statusKind(status) {
   const value = String(status || '').trim().toLowerCase()
-  if (value.includes('tolak')) return 'reject'
+  if (value.includes('tolak') || value.includes('reject')) return 'reject'
   if (value.includes('selesai')) return 'done'
   if (value.includes('setuju') || value.includes('diterima')) return 'done'
   if (value.includes('proses')) return 'process'
@@ -117,6 +128,12 @@ const HIDDEN_DATA_KEYS = new Set([
   'tanggalpengajuan',
   'tanggal_update',
   'tanggalupdate',
+  'tanggal_verifikasi',
+  'tanggalverifikasi',
+  'verified_at',
+  'verifiedat',
+  'verification_date',
+  'verificationdate',
   'id_pengajuan',
   'status',
   'status_pengajuan',
@@ -190,6 +207,183 @@ function formatDataValue(value) {
       .join(', ')
   }
   return String(value)
+}
+
+function isFileLikePath(value) {
+  const text = String(value || '').trim()
+  return /^https?:\/\//i.test(text) || text.startsWith('/') || text.startsWith('uploads/')
+}
+
+function buildDokumenUrl(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/^https?:\/\//i.test(text)) return text
+  if (!isFileLikePath(text)) return ''
+  if (!RAW_API_BASE_URL) return text
+
+  const base = RAW_API_BASE_URL.replace(/\/+$/, '').replace(/\/api$/i, '')
+  const path = text.startsWith('/') ? text : `/${text}`
+  return `${base}${path}`
+}
+
+function filenameFromPath(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  try {
+    const parsed = new URL(text)
+    return decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || text)
+  } catch {
+    return decodeURIComponent(text.split('?')[0].split('/').filter(Boolean).pop() || text)
+  }
+}
+
+function readDokumenMeta(meta, fallbackLabel) {
+  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+    const rawUrl =
+      meta.url_file ||
+      meta.url ||
+      meta.href ||
+      meta.path ||
+      meta.path_file ||
+      meta.file_path ||
+      meta.file_url ||
+      meta.dokumen_url ||
+      meta.lampiran_url ||
+      meta.download_url ||
+      ''
+    const url = buildDokumenUrl(rawUrl)
+    const filename =
+      meta.name ||
+      meta.nama ||
+      meta.filename ||
+      meta.file_name ||
+      meta.originalname ||
+      meta.nama_file ||
+      (rawUrl ? filenameFromPath(rawUrl) : '')
+    return { filename, url }
+  }
+
+  if (typeof meta === 'string') {
+    return {
+      filename: isFileLikePath(meta) ? filenameFromPath(meta) : meta,
+      url: buildDokumenUrl(meta),
+    }
+  }
+
+  return { filename: fallbackLabel, url: '' }
+}
+
+function normalizeDokumenKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function getDokumenIdentityCandidates(entry) {
+  return [
+    entry?.field,
+    entry?.key,
+    entry?.jenis,
+    entry?.jenis_dokumen,
+    entry?.jenisDokumen,
+    entry?.nama_dokumen,
+    entry?.namaDokumen,
+    entry?.tipe_dokumen,
+    entry?.kategori,
+    entry?.backendKey,
+  ].filter(Boolean)
+}
+
+function readDokumenByField(item, docs, field) {
+  const backendKey = field?.backendKey || field?.key
+  if (!backendKey) return null
+  if (docs && !Array.isArray(docs) && Object.prototype.hasOwnProperty.call(docs, backendKey)) return docs[backendKey]
+  if (docs && !Array.isArray(docs) && Object.prototype.hasOwnProperty.call(docs, field.key)) return docs[field.key]
+
+  if (Array.isArray(docs)) {
+    const expectedKeys = [backendKey, field.key, field.label, ...(field.aliases || [])]
+      .map(normalizeDokumenKey)
+      .filter(Boolean)
+    const match = docs.find((entry) => {
+      const actualKeys = getDokumenIdentityCandidates(entry).map(normalizeDokumenKey)
+      return actualKeys.some((actual) =>
+        expectedKeys.some((expected) => actual === expected || actual.endsWith(`_${expected}`) || expected.endsWith(`_${actual}`))
+      )
+    })
+    if (match) return match
+  }
+
+  if (item && Object.prototype.hasOwnProperty.call(item, backendKey)) return item[backendKey]
+  if (item && Object.prototype.hasOwnProperty.call(item, field.key)) return item[field.key]
+  return null
+}
+
+function normalizeDokumenPersyaratan(item) {
+  if (!item) return []
+  const config = getDokumenConfigForPengajuan(item)
+  const docs = getPengajuanDokumen(item)
+  const entries = []
+  const usedKeys = new Set()
+
+  const pushEntry = (id, label, meta, extra = {}) => {
+    const { filename, url } = readDokumenMeta(meta, label)
+    const uploaded = Boolean(meta) && Boolean(filename || url)
+    entries.push({
+      id,
+      label,
+      filename: uploaded ? filename || filenameFromPath(url) || 'Dokumen tersedia' : 'Belum diunggah',
+      url: uploaded ? url : '',
+      uploaded,
+      ...extra,
+    })
+  }
+
+  if (config?.fields?.length) {
+    config.fields.forEach((field) => {
+      const backendKey = field.backendKey || field.key
+      const meta = readDokumenByField(item, docs, field)
+      ;[backendKey, field.key, field.label, ...(field.aliases || [])].forEach((value) => usedKeys.add(normalizeDokumenKey(value)))
+      pushEntry(backendKey, field.label, meta, {
+        key: field.key,
+        backendKey,
+        required: field.required,
+      })
+    })
+  }
+
+  if (Array.isArray(docs)) {
+    docs.forEach((meta, index) => {
+      const label =
+        meta?.label || meta?.jenis_dokumen || meta?.jenis || meta?.nama_dokumen || meta?.tipe_dokumen || meta?.kategori || `Dokumen ${index + 1}`
+      const docKeyCandidates = [
+        meta?.field,
+        meta?.key,
+        meta?.jenis_dokumen,
+        meta?.nama_dokumen,
+        meta?.tipe_dokumen,
+        meta?.kategori,
+        label,
+      ]
+      const isMapped = docKeyCandidates.some((candidate) => usedKeys.has(normalizeDokumenKey(candidate)))
+      if (isMapped) return
+      pushEntry(`dokumen-${index}`, label, meta)
+    })
+  } else if (docs && typeof docs === 'object') {
+    Object.entries(docs).forEach(([key, meta]) => {
+      if (usedKeys.has(normalizeDokumenKey(key))) return
+      pushEntry(`dokumen-${key}`, humanizeLabel(key), meta)
+    })
+  }
+
+  const seen = new Set()
+  return entries.filter((entry) => {
+    const key = `${entry.label}|${entry.filename}|${entry.url}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 const RESULT_FILE_KEYS = [
@@ -302,6 +496,9 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const [editItem, setEditItem] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [editSourceType, setEditSourceType] = useState('item')
+  const [editFiles, setEditFiles] = useState({})
+  const [editFileErrors, setEditFileErrors] = useState([])
+  const [editFileInputVersion, setEditFileInputVersion] = useState(0)
   const [loading, setLoading] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
   const [error, setError] = useState('')
@@ -471,6 +668,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
       menunggu: list.filter((it) => statusKind(getStatus(it)) === 'waiting').length,
       diproses: list.filter((it) => statusKind(getStatus(it)) === 'process').length,
       selesai: list.filter((it) => statusKind(getStatus(it)) === 'done').length,
+      ditolak: list.filter((it) => statusKind(getStatus(it)) === 'reject').length,
     }
   }, [visibleItems])
 
@@ -480,6 +678,9 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const activeResultFile = getResultFile(active)
   const activeCanDownload = activeKind === 'done' && !!activeResultFile
   const activeRejectReason = getRejectReason(active)
+  const activeDokumenPersyaratan = useMemo(() => normalizeDokumenPersyaratan(active), [active])
+  const editDokumenConfig = useMemo(() => getDokumenConfigForPengajuan(editItem), [editItem])
+  const editDokumenPersyaratan = useMemo(() => normalizeDokumenPersyaratan(editItem), [editItem])
 
   const dataEntries = useMemo(() => {
     if (!active || typeof active !== 'object') return []
@@ -502,37 +703,76 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   function onDetail(item) {
     const id = getPengajuanId(item)
     if (!id) {
+      if (import.meta.env.DEV) {
+        console.log('DETAIL PENGAJUAN:', item)
+        console.log('DOKUMEN DETAIL:', item?.dokumen, item?.documents, item?.files)
+      }
       setActive(item)
       return
     }
 
     void (async () => {
       try {
-        const res = await getDetailPengajuan(id)
-        if (res?.success) setActive(res.data || item)
-        else setActive(item)
+        const res = await getDetailPengajuan(id, item)
+        const selectedPengajuan = res?.success ? res.data || item : item
+        if (import.meta.env.DEV) {
+          console.log('DETAIL PENGAJUAN:', selectedPengajuan)
+          console.log('DOKUMEN DETAIL:', selectedPengajuan?.dokumen, selectedPengajuan?.documents, selectedPengajuan?.files)
+          const normalizedDokumen = normalizeDokumenPersyaratan(selectedPengajuan)
+          if (normalizedDokumen.every((entry) => !entry.uploaded)) {
+            console.warn('Dokumen tidak ditemukan dari response backend', selectedPengajuan)
+          }
+        }
+        setActive(selectedPengajuan)
       } catch {
+        if (import.meta.env.DEV) {
+          console.log('DETAIL PENGAJUAN:', item)
+          console.log('DOKUMEN DETAIL:', item?.dokumen, item?.documents, item?.files)
+        }
         setActive(item)
       }
     })()
   }
 
-  function openEdit(item) {
+  async function openEdit(item) {
     if (!canManagePengajuan(getStatus(item))) {
       setNotice({ type: 'error', message: 'Pengajuan hanya dapat diedit saat Menunggu Verifikasi.' })
       return
     }
 
-    const source = getEditableSource(item)
+    const id = getPengajuanId(item)
+    let selectedPengajuan = item
+    if (id) {
+      try {
+        const res = await getDetailPengajuan(id, item)
+        if (res?.success) selectedPengajuan = res.data || item
+      } catch {
+        selectedPengajuan = item
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('DETAIL PENGAJUAN:', selectedPengajuan)
+      console.log('DOKUMEN DETAIL:', selectedPengajuan?.dokumen, selectedPengajuan?.documents, selectedPengajuan?.files)
+      const normalizedDokumen = normalizeDokumenPersyaratan(selectedPengajuan)
+      if (normalizedDokumen.every((entry) => !entry.uploaded)) {
+        console.warn('Dokumen tidak ditemukan dari response backend', selectedPengajuan)
+      }
+    }
+
+    const source = getEditableSource(selectedPengajuan)
     const entries = Object.entries(source.data).filter(([key, value]) => isSafeEditableEntry(key, value))
     if (entries.length === 0) {
       setNotice({ type: 'error', message: 'Tidak ada data pengajuan yang aman untuk diedit.' })
       return
     }
 
-    setEditItem(item)
+    setEditItem(selectedPengajuan)
     setEditSourceType(source.type)
     setEditForm(Object.fromEntries(entries))
+    setEditFiles({})
+    setEditFileErrors([])
+    setEditFileInputVersion((version) => version + 1)
     setActive(null)
   }
 
@@ -541,10 +781,32 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
     setEditItem(null)
     setEditForm({})
     setEditSourceType('item')
+    setEditFiles({})
+    setEditFileErrors([])
+    setEditFileInputVersion((version) => version + 1)
   }
 
   function setEditValue(key, value) {
     setEditForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function setEditFile(field, event) {
+    const file = event.target.files?.[0] || null
+    if (!file) {
+      setEditFiles((current) => ({ ...current, [field.key]: null }))
+      return
+    }
+
+    const errors = validateSelectedDokumenFiles({ [field.key]: file }, [field])
+    if (errors.length > 0) {
+      setEditFileErrors(errors)
+      setEditFiles((current) => ({ ...current, [field.key]: null }))
+      event.target.value = ''
+      return
+    }
+
+    setEditFileErrors([])
+    setEditFiles((current) => ({ ...current, [field.key]: file }))
   }
 
   async function onEditSubmit(event) {
@@ -556,6 +818,18 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
 
     const id = getPengajuanId(editItem)
     const endpoint = editItem?.__endpoint || ''
+    const shouldUploadDokumen = hasSelectedDokumenFiles(editFiles)
+    if (shouldUploadDokumen && !editDokumenConfig?.fields?.length) {
+      setEditFileErrors(['Jenis layanan belum memiliki konfigurasi upload dokumen.'])
+      return
+    }
+
+    const fileErrors = shouldUploadDokumen ? validateSelectedDokumenFiles(editFiles, editDokumenConfig.fields) : []
+    if (fileErrors.length > 0) {
+      setEditFileErrors(fileErrors)
+      return
+    }
+
     let payloadEdit = { ...editForm }
     if (editSourceType === 'data_form') {
       payloadEdit = { data_form: { ...editForm } }
@@ -571,8 +845,26 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         setNotice({ type: 'error', message: res?.message || 'Gagal memperbarui pengajuan.' })
         return
       }
+
+      if (shouldUploadDokumen) {
+        const uploadRes = await uploadDokumenPengajuan(
+          editDokumenConfig.endpoint || endpoint,
+          id,
+          buildDokumenFormDataFromFiles(editFiles, editDokumenConfig.fields)
+        )
+        if (!uploadRes?.success) {
+          const errors = handleBackendValidationError(uploadRes, uploadRes?.message || 'Gagal upload ulang dokumen.')
+          setEditFileErrors(errors)
+          setNotice({ type: 'error', message: errors[0] || 'Gagal upload ulang dokumen.' })
+          return
+        }
+      }
+
       setEditItem(null)
       setEditForm({})
+      setEditFiles({})
+      setEditFileErrors([])
+      setEditFileInputVersion((version) => version + 1)
       setNotice({ type: 'success', message: res?.message || 'Pengajuan berhasil diperbarui.' })
       await refreshItems()
     } catch (err) {
@@ -644,7 +936,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         .rk-kv dd { margin: 0; opacity: .95; }
         .rk-modalFoot { padding: 14px 16px; display:flex; flex-wrap:wrap; gap: 10px; justify-content:flex-end; border-top: 1px solid rgba(0,0,0,.08); background: rgba(0,0,0,.02); }
 
-        .rk-summaryGrid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .rk-summaryGrid { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
         .rk-summaryCard { padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(11,79,124,.12); background: rgba(255,255,255,.82); box-shadow: 0 10px 22px rgba(16,52,83,.06); }
         .rk-summaryLabel { font-size: 12px; font-weight: 900; opacity: .85; color: rgba(29,42,58,.92); }
         .rk-summaryValue { margin-top: 6px; font-size: 20px; font-weight: 950; color: #061c32; letter-spacing: -.2px; }
@@ -652,6 +944,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         .rk-summaryCard.isWaiting { border-color: rgba(245,158,11,.26); }
         .rk-summaryCard.isProcess { border-color: rgba(59,130,246,.26); }
         .rk-summaryCard.isDone { border-color: rgba(16,185,129,.26); }
+        .rk-summaryCard.isReject { border-color: rgba(220,38,38,.24); }
 
         @media (max-width: 900px) { .rk-summaryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 520px) { .rk-summaryGrid { grid-template-columns: 1fr; } .rk-mySubRow { align-items:flex-start; } }
@@ -709,6 +1002,14 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                   <div className="rk-summaryLabel">Selesai</div>
                   <div className="rk-summaryValue">{loading ? '—' : counts.selesai}</div>
                   <div className="rk-summaryHint">Sudah final</div>
+                </div>
+              </div>
+              <div className="rk-summaryCard isReject">
+                <span className="rk-summaryIcon"><FiAlertCircle aria-hidden="true" /></span>
+                <div>
+                  <div className="rk-summaryLabel">Ditolak</div>
+                  <div className="rk-summaryValue">{loading ? '—' : counts.ditolak}</div>
+                  <div className="rk-summaryHint">Perlu diperiksa</div>
                 </div>
               </div>
             </div>
@@ -851,6 +1152,38 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                   </dl>
                 )}
               </div>
+
+              <div className="rk-mySubCard rk-documentSection" aria-label="Dokumen persyaratan">
+                <div className="rk-dataFormTitle"><FiFileText aria-hidden="true" /> Dokumen Persyaratan</div>
+                {activeDokumenPersyaratan.length === 0 ? (
+                  <div className="rk-documentEmpty">Dokumen belum tersedia</div>
+                ) : (
+                  <div className="rk-documentList">
+                    {activeDokumenPersyaratan.map((dokumen) => (
+                      <div className="rk-documentItem" key={dokumen.id}>
+                        <div className="rk-documentIcon" aria-hidden="true">
+                          <FiFileText />
+                        </div>
+                        <div className="rk-documentMeta">
+                          <strong>{dokumen.label}</strong>
+                          <span title={dokumen.filename}>{dokumen.filename || 'Dokumen tersedia'}</span>
+                          <em className={dokumen.uploaded ? 'isUploaded' : ''}>
+                            {dokumen.uploaded ? 'Sudah diunggah' : 'Belum diunggah'}
+                          </em>
+                        </div>
+                        {dokumen.url ? (
+                          <div className="rk-documentActions">
+                            <a className="rk-miniBtn2 isDetail" href={dokumen.url} target="_blank" rel="noreferrer">
+                              <FiEye aria-hidden="true" />
+                              Lihat Dokumen
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="rk-modalFoot">
@@ -940,6 +1273,63 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div className="rk-editDocumentSection">
+                <div className="rk-dataFormTitle"><FiFileText aria-hidden="true" /> Upload Ulang Dokumen</div>
+                <p className="rk-documentHelp">Dokumen lama tetap aman jika tidak memilih file baru.</p>
+
+                {editFileErrors.length > 0 ? (
+                  <div className="rk-editFileErrors" role="alert">
+                    <strong>Validasi dokumen gagal</strong>
+                    {editFileErrors.map((err, index) => (
+                      <p key={`${err}-${index}`}>{err}</p>
+                    ))}
+                  </div>
+                ) : null}
+
+                {!editDokumenConfig?.fields?.length ? (
+                  <div className="rk-documentEmpty">Jenis dokumen untuk layanan ini belum tersedia.</div>
+                ) : (
+                  <div className="rk-editDocumentGrid">
+                    {editDokumenConfig.fields.map((field) => (
+                      <div className="rk-editField" key={`${editFileInputVersion}-${field.key}`}>
+                        <label htmlFor={`edit-file-${field.key}`}>
+                          {field.label}
+                          {!field.required ? <span className="rk-optionalBadge">Opsional</span> : null}
+                        </label>
+                        {(() => {
+                          const currentDokumen =
+                            editDokumenPersyaratan.find((dokumen) => dokumen.backendKey === (field.backendKey || field.key)) ||
+                            editDokumenPersyaratan.find((dokumen) => dokumen.key === field.key)
+
+                          return (
+                            <div className="rk-currentDocument">
+                              <span>Dokumen saat ini: {currentDokumen?.filename || 'Belum diunggah'}</span>
+                              {currentDokumen?.uploaded && currentDokumen?.url ? (
+                                <div className="rk-documentActions">
+                                  <a className="rk-miniBtn2 isDetail" href={currentDokumen.url} target="_blank" rel="noreferrer">
+                                    <FiEye aria-hidden="true" />
+                                    Lihat Dokumen
+                                  </a>
+                                </div>
+                              ) : null}
+                            </div>
+                          )
+                        })()}
+                        <input
+                          id={`edit-file-${field.key}`}
+                          type="file"
+                          accept={field.accept}
+                          onChange={(event) => setEditFile(field, event)}
+                          disabled={actionBusy}
+                        />
+                        <span className="rk-fileHint">Format: PDF, PNG, JPG/JPEG. Maksimal 2MB.</span>
+                        {editFiles[field.key]?.name ? <span className="rk-selectedFile">{editFiles[field.key].name}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

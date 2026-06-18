@@ -58,6 +58,27 @@ function unwrapItems(data) {
   return []
 }
 
+function unwrapDetail(data) {
+  if (!data) return null
+  if (Array.isArray(data)) return unwrapDetail(data[0])
+  if (typeof data !== 'object') return null
+
+  const wrapperKeys = ['data', 'item', 'result', 'pengajuan', 'record']
+  for (const key of wrapperKeys) {
+    const value = data[key]
+    if (Array.isArray(value) && value.length > 0) {
+      const nested = unwrapDetail(value[0])
+      if (nested) return nested
+    }
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const nested = unwrapDetail(value)
+      if (nested) return nested
+    }
+  }
+
+  return data
+}
+
 export const SERVICE_ROUTES = [
   { key: 'rekomendasi_penelitian', endpoint: '/api/rekomendasi_penelitian', jenis_layanan: 'Rekomendasi Penelitian / Riset' },
   { key: 'rekomendasi_surat_pindah', endpoint: '/api/rekomendasi_surat_pindah', jenis_layanan: 'Rekomendasi Surat Pindah' },
@@ -73,6 +94,7 @@ const PETUGAS_BACKEND_AUTH_MESSAGE =
   'Data pengajuan belum dapat dimuat. Pastikan akun petugas sudah terhubung ke backend.'
 const LOCAL_SUBMISSIONS_KEY = 'rk_submissions_v1'
 const LOCAL_ENDPOINT_PREFIX = 'local:'
+const DOKUMEN_CONTAINER_KEYS = ['dokumen_meta', 'dokumenMeta', 'dokumen', 'dokumens', 'documents', 'files', 'lampiran', 'berkas', 'data_dokumen']
 
 const ENDPOINT_BY_LAYANAN_PATH = {
   '/layanan/penelitian': '/api/rekomendasi_penelitian',
@@ -141,6 +163,83 @@ function normalizeText(value) {
     .replace(/\s+/g, ' ')
 }
 
+function readDokumenCollection(source) {
+  if (!source || typeof source !== 'object') return null
+  if (Array.isArray(source)) return source
+
+  for (const key of DOKUMEN_CONTAINER_KEYS) {
+    const value = source[key]
+    if (Array.isArray(value)) return value
+    if (value && typeof value === 'object') return value
+  }
+
+  return null
+}
+
+function mergeDokumenCollections(...collections) {
+  const mergedArray = []
+  const mergedObject = {}
+
+  collections.filter(Boolean).forEach((collection) => {
+    if (Array.isArray(collection)) {
+      mergedArray.push(...collection)
+      return
+    }
+
+    if (collection && typeof collection === 'object') {
+      Object.assign(mergedObject, collection)
+    }
+  })
+
+  const objectEntries = Object.entries(mergedObject)
+  if (mergedArray.length > 0) {
+    const objectDocuments = objectEntries.map(([field, value]) => {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return { field, ...value }
+      }
+      return { field, path_file: value, nama_file: typeof value === 'string' ? value : '' }
+    })
+    return [...objectDocuments, ...mergedArray]
+  }
+
+  return objectEntries.length > 0 ? mergedObject : {}
+}
+
+function extractDokumenFromResponse(data) {
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object') {
+    const wrappedArray =
+      (Array.isArray(data.data) && data.data) ||
+      (Array.isArray(data.items) && data.items) ||
+      (Array.isArray(data.result) && data.result) ||
+      null
+    if (wrappedArray) return wrappedArray
+  }
+  const detail = unwrapDetail(data)
+  const direct = readDokumenCollection(data)
+  const nested = readDokumenCollection(detail)
+  const extracted = mergeDokumenCollections(direct, nested)
+  const hasExtracted =
+    Array.isArray(extracted) ? extracted.length > 0 : extracted && typeof extracted === 'object' && Object.keys(extracted).length > 0
+  if (hasExtracted) return extracted
+
+  if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+    const fileKeys = ['path_file', 'file_path', 'file_url', 'url', 'url_file', 'nama_file']
+    if (fileKeys.some((key) => detail[key])) return [detail]
+
+    const ignoredKeys = new Set(['success', 'message', 'errors', 'status'])
+    const candidateEntries = Object.entries(detail).filter(([key, value]) => !ignoredKeys.has(key) && value != null)
+    const looksLikeDocumentMap = candidateEntries.some(([, value]) => {
+      if (typeof value === 'string') return value.trim().length > 0
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+      return fileKeys.some((key) => value[key]) || value.filename || value.file_name || value.originalname
+    })
+    if (looksLikeDocumentMap) return Object.fromEntries(candidateEntries)
+  }
+
+  return {}
+}
+
 function readFormData(item) {
   const form = item?.data_form || item?.dataForm || item?.form_data || item?.formData || item?.form || null
   return form && typeof form === 'object' && !Array.isArray(form) ? form : {}
@@ -198,7 +297,7 @@ function normalizeLocalSubmission(item) {
   const hasilNama = hasil?.filename || hasil?.name || hasil?.nama || item?.nama_file_hasil || ''
   const hasilUrl = hasil?.url || hasil?.href || hasil?.path || item?.url_hasil || item?.hasil_url || item?.file_url || ''
   const dataForm = item?.data_form || item?.dataForm || item?.data || item?.form || {}
-  const dokumen = item?.dokumen || item?.documents || item?.lampiran || item?.files || {}
+  const dokumen = mergeDokumenCollections(item?.dokumen, item?.dokumens, item?.documents, item?.lampiran, item?.files, item?.berkas)
 
   return {
     ...item,
@@ -209,7 +308,7 @@ function normalizeLocalSubmission(item) {
     jenis_layanan: item?.jenis_layanan || item?.layanan || '',
     layanan: item?.layanan || item?.jenis_layanan || '',
     data_form: dataForm && typeof dataForm === 'object' ? dataForm : {},
-    dokumen: dokumen && typeof dokumen === 'object' ? dokumen : {},
+    dokumen: Array.isArray(dokumen) ? dokumen : dokumen && typeof dokumen === 'object' ? dokumen : {},
     status: normalizePengajuanStatus(item?.status || item?.status_pengajuan || item),
     createdAt: getPengajuanCreatedAt(item),
     updatedAt: item?.updatedAt || item?.updated_at || item?.createdAt || '',
@@ -238,6 +337,7 @@ function normalizePengajuanItem(item, svc) {
   const id = getPengajuanId(item)
   const status = normalizePengajuanStatus(item)
   const createdAt = getPengajuanCreatedAt(item)
+  const dokumen = extractDokumenFromResponse(item)
   return {
     ...item,
     id: item?.id || id,
@@ -248,6 +348,7 @@ function normalizePengajuanItem(item, svc) {
     status_pengajuan: status,
     created_at: item?.created_at || createdAt,
     createdAt: item?.createdAt || createdAt,
+    dokumen: Array.isArray(dokumen) ? dokumen : dokumen && typeof dokumen === 'object' ? dokumen : item?.dokumen,
     __endpoint: item?.__endpoint || svc?.endpoint || '',
   }
 }
@@ -345,14 +446,17 @@ export function getPengajuanCatatanPetugas(item) {
 }
 
 export function getPengajuanDokumen(item) {
-  const docs =
-    item?.dokumen_meta ||
-    item?.dokumenMeta ||
-    item?.dokumen ||
-    item?.documents ||
-    item?.lampiran ||
-    item?.files ||
-    {}
+  const docs = mergeDokumenCollections(
+    item?.dokumen_meta,
+    item?.dokumenMeta,
+    item?.dokumen,
+    item?.dokumens,
+    item?.documents,
+    item?.lampiran,
+    item?.files,
+    item?.berkas,
+    item?.data_dokumen
+  )
   if (Array.isArray(docs)) return docs
   return docs && typeof docs === 'object' ? docs : {}
 }
@@ -657,12 +761,153 @@ export async function getSemuaPengajuanPetugas() {
   return { success: true, status: 200, items: [], source: 'backend' }
 }
 
-export async function getDetailPengajuan(id) {
+export async function getDetailPengajuan(id, item = null) {
+  return getDetailPengajuanByContext(id, item)
+}
+
+async function tryGetDetailPath(path) {
+  if (!path) return null
+
+  try {
+    const res = await apiRequest(path, { method: 'GET', withAuth: true })
+    if (!res.ok) {
+      return {
+        success: false,
+        status: res.status,
+        data: res.data,
+        path,
+        message: pickMessage(res) || 'Gagal memuat detail pengajuan.',
+      }
+    }
+
+    return { success: true, status: res.status, data: res.data, path, message: pickMessage(res) || '' }
+  } catch (err) {
+    return { success: false, status: 0, data: null, path, message: err?.message || 'Gagal memuat detail pengajuan.' }
+  }
+}
+
+async function tryCandidatePaths(paths = []) {
+  const responses = []
+  for (const path of paths) {
+    const response = await tryGetDetailPath(path)
+    if (response) responses.push(response)
+    if (response?.success) return { result: response, responses }
+  }
+  return { result: null, responses }
+}
+
+function dedupePaths(paths = []) {
+  return [...new Set(paths.filter(Boolean))]
+}
+
+function buildDetailCandidatePaths(id, item) {
+  const endpoint =
+    String(item?.__endpoint || '').trim() ||
+    resolveEndpoint(item) ||
+    SERVICE_ROUTES.find((svc) => normalizeText(svc.jenis_layanan) === normalizeText(item?.jenis_layanan || item?.layanan || ''))?.endpoint ||
+    ''
+
+  const encodedId = encodeURIComponent(id)
+  return dedupePaths([
+    endpoint ? `${endpoint}/${encodedId}` : '',
+    endpoint ? `${endpoint}/detail/${encodedId}` : '',
+    `/api/pengajuan/${encodedId}`,
+  ])
+}
+
+function buildDokumenCandidatePaths(id, item) {
+  const endpoint =
+    String(item?.__endpoint || '').trim() ||
+    resolveEndpoint(item) ||
+    SERVICE_ROUTES.find((svc) => normalizeText(svc.jenis_layanan) === normalizeText(item?.jenis_layanan || item?.layanan || ''))?.endpoint ||
+    ''
+
+  const encodedId = encodeURIComponent(id)
+  return dedupePaths([
+    endpoint ? `${endpoint}/${encodedId}/dokumen` : '',
+    `/api/pengajuan/${encodedId}/dokumen`,
+  ])
+}
+
+function mergePengajuanDetail(baseItem, detailItem, dokumenResponse) {
+  const normalizedBase = baseItem ? normalizePengajuanItem(baseItem, { endpoint: baseItem?.__endpoint || resolveEndpoint(baseItem) }) : {}
+  const normalizedDetail = detailItem
+    ? normalizePengajuanItem(detailItem, {
+        endpoint: detailItem?.__endpoint || baseItem?.__endpoint || resolveEndpoint(detailItem) || resolveEndpoint(baseItem),
+      })
+    : {}
+  const extractedDokumen = extractDokumenFromResponse(dokumenResponse)
+  const hasEndpointDokumen =
+    Array.isArray(extractedDokumen)
+      ? extractedDokumen.length > 0
+      : extractedDokumen && typeof extractedDokumen === 'object' && Object.keys(extractedDokumen).length > 0
+  const mergedDokumen = hasEndpointDokumen
+    ? extractedDokumen
+    : mergeDokumenCollections(getPengajuanDokumen(normalizedBase), getPengajuanDokumen(normalizedDetail))
+
+  return {
+    ...normalizedBase,
+    ...normalizedDetail,
+    dokumen: mergedDokumen,
+    documents: normalizedDetail?.documents || normalizedBase?.documents,
+    files: normalizedDetail?.files || normalizedBase?.files,
+    lampiran: normalizedDetail?.lampiran || normalizedBase?.lampiran,
+    berkas: normalizedDetail?.berkas || normalizedBase?.berkas,
+    __endpoint: normalizedDetail?.__endpoint || normalizedBase?.__endpoint || '',
+  }
+}
+
+export async function getDetailPengajuanByContext(id, item = null) {
   if (!id) return { success: false, status: 400, message: 'ID pengajuan tidak valid.' }
-  // Detail per layanan belum disepakati di backend; fallback pakai list gabungan lalu cari id.
+
+  if (isLocalEndpoint(item?.__endpoint || '')) {
+    const all = readLocalSubmissionsRaw().map((entry) => normalizeLocalSubmission(entry)).filter(Boolean)
+    const found = all.find((entry) => getPengajuanId(entry) === String(id))
+    if (!found) return { success: false, status: 404, message: 'Detail pengajuan tidak ditemukan.' }
+    return { success: true, status: 200, data: found }
+  }
+
+  const detailPaths = buildDetailCandidatePaths(id, item)
+  const dokumenPaths = buildDokumenCandidatePaths(id, item)
+
+  const [detailFetch, dokumenFetch] = await Promise.all([
+    tryCandidatePaths(detailPaths),
+    tryCandidatePaths(dokumenPaths),
+  ])
+  const detailResult = detailFetch.result
+  const dokumenResult = dokumenFetch.result
+
+  if (IS_DEV) {
+    console.log('DETAIL PENGAJUAN:', detailResult?.data ?? detailFetch.responses)
+    console.log('DOKUMEN DETAIL:', dokumenResult?.data ?? dokumenFetch.responses)
+  }
+
+  if (IS_DEV && dokumenResult?.success) {
+    const extractedDokumen = extractDokumenFromResponse(dokumenResult.data)
+    const hasDokumen =
+      Array.isArray(extractedDokumen) ? extractedDokumen.length > 0 : extractedDokumen && Object.keys(extractedDokumen).length > 0
+    if (!hasDokumen) {
+      console.warn('Dokumen tidak ditemukan dari response backend', dokumenResult.data)
+    }
+  } else if (IS_DEV && !dokumenResult?.success) {
+    console.warn('Dokumen tidak ditemukan dari response backend', dokumenFetch.responses)
+  }
+
+  if (detailResult?.success || dokumenResult?.success) {
+    const detailData = unwrapDetail(detailResult?.data) || item || {}
+    const selectedPengajuan = mergePengajuanDetail(item, detailData, dokumenResult?.data)
+    if (IS_DEV) console.log('SELECTED PENGAJUAN MERGED:', selectedPengajuan)
+    return {
+      success: true,
+      status: detailResult?.status || dokumenResult?.status || 200,
+      data: selectedPengajuan,
+    }
+  }
+
+  // Fallback terakhir: list gabungan lalu cari item terkait.
   const res = await getPengajuanSaya()
   if (!res?.success) return { success: false, status: res?.status || 0, message: res?.message || 'Gagal memuat pengajuan.' }
   const found = (res.items || []).find((it) => getPengajuanId(it) === String(id))
   if (!found) return { success: false, status: 404, message: 'Detail pengajuan tidak ditemukan.' }
-  return { success: true, status: 200, data: found }
+  return { success: true, status: 200, data: mergePengajuanDetail(item, found, null) }
 }

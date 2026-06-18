@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiPhone, FiUploadCloud, FiUser
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './KartuKeluargaForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -225,6 +226,7 @@ export default function KartuKeluargaForm() {
 
         <section className="rk-formSection" aria-label="Form rekomendasi kartu keluarga">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 

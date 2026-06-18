@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiInfo, FiUploadCloud } from '
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './SuratPindahForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -223,6 +224,7 @@ export default function SuratPindahForm() {
 
         <section className="rk-formSection" aria-label="Form surat pindah">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 

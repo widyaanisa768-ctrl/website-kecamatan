@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { FiArrowLeft, FiPlus, FiSearch } from 'react-icons/fi'
+import { FiArrowLeft, FiSearch } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import PengajuanSaya from '../components/PengajuanSaya'
@@ -25,13 +25,13 @@ export default function StatusPengajuan() {
               </p>
             </div>
             <div className="rk-statusHeroActions" aria-label="Navigasi cepat">
-              <Link to="/layanan" className="rk-statusHeroBtn isPrimary">
+              <Link
+                to="/layanan"
+                className="rk-statusHeroBtn isPrimary"
+                onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' })}
+              >
                 <FiArrowLeft aria-hidden="true" />
                 Kembali ke Layanan
-              </Link>
-              <Link to="/layanan" className="rk-statusHeroBtn isNew">
-                <FiPlus aria-hidden="true" />
-                Pengajuan Baru
               </Link>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiInfo, FiUploadCloud } from '
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './AhliWarisForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -228,6 +229,7 @@ export default function AhliWarisForm() {
 
         <section className="rk-formSection" aria-label="Form upload dokumen">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 

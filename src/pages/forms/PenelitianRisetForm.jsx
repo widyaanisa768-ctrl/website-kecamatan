@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiClipboard, FiFileText, FiUploadCloud } f
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './PenelitianRisetForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -205,6 +206,7 @@ export default function PenelitianRisetForm() {
 
         <section className="rk-formSection" aria-label="Form penelitian atau riset">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 

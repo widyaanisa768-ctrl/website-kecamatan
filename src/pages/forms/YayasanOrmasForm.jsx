@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiUploadCloud, FiUser } from '
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './YayasanOrmasForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -235,6 +236,7 @@ export default function YayasanOrmasForm() {
 
         <section className="rk-formSection" aria-label="Form yayasan atau ormas">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 

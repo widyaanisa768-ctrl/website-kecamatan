@@ -204,6 +204,46 @@ body .rk-portal.rk-formPage .rk-formSection {
   padding: 52px 0;
 }
 
+body .rk-portal.rk-formPage .rk-formBackRow {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
+body .rk-portal.rk-formPage .rk-backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 79, 124, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  color: #0b4f7c;
+  box-shadow: 0 10px 24px rgba(16, 52, 83, 0.08);
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+body .rk-portal.rk-formPage .rk-backLink svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+body .rk-portal.rk-formPage .rk-backLink:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  border-color: rgba(11, 79, 124, 0.32);
+  box-shadow: 0 14px 28px rgba(16, 52, 83, 0.12);
+}
+
 body .rk-portal.rk-formPage .rk-formCard {
   width: 100%;
   max-width: 100%;
@@ -264,6 +304,15 @@ body .rk-portal.rk-formPage .rk-textarea {
 
 body .rk-portal.rk-formPage .rk-file {
   overflow: hidden;
+}
+
+body .rk-portal.rk-formPage .rk-field:has(.rk-file)::after,
+body .rk-portal.rk-formPage .rk-docField:has(.rk-file)::after {
+  content: 'Format: PDF, PNG, JPG/JPEG. Maksimal 2MB.';
+  display: block;
+  color: #5d7083;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 body .rk-portal.rk-formPage .rk-picked,
@@ -352,6 +401,10 @@ body .rk-portal.rk-formPage .rk-submitBtn {
     padding: 32px 0;
   }
 
+  body .rk-portal.rk-formPage .rk-formBackRow {
+    margin-bottom: 14px;
+  }
+
   body .rk-portal.rk-formPage .rk-formCard {
     padding: 14px;
     border-radius: 16px;
@@ -381,5 +434,10 @@ body .rk-portal.rk-formPage .rk-submitBtn {
   body .rk-portal.rk-formPage .rk-submitBtn,
   body .rk-portal.rk-formPage .rk-formHint {
     width: 100%;
+  }
+
+  body .rk-portal.rk-formPage .rk-backLink {
+    width: 100%;
+    justify-content: center;
   }
 }

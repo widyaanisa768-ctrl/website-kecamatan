@@ -82,6 +82,17 @@
   border-color: rgba(34, 197, 94, 0.19);
 }
 
+.rk-pengajuanSaya .rk-summaryCard.isReject {
+  border-color: rgba(220, 38, 38, 0.23);
+  background: #fffafa;
+}
+
+.rk-pengajuanSaya .rk-summaryCard.isReject .rk-summaryIcon {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.09);
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
 .rk-pengajuanSaya .rk-summaryLabel {
   opacity: 1;
   color: rgba(29, 42, 58, 0.72);
@@ -456,6 +467,164 @@
   color: var(--rk-primary);
 }
 
+.rk-pengajuanSaya .rk-documentSection,
+.rk-pengajuanSaya .rk-editDocumentSection {
+  display: grid;
+  gap: 12px;
+}
+
+.rk-pengajuanSaya .rk-documentList {
+  display: grid;
+  gap: 10px;
+}
+
+.rk-pengajuanSaya .rk-documentItem {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  border-radius: 14px;
+  background: #f8fbfe;
+}
+
+.rk-pengajuanSaya .rk-documentIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--rk-primary);
+  background: rgba(30, 136, 200, 0.1);
+  border: 1px solid rgba(30, 136, 200, 0.18);
+}
+
+.rk-pengajuanSaya .rk-documentMeta {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.rk-pengajuanSaya .rk-documentMeta strong {
+  color: var(--rk-text);
+  font-size: 13px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rk-pengajuanSaya .rk-documentMeta span,
+.rk-pengajuanSaya .rk-documentHelp,
+.rk-pengajuanSaya .rk-fileHint,
+.rk-pengajuanSaya .rk-selectedFile {
+  color: var(--rk-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rk-pengajuanSaya .rk-documentMeta em {
+  color: #991b1b;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.rk-pengajuanSaya .rk-documentMeta em.isUploaded {
+  color: #166534;
+}
+
+.rk-pengajuanSaya .rk-documentActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rk-pengajuanSaya .rk-documentActions a {
+  text-decoration: none;
+}
+
+.rk-pengajuanSaya .rk-documentEmpty {
+  padding: 12px;
+  border: 1px dashed rgba(11, 79, 124, 0.2);
+  border-radius: 14px;
+  color: var(--rk-muted);
+  background: rgba(248, 251, 254, 0.75);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rk-pengajuanSaya .rk-editDocumentSection {
+  padding-top: 14px;
+  border-top: 1px solid rgba(11, 79, 124, 0.09);
+}
+
+.rk-pengajuanSaya .rk-editDocumentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rk-pengajuanSaya .rk-currentDocument {
+  padding: 10px 12px;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  border-radius: 12px;
+  background: rgba(248, 251, 254, 0.92);
+  display: grid;
+  gap: 8px;
+}
+
+.rk-pengajuanSaya .rk-currentDocument span {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--rk-muted);
+  word-break: break-word;
+}
+
+.rk-pengajuanSaya .rk-optionalBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  border-radius: 999px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rk-pengajuanSaya .rk-editFileErrors {
+  padding: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 14px;
+  color: #991b1b;
+  background: #fff0f0;
+}
+
+.rk-pengajuanSaya .rk-editFileErrors strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.rk-pengajuanSaya .rk-editFileErrors p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.rk-pengajuanSaya .rk-selectedFile {
+  font-weight: 900;
+  color: var(--rk-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rk-pengajuanSaya .rk-editModal {
   width: min(760px, 100%);
 }
@@ -552,6 +721,19 @@
 
   .rk-pengajuanSaya .rk-editGrid {
     grid-template-columns: 1fr;
+  }
+
+  .rk-pengajuanSaya .rk-editDocumentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-pengajuanSaya .rk-documentItem {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .rk-pengajuanSaya .rk-documentActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 
   .rk-pengajuanSaya .rk-editField.isWide {

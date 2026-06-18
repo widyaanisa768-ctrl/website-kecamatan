@@ -3,6 +3,7 @@ import { FiArrowRight, FiCheckCircle, FiPhone, FiUploadCloud, FiUser } from 'rea
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import BackToLayananLink from '../../components/BackToLayananLink'
 import ValidationAlert from '../../components/ValidationAlert'
 import './RekomendasiKerjaForm.css'
 import { getAuth, mergeDokumenMeta } from '../../lib/rkLocal'
@@ -197,6 +198,7 @@ export default function RekomendasiKerjaForm() {
 
         <section className="rk-formSection" aria-label="Form rekomendasi kerja">
           <div className="rk-container">
+            <BackToLayananLink />
             <form className="rk-formCard" onSubmit={onSubmit}>
               <ValidationAlert errors={validationErrors} />
 
