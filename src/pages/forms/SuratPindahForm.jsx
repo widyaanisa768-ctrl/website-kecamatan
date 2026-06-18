@@ -30,7 +30,7 @@ const FILE_FIELDS = [
     label: 'Surat Keterangan Pindah',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'pasFoto',
@@ -38,7 +38,7 @@ const FILE_FIELDS = [
     label: 'Pas Foto 3x4',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'kk',
@@ -46,7 +46,7 @@ const FILE_FIELDS = [
     label: 'Fotocopy dan Asli KK',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'ktp',
@@ -54,7 +54,7 @@ const FILE_FIELDS = [
     label: 'Fotocopy KTP',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'aktaKelahiranTionghoa',
@@ -62,7 +62,7 @@ const FILE_FIELDS = [
     label: 'Fotocopy Akta Kelahiran',
     required: false,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
 ]
 

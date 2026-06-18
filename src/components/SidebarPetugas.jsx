@@ -24,7 +24,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
 
   const menuItems = useMemo(() => {
     return [
-      { label: 'Dashboard', to: '/petugas/dashboard', icon: 'dashboard' },
+      { label: 'Dashboard', to: '/dashboard', icon: 'dashboard' },
       { label: 'Daftar Pengajuan', to: '/petugas/pengajuan', icon: 'pengajuan' },
       { label: 'Kelola Data Masyarakat', to: '/petugas/masyarakat', icon: 'masyarakat' },
       { label: 'Profil Petugas', to: '/petugas/profil', icon: 'profil' },
@@ -35,7 +35,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
   function isActive(item) {
     if (item.action === 'logout') return false
     const path = location?.pathname || ''
-    if (item.to === '/petugas/dashboard') return path === '/petugas/dashboard'
+    if (item.to === '/dashboard') return path === '/dashboard'
     if (item.to === '/petugas/pengajuan') return path.startsWith('/petugas/pengajuan')
     if (item.to === '/petugas/masyarakat') return path.startsWith('/petugas/masyarakat')
     if (item.to === '/petugas/profil') return path.startsWith('/petugas/profil')

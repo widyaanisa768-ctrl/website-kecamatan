@@ -31,7 +31,7 @@ const FILE_FIELDS = [
     label: 'Fotocopy KTP Mahasiswa 1 lembar',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'ktm',
@@ -39,7 +39,7 @@ const FILE_FIELDS = [
     label: 'Fotocopy Kartu Tanda Mahasiswa (KTM) 1 lembar',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
   {
     key: 'suratRekomendasi',
@@ -47,7 +47,7 @@ const FILE_FIELDS = [
     label: 'Surat rekomendasi riset',
     required: true,
     maxSizeMB: 2,
-    ...FILE_TYPE_PRESETS.PDF_IMAGE,
+    ...FILE_TYPE_PRESETS.PDF_PNG,
   },
 ]
 
@@ -310,7 +310,7 @@ export default function PenelitianRisetForm() {
                 </div>
                 <div>
                   <div className="rk-formCardTitle">Upload Dokumen</div>
-                  <div className="rk-formCardDesc">Unggah dokumen dalam format PDF atau gambar.</div>
+                  <div className="rk-formCardDesc">Unggah dokumen dalam format PDF atau PNG.</div>
                 </div>
               </div>
 

@@ -12,10 +12,10 @@ export const FILE_TYPE_PRESETS = {
     allowedTypeLabel: 'PDF',
   },
   PDF_IMAGE: {
-    accept: '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png',
-    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-    allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-    allowedTypeLabel: 'PDF, JPG, JPEG, atau PNG',
+    accept: '.pdf,.png,application/pdf,image/png',
+    allowedExtensions: ['pdf', 'png'],
+    allowedMimeTypes: ['application/pdf', 'image/png'],
+    allowedTypeLabel: 'PDF atau PNG',
   },
   PDF_PNG: {
     accept: '.pdf,.png,application/pdf,image/png',
@@ -24,10 +24,10 @@ export const FILE_TYPE_PRESETS = {
     allowedTypeLabel: 'PDF atau PNG',
   },
   IMAGE: {
-    accept: '.jpg,.jpeg,.png,image/jpeg,image/png',
-    allowedExtensions: ['jpg', 'jpeg', 'png'],
-    allowedMimeTypes: ['image/jpeg', 'image/png'],
-    allowedTypeLabel: 'JPG, JPEG, atau PNG',
+    accept: '.pdf,.png,application/pdf,image/png',
+    allowedExtensions: ['pdf', 'png'],
+    allowedMimeTypes: ['application/pdf', 'image/png'],
+    allowedTypeLabel: 'PDF atau PNG',
   },
 }
 
@@ -141,7 +141,7 @@ export function validateFileField(file, options = {}) {
   const mimeAllowed = allowedMimeTypes.length === 0 || allowedMimeTypes.includes(mimeType)
 
   if (!extensionAllowed && !mimeAllowed) {
-    return `${label} harus berformat ${allowedTypeLabel}`
+    return `Format file harus ${allowedTypeLabel}.`
   }
 
   if (maxSizeMB > 0 && file.size > maxSizeMB * BYTES_PER_MB) {

@@ -8,7 +8,7 @@ import './Navbar.css'
 const NAV_ITEMS = [
   { label: 'Beranda', to: '/home', end: true },
   { label: 'Profil Kecamatan', to: '/profil' },
-  { label: 'Layanan Online', to: '/layanan', authOnly: true },
+  { label: 'Layanan Online', to: '/layanan', authOnly: true, roles: ['masyarakat'] },
   { label: 'Galeri', to: '/galeri' },
   { label: 'Kontak', to: '/kontak' },
 ]
@@ -70,9 +70,15 @@ export default function Navbar() {
   }, [user, auth])
 
   const isLoggedIn = !!auth || (!!token && !!user && !!userLabel)
+  const normalizedRole = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
   const visibleNavItems = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.authOnly || (isLoggedIn && role === 'masyarakat')),
-    [isLoggedIn, role]
+    () =>
+      NAV_ITEMS.filter(
+        (item) =>
+          !item.authOnly ||
+          (isLoggedIn && (!item.roles || item.roles.includes(normalizedRole)))
+      ),
+    [isLoggedIn, normalizedRole]
   )
 
   useEffect(() => {

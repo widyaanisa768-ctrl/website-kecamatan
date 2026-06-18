@@ -308,7 +308,7 @@ body .rk-portal.rk-formPage .rk-file {
 
 body .rk-portal.rk-formPage .rk-field:has(.rk-file)::after,
 body .rk-portal.rk-formPage .rk-docField:has(.rk-file)::after {
-  content: 'Format: PDF, PNG, JPG/JPEG. Maksimal 2MB.';
+  content: 'Format: PDF atau PNG. Maksimal 2MB.';
   display: block;
   color: #5d7083;
   font-size: 12px;

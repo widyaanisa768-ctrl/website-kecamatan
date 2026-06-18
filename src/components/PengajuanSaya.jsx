@@ -1324,7 +1324,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                           onChange={(event) => setEditFile(field, event)}
                           disabled={actionBusy}
                         />
-                        <span className="rk-fileHint">Format: PDF, PNG, JPG/JPEG. Maksimal 2MB.</span>
+                        <span className="rk-fileHint">Format: PDF atau PNG. Maksimal 2MB.</span>
                         {editFiles[field.key]?.name ? <span className="rk-selectedFile">{editFiles[field.key].name}</span> : null}
                       </div>
                     ))}

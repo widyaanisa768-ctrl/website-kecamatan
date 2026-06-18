@@ -2,18 +2,8 @@ import { FILE_TYPE_PRESETS, validateFileField } from './formValidation'
 
 const TWO_MB = 2
 
-const PDF_IMAGE = {
-  ...FILE_TYPE_PRESETS.PDF_IMAGE,
-  maxSizeMB: TWO_MB,
-}
-
 const PDF_PNG = {
   ...FILE_TYPE_PRESETS.PDF_PNG,
-  maxSizeMB: TWO_MB,
-}
-
-const IMAGE = {
-  ...FILE_TYPE_PRESETS.IMAGE,
   maxSizeMB: TWO_MB,
 }
 
@@ -23,14 +13,14 @@ export const DOKUMEN_CONFIGS = [
     endpoint: '/api/rekomendasi_penelitian',
     labels: ['rekomendasi penelitian', 'penelitian riset', 'riset'],
     fields: [
-      { key: 'ktpMahasiswa', backendKey: 'ktp_mahasiswa', label: 'Fotocopy KTP Mahasiswa', required: true, ...PDF_IMAGE },
-      { key: 'ktmMahasiswa', backendKey: 'ktm_mahasiswa', label: 'Fotocopy KTM', required: true, ...PDF_IMAGE },
+      { key: 'ktpMahasiswa', backendKey: 'ktp_mahasiswa', label: 'Fotocopy KTP Mahasiswa', required: true, ...PDF_PNG },
+      { key: 'ktmMahasiswa', backendKey: 'ktm_mahasiswa', label: 'Fotocopy KTM', required: true, ...PDF_PNG },
       {
         key: 'suratRekomendasiRiset',
         backendKey: 'surat_rekomendasi_riset_univ_kesbangpol',
         label: 'Surat Rekomendasi Riset dari Universitas/KESBANGPOL',
         required: true,
-        ...PDF_IMAGE,
+        ...PDF_PNG,
       },
     ],
   },
@@ -44,17 +34,17 @@ export const DOKUMEN_CONFIGS = [
         backendKey: 'surat_keterangan_pindah_kelurahan',
         label: 'Surat Keterangan Pindah',
         required: true,
-        ...PDF_IMAGE,
+        ...PDF_PNG,
       },
-      { key: 'pasFoto', backendKey: 'pas_foto_3x4', label: 'Pas Foto 3x4', required: true, ...IMAGE },
-      { key: 'kartuKeluarga', backendKey: 'kartu_keluarga', label: 'Fotocopy dan Asli KK', required: true, ...PDF_IMAGE },
-      { key: 'ktp', backendKey: 'ktp', label: 'Fotocopy KTP', required: true, ...PDF_IMAGE },
+      { key: 'pasFoto', backendKey: 'pas_foto_3x4', label: 'Pas Foto 3x4', required: true, ...PDF_PNG },
+      { key: 'kartuKeluarga', backendKey: 'kartu_keluarga', label: 'Fotocopy dan Asli KK', required: true, ...PDF_PNG },
+      { key: 'ktp', backendKey: 'ktp', label: 'Fotocopy KTP', required: true, ...PDF_PNG },
       {
         key: 'aktaKelahiranWniTionghoa',
         backendKey: 'akta_kelahiran_wni_tionghoa',
         label: 'Fotocopy Akta Kelahiran',
         required: false,
-        ...PDF_IMAGE,
+        ...PDF_PNG,
       },
     ],
   },
