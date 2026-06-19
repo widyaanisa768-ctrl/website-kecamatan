@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FiArrowRight,
   FiBarChart2,
   FiBriefcase,
+  FiCheck,
   FiCheckCircle,
   FiClock,
   FiFileText,
@@ -13,6 +14,7 @@ import {
   FiMap,
   FiSearch,
   FiShield,
+  FiUser,
   FiUsers,
 } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
@@ -20,10 +22,55 @@ import Footer from '../components/Footer'
 import { getAuth } from '../lib/rkLocal'
 import './HomeModern.css'
 
+function readStoredUser() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function getDisplayName(auth, storedUser) {
+  const base = { ...(storedUser || {}), ...(auth || {}) }
+  return base.nama || base.name || base.nama_lengkap || base.username || 'Pengguna'
+}
+
+function readHomeAuth() {
+  const auth = getAuth()
+  const storedUser = readStoredUser()
+  const storedRole = typeof window !== 'undefined' ? window.localStorage.getItem('role') : ''
+  const role = String(auth?.role || storedUser?.role || storedRole || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+  return { auth, storedUser, role }
+}
+
 export default function HomeModern() {
+  const [homeAuth, setHomeAuth] = useState(() => readHomeAuth())
+  const { auth, storedUser, role } = homeAuth
+  const isLoggedIn = Boolean((auth || storedUser) && role === 'masyarakat')
+  const displayName = getDisplayName(auth, storedUser)
+
+  useEffect(() => {
+    const syncAuth = () => setHomeAuth(readHomeAuth())
+
+    window.addEventListener('focus', syncAuth)
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('rk-auth-updated', syncAuth)
+    return () => {
+      window.removeEventListener('focus', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('rk-auth-updated', syncAuth)
+    }
+  }, [])
+
   const getMasyarakatPath = (path) => {
-    const auth = getAuth()
-    return auth?.role === 'masyarakat' ? path : '/login'
+    return role === 'masyarakat' ? path : '/login'
   }
 
   const services = useMemo(
@@ -117,58 +164,109 @@ export default function HomeModern() {
               </div>
             </div>
 
-            <aside className="rk-heroCard" aria-label="Informasi layanan">
-              <div className="rk-heroCardHeader">
-                <span className="rk-heroCardTitle">Layanan Tersedia</span>
-                <span className="rk-heroCardPill">Online</span>
-              </div>
+            {isLoggedIn ? (
+              <aside className="rk-heroCard rk-heroAccountCard" aria-label="Sambutan pengguna">
+                <p className="rk-heroAccountLabel">Akun Anda</p>
+                <h2 className="rk-heroAccountTitle">Selamat Datang, {displayName}</h2>
+                <p className="rk-heroAccountDesc">
+                  Silakan ajukan layanan administrasi atau pantau status pengajuan Anda secara online.
+                </p>
 
-              <div className="rk-heroCardGrid">
-                <div className="rk-heroCardStat">
-                  <div className="rk-heroCardValue">8+</div>
-                  <div className="rk-heroCardLabel">Jenis Surat</div>
-                </div>
-                <div className="rk-heroCardStat">
-                  <div className="rk-heroCardValue">Mudah</div>
-                  <div className="rk-heroCardLabel">Akses</div>
-                </div>
-                <div className="rk-heroCardStat">
-                  <div className="rk-heroCardValue">Cepat</div>
-                  <div className="rk-heroCardLabel">Proses</div>
-                </div>
-                <div className="rk-heroCardStat">
-                  <div className="rk-heroCardValue">Aktif</div>
-                  <div className="rk-heroCardLabel">Pelacakan</div>
-                </div>
-              </div>
+                <div className="rk-heroAccountList" aria-label="Aktivitas akun">
+                  <div className="rk-heroAccountItem">
+                    <span className="rk-heroAccountIcon" aria-hidden="true">
+                      <FiFileText />
+                    </span>
+                    <div className="rk-heroAccountBody">
+                      <strong>Ajukan layanan administrasi</strong>
+                      <span>Ajukan berbagai jenis layanan dengan mudah.</span>
+                    </div>
+                    <span className="rk-heroAccountState" aria-hidden="true">
+                      <FiCheck />
+                    </span>
+                  </div>
 
-              <div className="rk-heroCardList" aria-label="Fitur utama">
-                <div className="rk-heroCardRow">
-                  <FiCheckCircle aria-hidden="true" />
-                  Formulir online terstruktur
+                  <div className="rk-heroAccountItem">
+                    <span className="rk-heroAccountIcon" aria-hidden="true">
+                      <FiSearch />
+                    </span>
+                    <div className="rk-heroAccountBody">
+                      <strong>Pantau status pengajuan</strong>
+                      <span>Cek perkembangan pengajuan secara real-time.</span>
+                    </div>
+                    <span className="rk-heroAccountState" aria-hidden="true">
+                      <FiCheck />
+                    </span>
+                  </div>
+
+                  <div className="rk-heroAccountItem">
+                    <span className="rk-heroAccountIcon" aria-hidden="true">
+                      <FiUser />
+                    </span>
+                    <div className="rk-heroAccountBody">
+                      <strong>Lengkapi profil Anda</strong>
+                      <span>Pastikan data Anda akurat dan terbaru.</span>
+                    </div>
+                    <span className="rk-heroAccountState" aria-hidden="true">
+                      <FiCheck />
+                    </span>
+                  </div>
                 </div>
-                <div className="rk-heroCardRow">
-                  <FiBarChart2 aria-hidden="true" />
-                  Status pengajuan terpantau
+              </aside>
+            ) : (
+              <aside className="rk-heroCard" aria-label="Informasi layanan">
+                <div className="rk-heroCardHeader">
+                  <span className="rk-heroCardTitle">Layanan Tersedia</span>
+                  <span className="rk-heroCardPill">Online</span>
                 </div>
-                <div className="rk-heroCardRow">
-                  <FiShield aria-hidden="true" />
-                  Transparansi dan notifikasi
+
+                <div className="rk-heroCardGrid">
+                  <div className="rk-heroCardStat">
+                    <div className="rk-heroCardValue">8+</div>
+                    <div className="rk-heroCardLabel">Jenis Surat</div>
+                  </div>
+                  <div className="rk-heroCardStat">
+                    <div className="rk-heroCardValue">Mudah</div>
+                    <div className="rk-heroCardLabel">Akses</div>
+                  </div>
+                  <div className="rk-heroCardStat">
+                    <div className="rk-heroCardValue">Cepat</div>
+                    <div className="rk-heroCardLabel">Proses</div>
+                  </div>
+                  <div className="rk-heroCardStat">
+                    <div className="rk-heroCardValue">Aktif</div>
+                    <div className="rk-heroCardLabel">Pelacakan</div>
+                  </div>
                 </div>
-                <div className="rk-heroCardRow">
-                  <FiCheckCircle aria-hidden="true" />
-                  Standar layanan jelas
+
+                <div className="rk-heroCardList" aria-label="Fitur utama">
+                  <div className="rk-heroCardRow">
+                    <FiCheckCircle aria-hidden="true" />
+                    Formulir online terstruktur
+                  </div>
+                  <div className="rk-heroCardRow">
+                    <FiBarChart2 aria-hidden="true" />
+                    Status pengajuan terpantau
+                  </div>
+                  <div className="rk-heroCardRow">
+                    <FiShield aria-hidden="true" />
+                    Transparansi dan notifikasi
+                  </div>
+                  <div className="rk-heroCardRow">
+                    <FiCheckCircle aria-hidden="true" />
+                    Standar layanan jelas
+                  </div>
+                  <div className="rk-heroCardRow">
+                    <FiShield aria-hidden="true" />
+                    Data lebih aman
+                  </div>
+                  <div className="rk-heroCardRow">
+                    <FiClock aria-hidden="true" />
+                    Hemat waktu
+                  </div>
                 </div>
-                <div className="rk-heroCardRow">
-                  <FiShield aria-hidden="true" />
-                  Data lebih aman
-                </div>
-                <div className="rk-heroCardRow">
-                  <FiClock aria-hidden="true" />
-                  Hemat waktu
-                </div>
-              </div>
-            </aside>
+              </aside>
+            )}
           </div>
 
           <svg className="rk-heroWave" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">

@@ -86,6 +86,23 @@
   line-height: 1.75;
 }
 
+.rk-layananWelcome {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.55;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .rk-pageLayanan .rk-heroVisual {
   position: relative;
   width: 100%;
