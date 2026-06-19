@@ -1,8 +1,15 @@
-import { useMemo, useState } from 'react'
-import { FiCamera, FiCheckCircle, FiMail, FiMapPin, FiPhone, FiSave, FiShield, FiUser } from 'react-icons/fi'
+import { useMemo, useRef, useState } from 'react'
+import { FiAlertCircle, FiCamera, FiCheckCircle, FiLoader, FiMail, FiMapPin, FiPhone, FiSave, FiShield, FiTrash2, FiUser } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { getAuth, setAuth } from '../lib/rkLocal'
+import {
+  deleteAvatar,
+  extractProfileFromResponse,
+  normalizeProfileUser,
+  updateProfile,
+  updateProfileWithAvatar,
+} from '../services/profileService'
 import './ProfilUser.css'
 
 function readStoredUser() {
@@ -24,7 +31,7 @@ function getInitials(name, username) {
 }
 
 function buildProfile(auth, storedUser) {
-  const base = { ...(storedUser || {}), ...(auth || {}) }
+  const base = normalizeProfileUser({ ...(storedUser || {}), ...(auth || {}) })
   const fullName = base.nama_lengkap || base.name || base.nama || ''
 
   return {
@@ -38,67 +45,267 @@ function buildProfile(auth, storedUser) {
   }
 }
 
+function validateProfileInput(profile) {
+  const errors = []
+  const fullName = String(profile.fullName || '').trim()
+  const username = String(profile.username || '').trim()
+  const email = String(profile.email || '').trim()
+  const phone = String(profile.phone || '').replace(/\D/g, '')
+
+  if (!fullName) errors.push('Nama lengkap wajib diisi.')
+  if (!username) errors.push('Username wajib tersedia.')
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Email harus valid.')
+  if (!phone) errors.push('Nomor HP wajib diisi.')
+  else if (!/^\d{10,15}$/.test(phone)) errors.push('Nomor HP harus berisi 10-15 digit angka.')
+
+  return errors
+}
+
+function buildProfilePayload(profile) {
+  return {
+    nama_lengkap: String(profile.fullName || '').trim(),
+    username: String(profile.username || '').trim(),
+    email: String(profile.email || '').trim(),
+    no_hp: String(profile.phone || '').replace(/\D/g, ''),
+    alamat: String(profile.address || '').trim(),
+    role: String(profile.role || '').trim() || 'masyarakat',
+  }
+}
+
+function buildAuthUser(nextUser, currentAuth) {
+  const normalized = normalizeProfileUser(nextUser)
+  const baseAuth = currentAuth && typeof currentAuth === 'object' ? currentAuth : {}
+  const role = normalized.role || baseAuth.role || 'masyarakat'
+  const username = normalized.username || baseAuth.username || ''
+  const name = normalized.name || normalized.nama_lengkap || normalized.nama || username
+
+  return {
+    ...baseAuth,
+    ...normalized,
+    role,
+    username,
+    name,
+    nama: normalized.nama || normalized.nama_lengkap || name,
+    nama_lengkap: normalized.nama_lengkap || normalized.nama || name,
+    email: normalized.email || '',
+    no_hp: normalized.no_hp || '',
+    phone: normalized.phone || normalized.no_hp || '',
+    alamat: normalized.alamat || '',
+    address: normalized.address || normalized.alamat || '',
+    avatar: normalized.avatar || '',
+    foto_profil: normalized.avatar || '',
+    photo: normalized.avatar || '',
+    foto: normalized.avatar || '',
+  }
+}
+
 export default function ProfilUser() {
   const initialProfile = useMemo(() => buildProfile(getAuth(), readStoredUser()), [])
   const [profile, setProfile] = useState(initialProfile)
-  const [notice, setNotice] = useState('')
+  const [errorMessages, setErrorMessages] = useState([])
+  const [successMessage, setSuccessMessage] = useState('')
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false)
+  const [hasPersistedAvatar, setHasPersistedAvatar] = useState(Boolean(initialProfile.avatar))
+  const avatarInputRef = useRef(null)
 
   const initials = getInitials(profile.fullName, profile.username)
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setProfile((prev) => ({ ...prev, [name]: value }))
-    if (notice) setNotice('')
+    if (errorMessages.length > 0) setErrorMessages([])
+    if (successMessage) setSuccessMessage('')
   }
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (!String(file.type || '').startsWith('image/')) {
+      setErrorMessages(['File foto profil harus berupa gambar.'])
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
       setProfile((prev) => ({ ...prev, avatar: String(reader.result || '') }))
-      if (notice) setNotice('')
+      setAvatarFile(file)
+      if (errorMessages.length > 0) setErrorMessages([])
+      if (successMessage) setSuccessMessage('')
     }
+    reader.onerror = () => setErrorMessages(['Gagal membaca file foto profil.'])
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (e) => {
+  const commitProfileSession = (nextUser) => {
+    const storedUser = readStoredUser() || {}
+    const currentAuth = getAuth() || {}
+    const normalizedUser = normalizeProfileUser({ ...storedUser, ...currentAuth, ...(nextUser || {}) })
+    const authUser = buildAuthUser(normalizedUser, currentAuth)
+
+    window.localStorage.setItem('user', JSON.stringify(normalizedUser))
+    if (authUser.role) window.localStorage.setItem('role', authUser.role)
+    setAuth(authUser)
+    window.dispatchEvent(new Event('rk-auth-updated'))
+    return normalizedUser
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const auth = getAuth() || {}
-    const storedUser = readStoredUser() || {}
-    const nextUser = {
-      ...storedUser,
-      ...auth,
-      name: profile.fullName,
-      nama: profile.fullName,
-      nama_lengkap: profile.fullName,
-      username: profile.username,
-      email: profile.email,
-      no_hp: profile.phone,
-      phone: profile.phone,
-      alamat: profile.address,
-      address: profile.address,
-      role: profile.role,
-      avatar: profile.avatar,
+    const frontendErrors = validateProfileInput(profile)
+    if (frontendErrors.length > 0) {
+      setErrorMessages(frontendErrors)
+      setSuccessMessage('')
+      return
     }
 
-    const nextAuth = {
-      ...auth,
-      role: profile.role,
-      username: profile.username,
-      name: profile.fullName || profile.username,
-      email: profile.email,
-      no_hp: profile.phone,
-      alamat: profile.address,
-      avatar: profile.avatar,
+    const payload = buildProfilePayload(profile)
+    const currentAuth = getAuth() || {}
+    const currentUser = readStoredUser() || {}
+
+    console.log('payload profil:', payload)
+
+    setIsSaving(true)
+    setErrorMessages([])
+    setSuccessMessage('')
+
+    try {
+      let result
+
+      if (avatarFile) {
+        const formData = new FormData()
+        formData.append('nama_lengkap', payload.nama_lengkap)
+        formData.append('username', payload.username)
+        formData.append('email', payload.email)
+        formData.append('no_hp', payload.no_hp)
+        formData.append('alamat', payload.alamat)
+        formData.append('role', payload.role)
+        formData.append('avatar', avatarFile)
+        for (const pair of formData.entries()) {
+          console.log(pair[0], pair[1])
+        }
+        result = await updateProfileWithAvatar(formData)
+      } else {
+        result = await updateProfile(payload)
+      }
+
+      if (!result?.success) {
+        setErrorMessages(result?.errors?.length ? result.errors : [result?.message || 'Gagal menyimpan profil.'])
+        return
+      }
+
+      const backendProfile = extractProfileFromResponse(result.data, {
+        ...currentUser,
+        ...currentAuth,
+        ...payload,
+        username: profile.username,
+        role: profile.role,
+      })
+
+      const nextUser = commitProfileSession({
+        ...currentUser,
+        ...currentAuth,
+        ...backendProfile,
+        username: backendProfile.username || profile.username,
+        role: backendProfile.role || profile.role,
+      })
+
+      const nextForm = buildProfile(nextUser, nextUser)
+      setProfile(nextForm)
+      setAvatarFile(null)
+      setHasPersistedAvatar(Boolean(nextUser.avatar))
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+      setSuccessMessage(result.message || 'Profil berhasil diperbarui.')
+    } catch (err) {
+      setErrorMessages([err?.message || 'Gagal menyimpan profil.'])
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteAvatar = async () => {
+    if (isDeletingAvatar || isSaving) return
+
+    const previousProfile = profile
+    const previousAvatarFile = avatarFile
+    const previousHasPersistedAvatar = hasPersistedAvatar
+    const currentAuth = getAuth() || {}
+    const currentUser = readStoredUser() || {}
+    const payload = buildProfilePayload(profile)
+
+    setProfile((prev) => ({ ...prev, avatar: '' }))
+    setAvatarFile(null)
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+    setErrorMessages([])
+    setSuccessMessage('')
+
+    if (!previousHasPersistedAvatar) {
+      setSuccessMessage('Preview foto profil berhasil dihapus.')
+      return
     }
 
-    window.localStorage.setItem('user', JSON.stringify(nextUser))
-    setAuth(nextAuth)
-    window.dispatchEvent(new Event('rk-auth-updated'))
-    setNotice('Profil berhasil diperbarui.')
+    setIsDeletingAvatar(true)
+
+    try {
+      let result = await deleteAvatar()
+
+      if (!result?.success && result?.notSupported) {
+        result = await updateProfile({
+          ...payload,
+          avatar: null,
+          foto_profil: null,
+          photo: null,
+          foto: null,
+        })
+      }
+
+      if (!result?.success) {
+        setProfile(previousProfile)
+        setAvatarFile(previousAvatarFile)
+        setHasPersistedAvatar(previousHasPersistedAvatar)
+        setErrorMessages(result?.errors?.length ? result.errors : [result?.message || 'Gagal menghapus foto profil.'])
+        return
+      }
+
+      const backendProfile = extractProfileFromResponse(result.data, {
+        ...currentUser,
+        ...currentAuth,
+        ...payload,
+        username: profile.username,
+        role: profile.role,
+        avatar: '',
+        foto_profil: '',
+        photo: '',
+        foto: '',
+      })
+
+      const nextUser = commitProfileSession({
+        ...currentUser,
+        ...currentAuth,
+        ...backendProfile,
+        username: backendProfile.username || profile.username,
+        role: backendProfile.role || profile.role,
+        avatar: '',
+        foto_profil: '',
+        photo: '',
+        foto: '',
+      })
+
+      setProfile(buildProfile(nextUser, nextUser))
+      setHasPersistedAvatar(false)
+      setSuccessMessage(result.message || 'Foto profil berhasil dihapus.')
+    } catch (err) {
+      setProfile(previousProfile)
+      setAvatarFile(previousAvatarFile)
+      setHasPersistedAvatar(previousHasPersistedAvatar)
+      setErrorMessages([err?.message || 'Gagal menghapus foto profil.'])
+    } finally {
+      setIsDeletingAvatar(false)
+    }
   }
 
   return (
@@ -158,17 +365,41 @@ export default function ProfilUser() {
                   <p className="rk-eyebrow">Edit Profil</p>
                   <h2 className="rk-profileUserFormTitle">Data Pribadi</h2>
                 </div>
-                <label className="rk-profileUserAvatarBtn">
-                  <FiCamera aria-hidden="true" />
-                  <span>Ubah Avatar</span>
-                  <input type="file" accept="image/*" onChange={handleAvatarChange} />
-                </label>
+                <div className="rk-profileUserFormHeadActions">
+                  <label className="rk-profileUserAvatarBtn">
+                    <FiCamera aria-hidden="true" />
+                    <span>Ubah Avatar</span>
+                    <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarChange} />
+                  </label>
+                  {profile.avatar ? (
+                    <button
+                      type="button"
+                      className="rk-profileUserDeleteAvatar"
+                      onClick={handleDeleteAvatar}
+                      disabled={isDeletingAvatar || isSaving}
+                    >
+                      {isDeletingAvatar ? <FiLoader className="rk-spin" aria-hidden="true" /> : <FiTrash2 aria-hidden="true" />}
+                      {isDeletingAvatar ? 'Menghapus...' : 'Hapus Foto Profil'}
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
-              {notice ? (
+              {errorMessages.length > 0 ? (
+                <div className="rk-profileUserNotice isError" role="alert" aria-live="assertive">
+                  <FiAlertCircle aria-hidden="true" />
+                  <div>
+                    {errorMessages.map((message, index) => (
+                      <p key={`${message}-${index}`}>{message}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {successMessage ? (
                 <div className="rk-profileUserNotice" role="status" aria-live="polite">
                   <FiCheckCircle aria-hidden="true" />
-                  {notice}
+                  <span>{successMessage}</span>
                 </div>
               ) : null}
 
@@ -244,9 +475,9 @@ export default function ProfilUser() {
               </div>
 
               <div className="rk-profileUserActions">
-                <button type="submit" className="rk-profileUserSave">
-                  <FiSave aria-hidden="true" />
-                  Simpan Profil
+                <button type="submit" className="rk-profileUserSave" disabled={isSaving}>
+                  {isSaving ? <FiLoader className="rk-spin" aria-hidden="true" /> : <FiSave aria-hidden="true" />}
+                  {isSaving ? 'Menyimpan...' : 'Simpan Profil'}
                 </button>
               </div>
             </form>

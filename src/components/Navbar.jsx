@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
 import { getAuth } from '../lib/rkLocal'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
+import { normalizeProfileAvatar, normalizeProfileUser } from '../services/profileService'
 import './Navbar.css'
 
 const NAV_ITEMS = [
@@ -27,25 +28,38 @@ function getInitials(label) {
   return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
 }
 
+function readStoredUser() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function readCurrentUser() {
+  const auth = getAuth()
+  const storedUser = readStoredUser()
+  if (!auth && !storedUser) return null
+  return normalizeProfileUser({ ...(storedUser || {}), ...(auth || {}) })
+}
+
+function scrollPageToTop() {
+  if (typeof window === 'undefined') return
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+}
+
 export default function Navbar() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef(null)
-  const [user, setUser] = useState(() => {
-    try {
-      const auth = getAuth()
-      if (auth) return auth
-      const raw = window.localStorage.getItem('user')
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  })
+  const [user, setUser] = useState(() => readCurrentUser())
   const [token, setToken] = useState(() => readToken())
 
   const userLabel = (user?.name || user?.nama_lengkap || user?.nama || user?.username || '').trim()
-  const userAvatar = user?.avatar || user?.photo || user?.foto || ''
+  const userAvatar = normalizeProfileAvatar(user?.avatar || user?.photo || user?.foto || '')
   const userInitials = getInitials(userLabel || user?.username)
 
   const auth = useMemo(() => {
@@ -119,15 +133,7 @@ export default function Navbar() {
   useEffect(() => {
     const syncAuth = () => {
       try {
-        const auth = getAuth()
-        if (auth) {
-          setUser(auth)
-          setToken(readToken())
-          return
-        }
-
-        const raw = window.localStorage.getItem('user')
-        setUser(raw ? JSON.parse(raw) : null)
+        setUser(readCurrentUser())
       } catch {
         setUser(null)
       }
@@ -159,10 +165,16 @@ export default function Navbar() {
     }
   }
 
+  const handleNavLinkClick = () => {
+    setMenuOpen(false)
+    setUserMenuOpen(false)
+    scrollPageToTop()
+  }
+
   return (
     <header className="rk-nav bg-white shadow-sm border-b" role="banner">
       <div className="rk-container rk-navInner">
-        <Link to="/home" className="rk-brand" aria-label="Kecamatan Rantau Kopar">
+        <Link to="/home" className="rk-brand" aria-label="Kecamatan Rantau Kopar" onClick={handleNavLinkClick}>
           <img 
             src="/images/logo-rohil.png" 
     alt="Logo Rohil" 
@@ -183,6 +195,7 @@ export default function Navbar() {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) => `rk-link ${isActive ? 'isActive' : ''}`}
+                onClick={handleNavLinkClick}
               >
                 {item.label}
               </NavLink>
@@ -214,7 +227,7 @@ export default function Navbar() {
                       to="/profil-saya"
                       className="rk-userDropdownItem"
                       role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={handleNavLinkClick}
                     >
                       Profil Saya
                     </Link>
@@ -222,7 +235,7 @@ export default function Navbar() {
                       to="/status-pengajuan"
                       className="rk-userDropdownItem"
                       role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={handleNavLinkClick}
                     >
                       Status Pengajuan
                     </Link>
@@ -239,7 +252,7 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <NavLink to="/login" className="rk-loginBtn">
+            <NavLink to="/login" className="rk-loginBtn" onClick={handleNavLinkClick}>
               Login
             </NavLink>
           )}
@@ -275,7 +288,7 @@ export default function Navbar() {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) => `rk-mobileLink ${isActive ? 'isActive' : ''}`}
-                onClick={() => setMenuOpen(false)}
+                onClick={handleNavLinkClick}
               >
                 {item.label}
               </NavLink>
@@ -290,10 +303,10 @@ export default function Navbar() {
                 </div>
                 {role === 'masyarakat' ? (
                   <>
-                    <NavLink to="/profil-saya" className="rk-mobileLink" onClick={() => setMenuOpen(false)}>
+                    <NavLink to="/profil-saya" className="rk-mobileLink" onClick={handleNavLinkClick}>
                       Profil Saya
                     </NavLink>
-                    <NavLink to="/status-pengajuan" className="rk-mobileLink" onClick={() => setMenuOpen(false)}>
+                    <NavLink to="/status-pengajuan" className="rk-mobileLink" onClick={handleNavLinkClick}>
                       Status Pengajuan
                     </NavLink>
                   </>
@@ -303,7 +316,7 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <NavLink to="/login" className="rk-mobileLink isLogin" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/login" className="rk-mobileLink isLogin" onClick={handleNavLinkClick}>
                 Login
               </NavLink>
             )}

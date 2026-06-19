@@ -146,7 +146,7 @@
   position: relative;
   z-index: 1;
   margin-top: -54px;
-  padding: 0 0 52px;
+  padding: 0 0 76px;
 }
 
 .rk-profileUserGrid {
@@ -279,8 +279,10 @@
 
 .rk-profileUserFormCard {
   position: relative;
+  z-index: 2;
   overflow: hidden;
   padding: 30px 32px 28px;
+  pointer-events: auto;
 }
 
 .rk-profileUserFormCard::before {
@@ -306,6 +308,13 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
+}
+
+.rk-profileUserFormHeadActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .rk-profileUserFormTitle {
@@ -336,6 +345,39 @@
     transform 180ms ease,
     background 180ms ease,
     box-shadow 180ms ease;
+}
+
+.rk-profileUserDeleteAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(182, 49, 49, 0.18);
+  background: rgba(182, 49, 49, 0.06);
+  color: #9a2424;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.rk-profileUserDeleteAvatar:hover {
+  transform: translateY(-1px);
+  background: rgba(182, 49, 49, 0.1);
+  box-shadow: 0 14px 28px rgba(122, 18, 18, 0.12);
+}
+
+.rk-profileUserDeleteAvatar:disabled {
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.72;
+  box-shadow: none;
 }
 
 .rk-profileUserAvatarBtn:hover {
@@ -369,6 +411,21 @@
 
 .rk-profileUserNotice svg {
   flex: 0 0 auto;
+}
+
+.rk-profileUserNotice p {
+  margin: 0;
+}
+
+.rk-profileUserNotice div {
+  display: grid;
+  gap: 4px;
+}
+
+.rk-profileUserNotice.isError {
+  background: rgba(182, 49, 49, 0.08);
+  border-color: rgba(182, 49, 49, 0.18);
+  color: #8f1f1f;
 }
 
 .rk-profileUserFields {
@@ -452,12 +509,18 @@
 }
 
 .rk-profileUserActions {
+  position: relative;
+  z-index: 4;
   display: flex;
   justify-content: flex-end;
   margin-top: 18px;
+  padding-bottom: 4px;
+  pointer-events: auto;
 }
 
 .rk-profileUserSave {
+  position: relative;
+  z-index: 5;
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
@@ -469,6 +532,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  pointer-events: auto;
   font-size: 14px;
   font-weight: 950;
   transition:
@@ -481,6 +545,28 @@
   transform: translateY(-1px);
   filter: brightness(1.02);
   box-shadow: 0 18px 36px rgba(11, 79, 124, 0.26);
+}
+
+.rk-profileUserSave:disabled {
+  cursor: wait;
+  transform: none;
+  filter: none;
+  opacity: 0.84;
+  box-shadow: 0 12px 24px rgba(11, 79, 124, 0.18);
+}
+
+.rk-spin {
+  animation: rk-profileUserSpin 0.9s linear infinite;
+}
+
+@keyframes rk-profileUserSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {
@@ -557,7 +643,15 @@
     display: grid;
   }
 
+  .rk-profileUserFormHeadActions {
+    justify-content: stretch;
+  }
+
   .rk-profileUserAvatarBtn {
+    width: 100%;
+  }
+
+  .rk-profileUserDeleteAvatar {
     width: 100%;
   }
 

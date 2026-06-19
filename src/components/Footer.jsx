@@ -10,6 +10,11 @@ const FOOTER_LINKS = [
   { label: 'Kontak', to: '/kontak' },
 ]
 
+function scrollPageToTop() {
+  if (typeof window === 'undefined') return
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+}
+
 export default function Footer() {
   return (
     <footer className="rk-footer" aria-label="Footer">
@@ -63,11 +68,11 @@ export default function Footer() {
           <p className="rk-footerTitle">Navigasi Cepat</p>
           <div className="rk-footerLinks">
             {FOOTER_LINKS.map((item) => (
-              <NavLink key={item.to} to={item.to} className="rk-footerLink">
+              <NavLink key={item.to} to={item.to} className="rk-footerLink" onClick={scrollPageToTop}>
                 {item.label}
               </NavLink>
             ))}
-            <NavLink to="/login" className="rk-footerLink">
+            <NavLink to="/login" className="rk-footerLink" onClick={scrollPageToTop}>
               Login
             </NavLink>
           </div>
@@ -95,4 +100,3 @@ export default function Footer() {
     </footer>
   )
 }
-

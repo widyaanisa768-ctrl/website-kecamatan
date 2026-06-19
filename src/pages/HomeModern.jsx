@@ -50,6 +50,11 @@ function readHomeAuth() {
   return { auth, storedUser, role }
 }
 
+function scrollPageToTop() {
+  if (typeof window === 'undefined') return
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+}
+
 export default function HomeModern() {
   const [homeAuth, setHomeAuth] = useState(() => readHomeAuth())
   const { auth, storedUser, role } = homeAuth
@@ -155,10 +160,10 @@ export default function HomeModern() {
               </p>
 
               <div className="rk-heroActions">
-                <Link className="rk-btn rk-btnPrimary" to={getMasyarakatPath('/layanan')}>
+                <Link className="rk-btn rk-btnPrimary" to={getMasyarakatPath('/layanan')} onClick={scrollPageToTop}>
                   Ajukan Layanan <FiArrowRight aria-hidden="true" />
                 </Link>
-                <Link className="rk-btn rk-btnGhost" to={getMasyarakatPath('/status-pengajuan')}>
+                <Link className="rk-btn rk-btnGhost" to={getMasyarakatPath('/status-pengajuan')} onClick={scrollPageToTop}>
                   Cek Status Pengajuan
                 </Link>
               </div>
@@ -354,7 +359,7 @@ export default function HomeModern() {
             </div>
 
             <div className="rk-sectionFooter">
-              <Link to={getMasyarakatPath('/layanan')} className="rk-miniBtn rk-sectionCta">
+              <Link to={getMasyarakatPath('/layanan')} className="rk-miniBtn rk-sectionCta" onClick={scrollPageToTop}>
                 Lihat Semua Layanan <FiArrowRight aria-hidden="true" />
               </Link>
             </div>
@@ -376,7 +381,7 @@ export default function HomeModern() {
                   menjadi lebih tertib, cepat, transparan, dan mudah dipantau oleh masyarakat kapan saja dan di mana saja.
                 </p>
                 <div className="rk-briefActions">
-                  <Link className="rk-btn rk-btnOutline" to="/profil">
+                  <Link className="rk-btn rk-btnOutline" to="/profil" onClick={scrollPageToTop}>
                     Lihat Profil Kecamatan <FiArrowRight aria-hidden="true" />
                   </Link>
                 </div>
@@ -400,10 +405,10 @@ export default function HomeModern() {
                 </p>
               </div>
               <div className="rk-ctaActions">
-                <Link to={getMasyarakatPath('/layanan')} className="rk-btn rk-btnPrimary">
+                <Link to={getMasyarakatPath('/layanan')} className="rk-btn rk-btnPrimary" onClick={scrollPageToTop}>
                   Mulai Pengajuan <FiArrowRight aria-hidden="true" />
                 </Link>
-                <Link to="/kontak" className="rk-btn rk-btnGhostAlt">
+                <Link to="/kontak" className="rk-btn rk-btnGhostAlt" onClick={scrollPageToTop}>
                   Hubungi Kami
                 </Link>
               </div>

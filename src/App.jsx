@@ -9,6 +9,7 @@ import Layanan from './pages/Layanan'
 import Galeri from './pages/Galeri'
 import Kontak from './pages/Kontak'
 import StatusPengajuan from './pages/StatusPengajuan'
+import ScrollToTop from './components/ScrollToTop'
 import DashboardPetugas from './pages/DashboardPetugas'
 import DashboardKepalaCamat from './pages/DashboardKepalaCamat'
 import LaporanKepalaCamat from './pages/LaporanKepalaCamat'
@@ -68,6 +69,7 @@ function Logout() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
 
