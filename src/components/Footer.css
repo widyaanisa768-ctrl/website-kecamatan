@@ -112,14 +112,36 @@
 }
 
 .rk-footerLink {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 14px;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.82);
   font-weight: 800;
-  transition: color 180ms ease;
+  background: transparent;
+  transition:
+    all 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.14);
+  touch-action: manipulation;
 }
 
 .rk-footerLink:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.98);
+}
+
+.rk-footerLink.isActive {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.rk-footerLink:active {
+  transform: scale(0.96);
 }
 
 .rk-footerInfo {
@@ -179,3 +201,8 @@
   }
 }
 
+@media (max-width: 768px) {
+  .rk-footerLink {
+    min-height: 44px;
+  }
+}

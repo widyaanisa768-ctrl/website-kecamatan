@@ -149,7 +149,7 @@ function SidebarKepalaCamat({ active }) {
   async function handleLogout() {
     await remoteLogout()
     clearAuthArtifacts()
-    navigate('/login?role=kepala_camat', { replace: true })
+    navigate('/login', { replace: true })
   }
 
   return (

@@ -46,7 +46,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
     if (item.action === 'logout') {
       await remoteLogout()
       clearAuthArtifacts()
-      navigate('/login-petugas', { replace: true })
+      navigate('/login', { replace: true })
       return
     }
     navigate(item.to)

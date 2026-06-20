@@ -31,13 +31,13 @@ import { clearAuthArtifacts, logout as remoteLogout } from './services/authServi
 
 function RequirePetugas({ children }) {
   const auth = getAuth()
-  if (!auth || auth.role !== 'petugas') return <Navigate to="/login-petugas" replace />
+  if (!auth || auth.role !== 'petugas') return <Navigate to="/login" replace />
   return children
 }
 
 function RequireKepalaCamat({ children }) {
   const auth = getAuth()
-  if (!auth || auth.role !== 'kepala_camat') return <Navigate to="/login?role=kepala_camat" replace />
+  if (!auth || auth.role !== 'kepala_camat') return <Navigate to="/login" replace />
   return children
 }
 
@@ -261,7 +261,7 @@ function App() {
 
         <Route path="/logout" element={<Logout />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/login-petugas" element={<Login />} />
+        <Route path="/login-petugas" element={<Navigate to="/login" replace />} />
         <Route path="/register" element={<Register />} />
       </Routes>
           </BrowserRouter>

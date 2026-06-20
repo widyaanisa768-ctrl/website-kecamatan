@@ -12,7 +12,8 @@ const FOOTER_LINKS = [
 
 function scrollPageToTop() {
   if (typeof window === 'undefined') return
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  window.sessionStorage.setItem('rk-scroll-behavior', 'smooth')
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
 }
 
 export default function Footer() {
@@ -68,11 +69,20 @@ export default function Footer() {
           <p className="rk-footerTitle">Navigasi Cepat</p>
           <div className="rk-footerLinks">
             {FOOTER_LINKS.map((item) => (
-              <NavLink key={item.to} to={item.to} className="rk-footerLink" onClick={scrollPageToTop}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `rk-footerLink ${isActive ? 'isActive' : ''}`}
+                onClick={scrollPageToTop}
+              >
                 {item.label}
               </NavLink>
             ))}
-            <NavLink to="/login" className="rk-footerLink" onClick={scrollPageToTop}>
+            <NavLink
+              to="/login"
+              className={({ isActive }) => `rk-footerLink ${isActive ? 'isActive' : ''}`}
+              onClick={scrollPageToTop}
+            >
               Login
             </NavLink>
           </div>

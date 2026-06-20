@@ -332,7 +332,7 @@ export default function DashboardKepalaCamat() {
   async function handleLogout() {
     await remoteLogout()
     clearAuthArtifacts()
-    navigate('/login?role=kepala_camat', { replace: true })
+    navigate('/login', { replace: true })
   }
 
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
