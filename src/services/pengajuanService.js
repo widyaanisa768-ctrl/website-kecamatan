@@ -95,6 +95,66 @@ const PETUGAS_BACKEND_AUTH_MESSAGE =
 const LOCAL_SUBMISSIONS_KEY = 'rk_submissions_v1'
 const LOCAL_ENDPOINT_PREFIX = 'local:'
 const DOKUMEN_CONTAINER_KEYS = ['dokumen_meta', 'dokumenMeta', 'dokumen', 'dokumens', 'documents', 'files', 'lampiran', 'berkas', 'data_dokumen']
+const HIDDEN_DOKUMEN_FIELD_KEYS = new Set([
+  'id',
+  '_id',
+  'uuid',
+  'id_pengajuan',
+  'pengajuan_id',
+  'user_id',
+  'id_user',
+  'pemohon_id',
+  'masyarakat_id',
+  'nama_lengkap',
+  'nama_pemohon',
+  'nama_peneliti',
+  'alamat',
+  'nik',
+  'no_hp',
+  'nomor_hp',
+  'email',
+  'username',
+  'keterangan',
+  'catatan',
+  'catatan_petugas',
+  'status',
+  'status_pengajuan',
+  'created_at',
+  'updated_at',
+  'createdat',
+  'updatedat',
+])
+const DOCUMENT_FIELD_HINTS = [
+  'dokumen',
+  'document',
+  'lampiran',
+  'berkas',
+  'file',
+  'ktp',
+  'kk',
+  'kartu_keluarga',
+  'surat_pindah',
+  'pas_foto',
+  'akta_kelahiran',
+  'akta_lahir',
+  'surat_keterangan',
+  'surat_nikah',
+  'foto_lokasi',
+  'foto_dokumentasi',
+  'pbb',
+  'akta_notaris',
+  'pengantar',
+  'lurah',
+  'penghulu',
+  'dasar_hak',
+  'blanko',
+  'ahli_waris',
+  'kematian',
+  'tanah',
+  'bidan',
+  'dokter',
+  'ktm',
+]
 
 const ENDPOINT_BY_LAYANAN_PATH = {
   '/layanan/penelitian': '/api/rekomendasi_penelitian',
@@ -163,6 +223,44 @@ function normalizeText(value) {
     .replace(/\s+/g, ' ')
 }
 
+function normalizeDokumenKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function isFilePathLike(value) {
+  const text = String(value || '').trim()
+  if (!text) return false
+  return /^https?:\/\//i.test(text) || text.startsWith('/uploads') || text.startsWith('uploads/') || text.startsWith('/storage') || text.startsWith('storage/')
+}
+
+function hasFilePathValue(value) {
+  if (!value) return false
+  if (typeof value === 'string') return isFilePathLike(value)
+  if (Array.isArray(value)) return value.some((entry) => hasFilePathValue(entry))
+  if (typeof value !== 'object') return false
+
+  const directKeys = ['url', 'href', 'path', 'path_file', 'file_path', 'file_url', 'dokumen_url', 'lampiran_url', 'download_url', 'secure_url']
+  return directKeys.some((key) => isFilePathLike(value[key]))
+}
+
+function isDocumentFieldKey(key) {
+  const normalized = normalizeDokumenKey(key)
+  if (!normalized || HIDDEN_DOKUMEN_FIELD_KEYS.has(normalized)) return false
+  return DOCUMENT_FIELD_HINTS.some((hint) => normalized === hint || normalized.includes(hint) || hint.includes(normalized))
+}
+
+function extractLegacyDokumenEntries(source) {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return {}
+
+  return Object.fromEntries(
+    Object.entries(source).filter(([key, value]) => isDocumentFieldKey(key) && hasFilePathValue(value))
+  )
+}
+
 function readDokumenCollection(source) {
   if (!source || typeof source !== 'object') return null
   if (Array.isArray(source)) return source
@@ -225,16 +323,10 @@ function extractDokumenFromResponse(data) {
 
   if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
     const fileKeys = ['path_file', 'file_path', 'file_url', 'url', 'url_file', 'nama_file']
-    if (fileKeys.some((key) => detail[key])) return [detail]
+    if (fileKeys.some((key) => isFilePathLike(detail[key]))) return [detail]
 
-    const ignoredKeys = new Set(['success', 'message', 'errors', 'status'])
-    const candidateEntries = Object.entries(detail).filter(([key, value]) => !ignoredKeys.has(key) && value != null)
-    const looksLikeDocumentMap = candidateEntries.some(([, value]) => {
-      if (typeof value === 'string') return value.trim().length > 0
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-      return fileKeys.some((key) => value[key]) || value.filename || value.file_name || value.originalname
-    })
-    if (looksLikeDocumentMap) return Object.fromEntries(candidateEntries)
+    const legacyEntries = extractLegacyDokumenEntries(detail)
+    if (Object.keys(legacyEntries).length > 0) return legacyEntries
   }
 
   return {}
@@ -247,10 +339,12 @@ function readFormData(item) {
 
 function pickFromItem(item, keys) {
   const form = readFormData(item)
+  const pengajuan = item?.pengajuan && typeof item.pengajuan === 'object' ? item.pengajuan : {}
+  const submission = item?.submission && typeof item.submission === 'object' ? item.submission : {}
   const pemohon = item?.pemohon && typeof item.pemohon === 'object' ? item.pemohon : {}
   const masyarakat = item?.masyarakat && typeof item.masyarakat === 'object' ? item.masyarakat : {}
   const user = item?.user && typeof item.user === 'object' ? item.user : {}
-  const sources = [item || {}, form, pemohon, masyarakat, user]
+  const sources = [item || {}, pengajuan, submission, form, pemohon, masyarakat, user]
 
   for (const source of sources) {
     for (const key of keys) {
@@ -338,12 +432,14 @@ function normalizePengajuanItem(item, svc) {
   const status = normalizePengajuanStatus(item)
   const createdAt = getPengajuanCreatedAt(item)
   const dokumen = extractDokumenFromResponse(item)
+  const layanan = getPengajuanLayanan({ ...(item || {}), __endpoint: item?.__endpoint || svc?.endpoint || '' })
   return {
     ...item,
     id: item?.id || id,
     id_pengajuan: item?.id_pengajuan || id,
     pengajuan_id: item?.pengajuan_id || id,
-    jenis_layanan: item?.jenis_layanan || item?.jenisLayanan || item?.layanan || svc?.jenis_layanan || '',
+    jenis_layanan: layanan === '-' ? svc?.jenis_layanan || '' : layanan,
+    layanan: item?.layanan || (layanan === '-' ? svc?.jenis_layanan || '' : layanan),
     status,
     status_pengajuan: status,
     created_at: item?.created_at || createdAt,
@@ -401,8 +497,55 @@ export function getPengajuanCreatedAt(item) {
   )
 }
 
+export function getPengajuanUpdatedAt(item) {
+  return (
+    item?.updatedAt ||
+    item?.updated_at ||
+    item?.tanggal_update ||
+    item?.tanggalUpdate ||
+    item?.modified_at ||
+    item?.modifiedAt ||
+    item?.last_update ||
+    item?.lastUpdate ||
+    getPengajuanCreatedAt(item) ||
+    ''
+  )
+}
+
+function layananDariEndpoint(item) {
+  const endpoint =
+    String(item?.__endpoint || item?.endpoint || item?.service || item?.service_key || item?.serviceKey || '').trim() ||
+    resolveEndpoint(item)
+  if (!endpoint) return ''
+
+  const normalizedEndpoint = endpoint.replace(/\/+$/, '').toLowerCase()
+  const routeMatch = SERVICE_ROUTES.find((svc) => svc.endpoint.toLowerCase() === normalizedEndpoint || svc.key === normalizedEndpoint.replace(/^\/+/, ''))
+  if (routeMatch?.jenis_layanan) return routeMatch.jenis_layanan
+
+  const layananPath = String(item?.layanan_path || item?.layananPath || '').trim()
+  if (layananPath && ENDPOINT_BY_LAYANAN_PATH[layananPath]) {
+    const pathMatch = SERVICE_ROUTES.find((svc) => svc.endpoint === ENDPOINT_BY_LAYANAN_PATH[layananPath])
+    if (pathMatch?.jenis_layanan) return pathMatch.jenis_layanan
+  }
+
+  return ''
+}
+
 export function getPengajuanLayanan(item) {
-  return pickFromItem(item, ['jenis_layanan', 'jenisLayanan', 'layanan', 'nama_layanan', 'namaLayanan']) || '-'
+  return (
+    pickFromItem(item, [
+      'jenis_layanan',
+      'jenisLayanan',
+      'layanan',
+      'nama_layanan',
+      'namaLayanan',
+      'service_name',
+      'serviceName',
+      'jenisPengajuan',
+    ]) ||
+    layananDariEndpoint(item) ||
+    '-'
+  )
 }
 
 export function getPengajuanNamaPemohon(item) {
@@ -426,6 +569,14 @@ export function getPengajuanNikPemohon(item) {
 
 export function getPengajuanUsernamePemohon(item) {
   return pickFromItem(item, ['username', 'user_name', 'email']) || '-'
+}
+
+export function getPengajuanNoHpPemohon(item) {
+  return pickFromItem(item, ['no_hp', 'nomor_hp', 'phone', 'no_telp', 'telepon', 'no_wa']) || '-'
+}
+
+export function getPengajuanAlamatPemohon(item) {
+  return pickFromItem(item, ['alamat', 'address', 'alamat_lengkap', 'domisili']) || '-'
 }
 
 export function getPengajuanKeterangan(item) {
@@ -457,8 +608,11 @@ export function getPengajuanDokumen(item) {
     item?.berkas,
     item?.data_dokumen
   )
-  if (Array.isArray(docs)) return docs
-  return docs && typeof docs === 'object' ? docs : {}
+  const legacyRootDocs = extractLegacyDokumenEntries(item)
+  const legacyFormDocs = extractLegacyDokumenEntries(readFormData(item))
+  const merged = mergeDokumenCollections(docs, legacyRootDocs, legacyFormDocs)
+  if (Array.isArray(merged)) return merged
+  return merged && typeof merged === 'object' ? merged : {}
 }
 
 export async function createPengajuan(payload) {
@@ -524,6 +678,17 @@ export async function uploadDokumenPengajuan(endpoint, id, dokumenPayload) {
     message: pickMessage(res) || 'Dokumen berhasil diunggah.',
     errors: [],
   }
+}
+
+export async function uploadSuratHasilPengajuan(endpoint, id, file) {
+  if (!endpoint || !id) return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
+  if (!file) return { success: false, status: 400, data: null, message: 'File surat hasil belum dipilih.' }
+
+  const formData = new FormData()
+  formData.append('file_hasil', file)
+  formData.append('nama_file_hasil', file.name || 'surat-hasil')
+
+  return updatePengajuan(endpoint, id, formData)
 }
 
 export async function createPengajuanWithDokumen({ endpoint, dokumen = {}, ...payload }) {

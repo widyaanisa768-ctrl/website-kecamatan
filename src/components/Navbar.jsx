@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { FiMenu, FiX } from 'react-icons/fi'
 import { getAuth } from '../lib/rkLocal'
+import { getCurrentRole, getDashboardLabel, getDashboardPath } from '../lib/roleNavigation'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
 import { normalizeProfileAvatar, normalizeProfileUser } from '../services/profileService'
 import './Navbar.css'
 
 const NAV_ITEMS = [
-  { label: 'Beranda', to: '/home', end: true },
   { label: 'Profil Kecamatan', to: '/profil' },
   { label: 'Layanan Online', to: '/layanan', authOnly: true, roles: ['masyarakat'] },
   { label: 'Galeri', to: '/galeri' },
@@ -72,27 +72,28 @@ export default function Navbar() {
 
   const role = useMemo(() => {
     try {
-      return (
-        window.localStorage.getItem('role') ||
-        user?.role ||
-        auth?.role ||
-        ''
-      )
+      return getCurrentRole() || user?.role || auth?.role || ''
     } catch {
       return user?.role || ''
     }
   }, [user, auth])
 
   const isLoggedIn = !!auth || (!!token && !!user && !!userLabel)
-  const normalizedRole = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  const normalizedRole = getCurrentRole() || role
+  const dashboardPath = getDashboardPath(normalizedRole)
+  const dashboardLabel = getDashboardLabel(normalizedRole)
+  const navItems = useMemo(
+    () => [{ label: dashboardLabel, to: dashboardPath, end: dashboardPath === '/home' }, ...NAV_ITEMS],
+    [dashboardLabel, dashboardPath]
+  )
   const visibleNavItems = useMemo(
     () =>
-      NAV_ITEMS.filter(
+      navItems.filter(
         (item) =>
           !item.authOnly ||
           (isLoggedIn && (!item.roles || item.roles.includes(normalizedRole)))
       ),
-    [isLoggedIn, normalizedRole]
+    [isLoggedIn, navItems, normalizedRole]
   )
 
   useEffect(() => {
@@ -174,18 +175,13 @@ export default function Navbar() {
   return (
     <header className="rk-nav bg-white shadow-sm border-b" role="banner">
       <div className="rk-container rk-navInner">
-        <Link to="/home" className="rk-brand" aria-label="Kecamatan Rantau Kopar" onClick={handleNavLinkClick}>
-          <img 
-            src="/images/logo-rohil.png" 
-    alt="Logo Rohil" 
-    className="rk-logo"
-  />
-
-  <span className="rk-brandText">
-    <span className="rk-brandLine1">Kecamatan Rantau Kopar</span>
-    <span className="rk-brandLine2">Kabupaten Rokan Hilir</span>
-  </span>
-</Link>
+        <Link to={dashboardPath} className="rk-brand" aria-label="Kecamatan Rantau Kopar" onClick={handleNavLinkClick}>
+          <img src="/images/logo-rohil.png" alt="Logo Rohil" className="rk-logo" />
+          <span className="rk-brandText">
+            <span className="rk-brandLine1">Kecamatan Rantau Kopar</span>
+            <span className="rk-brandLine2">Kabupaten Rokan Hilir</span>
+          </span>
+        </Link>
 
         <div className="rk-navRight">
           <nav className="rk-links" aria-label="Navigasi utama">
@@ -221,7 +217,7 @@ export default function Navbar() {
               </button>
 
               <div className={`rk-userDropdown ${userMenuOpen ? 'isOpen' : ''}`} role="menu" aria-label="Menu akun">
-                {role === 'masyarakat' ? (
+                {normalizedRole === 'masyarakat' ? (
                   <>
                     <Link
                       to="/profil-saya"
@@ -301,7 +297,7 @@ export default function Navbar() {
                   </span>
                   <span>{userLabel}</span>
                 </div>
-                {role === 'masyarakat' ? (
+                {normalizedRole === 'masyarakat' ? (
                   <>
                     <NavLink to="/profil-saya" className="rk-mobileLink" onClick={handleNavLinkClick}>
                       Profil Saya

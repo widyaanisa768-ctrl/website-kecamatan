@@ -17,7 +17,6 @@ import ProfilKepalaCamat from './pages/ProfilKepalaCamat'
 import DaftarPengajuanPetugas from './pages/DaftarPengajuanPetugas'
 import DetailPengajuanPetugas from './pages/DetailPengajuanPetugas'
 import ProfilPetugas from './pages/ProfilPetugas'
-import KelolaDataMasyarakat from './pages/KelolaDataMasyarakat'
 import AhliWarisForm from './pages/forms/AhliWarisForm'
 import RekomendasiKerjaForm from './pages/forms/RekomendasiKerjaForm'
 import PenelitianRisetForm from './pages/forms/PenelitianRisetForm'
@@ -27,7 +26,13 @@ import KartuKeluargaForm from './pages/forms/KartuKeluargaForm'
 import SuratTanahForm from './pages/forms/SuratTanahForm'
 import YayasanOrmasForm from './pages/forms/YayasanOrmasForm'
 import { getAuth } from './lib/rkLocal'
+import { getCurrentRole, getDashboardPath } from './lib/roleNavigation'
 import { clearAuthArtifacts, logout as remoteLogout } from './services/authService'
+
+function RoleDashboardRedirect({ masyarakatPath = '/home' }) {
+  const role = getCurrentRole()
+  return <Navigate to={getDashboardPath(role, { masyarakatPath })} replace />
+}
 
 function RequirePetugas({ children }) {
   const auth = getAuth()
@@ -71,7 +76,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/" element={<RoleDashboardRedirect />} />
 
         {/* Halaman publik */}
         <Route path="/home" element={<HomeModern />} />
@@ -171,7 +176,7 @@ function App() {
         />
 
         {/* Legacy dashboard masyarakat -> Beranda */}
-        <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+        <Route path="/dashboard" element={<RoleDashboardRedirect />} />
         <Route path="/dashboard-masyarakat" element={<Navigate to="/home" replace />} />
         <Route
           path="/status-pengajuan"
@@ -211,15 +216,11 @@ function App() {
         />
         <Route
           path="/petugas/data-masyarakat"
-          element={<Navigate to="/petugas/masyarakat" replace />}
+          element={<Navigate to="/petugas/dashboard" replace />}
         />
         <Route
           path="/petugas/masyarakat"
-          element={
-            <RequirePetugas>
-              <KelolaDataMasyarakat />
-            </RequirePetugas>
-          }
+          element={<Navigate to="/petugas/dashboard" replace />}
         />
         <Route
           path="/petugas/profil"
@@ -229,7 +230,7 @@ function App() {
             </RequirePetugas>
           }
         />
-        <Route path="/kelola-data-masyarakat" element={<Navigate to="/petugas/masyarakat" replace />} />
+        <Route path="/kelola-data-masyarakat" element={<Navigate to="/petugas/dashboard" replace />} />
 
         {/* Kepala Camat */}
         <Route path="/kepala-camat" element={<Navigate to="/dashboard-kepala-camat" replace />} />

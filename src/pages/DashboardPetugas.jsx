@@ -123,7 +123,7 @@ function DashboardPetugas() {
   const latestSubmissions = useMemo(() => {
     return [...submissions]
       .sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
-      .slice(0, 6)
+      .slice(0, 5)
   }, [submissions])
 
   const aktivitasHariIni = useMemo(

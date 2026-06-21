@@ -22,22 +22,24 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
     }
   }, [])
 
-  const menuItems = useMemo(() => {
-    return [
-      { label: 'Dashboard', to: '/dashboard', icon: 'dashboard' },
+  const menuItems = useMemo(
+    () => [
+      { label: 'Dashboard', to: '/petugas/dashboard', icon: 'dashboard' },
       { label: 'Daftar Pengajuan', to: '/petugas/pengajuan', icon: 'pengajuan' },
-      { label: 'Kelola Data Masyarakat', to: '/petugas/masyarakat', icon: 'masyarakat' },
       { label: 'Profil Petugas', to: '/petugas/profil', icon: 'profil' },
       { label: 'Logout', action: 'logout', icon: 'logout' },
-    ]
-  }, [])
+    ],
+    []
+  )
+
+  const primaryItems = useMemo(() => menuItems.filter((item) => item.action !== 'logout'), [menuItems])
+  const logoutItem = useMemo(() => menuItems.find((item) => item.action === 'logout') || null, [menuItems])
 
   function isActive(item) {
     if (item.action === 'logout') return false
     const path = location?.pathname || ''
-    if (item.to === '/dashboard') return path === '/dashboard'
+    if (item.to === '/petugas/dashboard') return path === '/petugas/dashboard'
     if (item.to === '/petugas/pengajuan') return path.startsWith('/petugas/pengajuan')
-    if (item.to === '/petugas/masyarakat') return path.startsWith('/petugas/masyarakat')
     if (item.to === '/petugas/profil') return path.startsWith('/petugas/profil')
     return activeLabel === item.label
   }
@@ -61,7 +63,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
 
   return (
-    <aside className="ptg-sidebar" aria-label="Sidebar petugas" style={{ display: 'flex', flexDirection: 'column' }}>
+    <aside className="ptg-sidebar" aria-label="Sidebar petugas">
       <div className="ptg-brand">
         <div className="ptg-logo" aria-hidden="true">
           <img src="/images/logo-rohil.png" alt="" className="ptg-logoImg" />
@@ -72,8 +74,8 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
         </div>
       </div>
 
-      <nav className="ptg-nav" aria-label="Menu sidebar" style={{ flex: 1, overflow: 'auto', paddingBottom: 10 }}>
-        {menuItems.map((item) => (
+      <nav className="ptg-nav" aria-label="Menu sidebar">
+        {primaryItems.map((item) => (
           <button
             key={item.label}
             type="button"
@@ -100,6 +102,25 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
           </div>
         </div>
       </div>
+
+      <div className="ptg-sidebarInfo" aria-label="Informasi peran petugas">
+        <span className="ptg-sidebarInfoIcon" aria-hidden="true">
+          i
+        </span>
+        <p>Petugas memverifikasi pengajuan, memperbarui status, dan mengunggah surat hasil untuk masyarakat.</p>
+      </div>
+
+      {logoutItem ? (
+        <button
+          type="button"
+          data-icon={logoutItem.icon}
+          className="ptg-navBtn ptg-sidebarLogout"
+          onClick={() => onClick(logoutItem)}
+        >
+          <span className="ptg-navDot" aria-hidden="true" />
+          <span className="ptg-navText">{logoutItem.label}</span>
+        </button>
+      ) : null}
     </aside>
   )
 }

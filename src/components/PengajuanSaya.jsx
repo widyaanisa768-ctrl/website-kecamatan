@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   FiAlertCircle,
@@ -34,6 +34,7 @@ import {
   hasSelectedDokumenFiles,
   validateSelectedDokumenFiles,
 } from '../lib/pengajuanDokumenConfig'
+import { normalizePengajuanDokumenPersyaratan } from '../lib/pengajuanDokumenView'
 import './PengajuanSaya.css'
 
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
@@ -503,6 +504,8 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const [actionBusy, setActionBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState(null)
+  const detailBodyRef = useRef(null)
+  const editBodyRef = useRef(null)
 
   const refreshItems = useCallback(async () => {
     setLoading(true)
@@ -547,6 +550,40 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
     const timeoutId = window.setTimeout(() => setNotice(null), 4500)
     return () => window.clearTimeout(timeoutId)
   }, [notice])
+
+  useEffect(() => {
+    const modalOpen = Boolean(active || editItem)
+    if (!modalOpen || typeof document === 'undefined' || typeof window === 'undefined') return undefined
+
+    const scrollY = window.scrollY || window.pageYOffset || 0
+    const original = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    }
+
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+
+    return () => {
+      document.body.style.overflow = original.overflow
+      document.body.style.position = original.position
+      document.body.style.top = original.top
+      document.body.style.width = original.width
+      window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
+    }
+  }, [active, editItem])
+
+  useEffect(() => {
+    if (active && detailBodyRef.current) detailBodyRef.current.scrollTop = 0
+  }, [active])
+
+  useEffect(() => {
+    if (editItem && editBodyRef.current) editBodyRef.current.scrollTop = 0
+  }, [editItem])
 
   function getLayanan(item) {
     return item?.jenis_layanan || item?.layanan || item?.service || item?.title || '-'
@@ -678,9 +715,9 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const activeResultFile = getResultFile(active)
   const activeCanDownload = activeKind === 'done' && !!activeResultFile
   const activeRejectReason = getRejectReason(active)
-  const activeDokumenPersyaratan = useMemo(() => normalizeDokumenPersyaratan(active), [active])
+  const activeDokumenPersyaratan = useMemo(() => normalizePengajuanDokumenPersyaratan(active), [active])
   const editDokumenConfig = useMemo(() => getDokumenConfigForPengajuan(editItem), [editItem])
-  const editDokumenPersyaratan = useMemo(() => normalizeDokumenPersyaratan(editItem), [editItem])
+  const editDokumenPersyaratan = useMemo(() => normalizePengajuanDokumenPersyaratan(editItem), [editItem])
 
   const dataEntries = useMemo(() => {
     if (!active || typeof active !== 'object') return []
@@ -718,7 +755,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
         if (import.meta.env.DEV) {
           console.log('DETAIL PENGAJUAN:', selectedPengajuan)
           console.log('DOKUMEN DETAIL:', selectedPengajuan?.dokumen, selectedPengajuan?.documents, selectedPengajuan?.files)
-          const normalizedDokumen = normalizeDokumenPersyaratan(selectedPengajuan)
+          const normalizedDokumen = normalizePengajuanDokumenPersyaratan(selectedPengajuan)
           if (normalizedDokumen.every((entry) => !entry.uploaded)) {
             console.warn('Dokumen tidak ditemukan dari response backend', selectedPengajuan)
           }
@@ -754,7 +791,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
     if (import.meta.env.DEV) {
       console.log('DETAIL PENGAJUAN:', selectedPengajuan)
       console.log('DOKUMEN DETAIL:', selectedPengajuan?.dokumen, selectedPengajuan?.documents, selectedPengajuan?.files)
-      const normalizedDokumen = normalizeDokumenPersyaratan(selectedPengajuan)
+      const normalizedDokumen = normalizePengajuanDokumenPersyaratan(selectedPengajuan)
       if (normalizedDokumen.every((entry) => !entry.uploaded)) {
         console.warn('Dokumen tidak ditemukan dari response backend', selectedPengajuan)
       }
@@ -1075,7 +1112,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                       {canDownloadResult ? (
                         <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(resultFile)}>
                           <FiDownload aria-hidden="true" />
-                          Unduh Surat
+                          Download Surat Hasil
                         </button>
                       ) : null}
                     </div>
@@ -1103,14 +1140,14 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               </button>
             </div>
 
-            <div className="rk-modalBody">
+            <div className="rk-modalBody" ref={detailBodyRef}>
               <div className={`rk-statusBox is-${activeKind}`}>
                 <div className="rk-statusTop">
                   <span className={`rk-mySubBadge ${badgeClass(activeStatus)}`}>{statusLabel(activeStatus)}</span>
                   {activeCanDownload ? (
                     <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
                       <FiDownload aria-hidden="true" />
-                      Unduh Surat
+                      Download Surat Hasil
                     </button>
                   ) : null}
                 </div>
@@ -1205,7 +1242,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               {activeKind === 'done' && activeCanDownload ? (
                 <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
                   <FiDownload aria-hidden="true" />
-                  Unduh Surat
+                  Download Surat Hasil
                 </button>
               ) : null}
               {activeKind === 'done' && !activeResultFile ? (
@@ -1235,7 +1272,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               </button>
             </div>
 
-            <div className="rk-modalBody">
+            <div className="rk-modalBody" ref={editBodyRef}>
               <div className="rk-editInfo">
                 <FiInfo aria-hidden="true" />
                 Data dapat diubah selama status masih Menunggu Verifikasi.

@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import { FiFacebook, FiInstagram, FiMail, FiMapPin, FiPhone, FiYoutube } from 'react-icons/fi'
+import { getCurrentRole, getDashboardLabel, getDashboardPath } from '../lib/roleNavigation'
 import './Footer.css'
 
 const FOOTER_LINKS = [
-  { label: 'Beranda', to: '/home' },
   { label: 'Profil Kecamatan', to: '/profil' },
   { label: 'Layanan Online', to: '/layanan' },
   { label: 'Galeri', to: '/galeri' },
@@ -17,6 +17,9 @@ function scrollPageToTop() {
 }
 
 export default function Footer() {
+  const role = getCurrentRole()
+  const footerLinks = [{ label: getDashboardLabel(role), to: getDashboardPath(role) }, ...FOOTER_LINKS]
+
   return (
     <footer className="rk-footer" aria-label="Footer">
       <div className="rk-container rk-footerGrid">
@@ -68,7 +71,7 @@ export default function Footer() {
         <div className="rk-footerCol">
           <p className="rk-footerTitle">Navigasi Cepat</p>
           <div className="rk-footerLinks">
-            {FOOTER_LINKS.map((item) => (
+            {footerLinks.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

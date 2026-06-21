@@ -3,28 +3,20 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { getAuth } from '../lib/rkLocal'
 import {
+  getDetailPengajuan,
   getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
-  getPengajuanDokumen,
   getPengajuanId,
   getPengajuanKeterangan,
   getPengajuanLayanan,
-  getPengajuanNamaPemohon,
-  getPengajuanNikPemohon,
   getPengajuanStatusKind,
-  getPengajuanUsernamePemohon,
+  getPengajuanUpdatedAt,
   getSemuaPengajuanPetugas,
   normalizePengajuanStatus,
   updatePengajuan,
-  uploadDokumenPengajuan,
+  uploadSuratHasilPengajuan,
 } from '../services/pengajuanService'
-import { handleBackendValidationError } from '../lib/formValidation'
-import {
-  buildDokumenFormDataFromFiles,
-  getDokumenConfigForPengajuan,
-  hasSelectedDokumenFiles,
-  validateSelectedDokumenFiles,
-} from '../lib/pengajuanDokumenConfig'
+import { normalizePengajuanDokumenPersyaratan } from '../lib/pengajuanDokumenView'
 import '../styles/petugas-ui.css'
 
 const STATUS_OPTIONS = ['Menunggu Verifikasi', 'Diproses', 'Selesai', 'Ditolak']
@@ -34,7 +26,113 @@ const SURAT_HASIL_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 const SURAT_HASIL_EXTENSIONS = ['pdf', 'doc', 'docx']
+const SURAT_HASIL_INPUT_ID = 'ptg-upload-surat-hasil'
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
+const HIDDEN_DOKUMEN_KEYS = new Set([
+  'id',
+  '_id',
+  'id_pengajuan',
+  'pengajuan_id',
+  'id_user',
+  'user_id',
+  'created_at',
+  'updated_at',
+  'createdat',
+  'updatedat',
+  'created',
+  'updated',
+  'status',
+  'status_pengajuan',
+  'catatan_petugas',
+  'catatanpetugas',
+  'nama_pemohon',
+  'nama_lengkap',
+  'alamat',
+  'no_hp',
+  'nik',
+  'email',
+  'username',
+  'layanan',
+  'jenis_layanan',
+  'keterangan',
+])
+const HIDDEN_DETAIL_DATA_KEYS = new Set([
+  '__endpoint',
+  'created_by',
+  'created_at',
+  'createdat',
+  'updated_at',
+  'updatedat',
+  'created',
+  'tanggal_pengajuan',
+  'tanggalpengajuan',
+  'tanggal_update',
+  'tanggalupdate',
+  'tanggal_verifikasi',
+  'tanggalverifikasi',
+  'verified_at',
+  'verifiedat',
+  'verification_date',
+  'verificationdate',
+  'id_pengajuan',
+  'status',
+  'status_pengajuan',
+  'statuspengajuan',
+  'id',
+  '_id',
+  'uuid',
+  'pengajuan_id',
+  'jenis_layanan',
+  'layanan',
+  'layanan_path',
+  'layananpath',
+  'service',
+  'service_key',
+  'servicekey',
+  'title',
+  'endpoint',
+  'user_id',
+  'userid',
+  'id_user',
+  'pemohon_id',
+  'masyarakat_id',
+  'dokumen',
+  'dokumen_meta',
+  'dokumenmeta',
+  'data_form',
+  'dataform',
+  'data',
+  'file_hasil',
+  'dokumen_hasil',
+  'surat_hasil',
+  'url_hasil',
+  'hasil_url',
+  'file_url',
+  'hasil_surat',
+  'hasilsurat',
+  'catatan_petugas',
+  'catatanpetugas',
+  'alasan_penolakan',
+  'alasanpenolakan',
+  'keterangan',
+])
+const DETAIL_LABEL_OVERRIDES = {
+  no_hp: 'Nomor HP',
+  nomor_hp: 'Nomor HP',
+  nik: 'NIK',
+  nik_pemohon: 'NIK Pemohon',
+  nik_pewaris: 'NIK Pewaris',
+  nama_pemohon: 'Nama Pemohon',
+  nama_pewaris: 'Nama Pewaris',
+  nama_peneliti: 'Nama Peneliti',
+  alamat: 'Alamat',
+  alamat_pemohon: 'Alamat Pemohon',
+  alamat_pewaris: 'Alamat Pewaris',
+  alamat_asal: 'Alamat Asal',
+  alamat_pindah: 'Alamat Pindah',
+  alamat_lembaga: 'Alamat Lembaga',
+  jenis_layanan: 'Jenis Layanan',
+}
 
 function formatTanggalID(date) {
   if (!date) return '-'
@@ -44,6 +142,21 @@ function formatTanggalID(date) {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
+    })
+  } catch {
+    return '-'
+  }
+}
+
+function formatTanggalWaktuID(date) {
+  if (!date) return '-'
+  try {
+    return new Date(date).toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
   } catch {
     return '-'
@@ -99,6 +212,38 @@ function humanizeKey(key) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+function humanizeDetailKey(key) {
+  const normalized = String(key || '').trim().toLowerCase()
+  if (DETAIL_LABEL_OVERRIDES[normalized]) return DETAIL_LABEL_OVERRIDES[normalized]
+  return normalized
+    .replace(/^__/, '')
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function formatDetailValue(value) {
+  if (Array.isArray(value)) return value.map(formatDetailValue).join(', ')
+  if (value && typeof value === 'object') {
+    if (value.name) return String(value.name)
+    return Object.entries(value)
+      .map(([key, nested]) => `${humanizeDetailKey(key)}: ${formatDetailValue(nested)}`)
+      .join(', ')
+  }
+  return String(value)
+}
+
+function getDetailFormSource(item) {
+  if (item?.data_form && typeof item.data_form === 'object' && !Array.isArray(item.data_form)) {
+    return item.data_form
+  }
+  if (item?.data && typeof item.data === 'object' && !Array.isArray(item.data)) {
+    return item.data
+  }
+  return item && typeof item === 'object' ? item : {}
+}
+
 function filenameFromUrl(url) {
   try {
     const parsed = new URL(url)
@@ -111,7 +256,7 @@ function filenameFromUrl(url) {
 
 function readLampiranValue(meta, fallbackLabel) {
   if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-    const url =
+    const rawUrl =
       meta.url ||
       meta.secure_url ||
       meta.href ||
@@ -120,6 +265,7 @@ function readLampiranValue(meta, fallbackLabel) {
       meta.dokumen_url ||
       meta.lampiran_url ||
       ''
+    const url = buildFileLink(rawUrl)
     const filename =
       meta.name ||
       meta.nama ||
@@ -127,8 +273,8 @@ function readLampiranValue(meta, fallbackLabel) {
       meta.file_name ||
       meta.originalname ||
       meta.public_id ||
-      (url ? filenameFromUrl(url) : fallbackLabel)
-    return { filename, url: buildFileLink(url) }
+      (rawUrl ? filenameFromUrl(rawUrl) : '')
+    return { filename, url }
   }
 
   if (typeof meta === 'string') {
@@ -138,7 +284,7 @@ function readLampiranValue(meta, fallbackLabel) {
     }
   }
 
-  return { filename: fallbackLabel, url: '' }
+  return { filename: '', url: '' }
 }
 
 function normalizeLampiran(item) {
@@ -161,7 +307,10 @@ function normalizeLampiran(item) {
   if (Array.isArray(docs)) {
     docs.forEach((meta, idx) => pushEntry(meta?.label || meta?.jenis || meta?.field || `Lampiran ${idx + 1}`, meta))
   } else {
-    Object.entries(docs || {}).forEach(([key, meta]) => pushEntry(key, meta))
+    Object.entries(docs || {}).forEach(([key, meta]) => {
+      if (HIDDEN_DOKUMEN_KEYS.has(String(key || '').trim().toLowerCase())) return
+      pushEntry(key, meta)
+    })
   }
 
   const knownFields = [
@@ -203,46 +352,60 @@ function readMetaByKey(item, docs, key) {
   return null
 }
 
+function normalizeFallbackDokumenPersyaratan(item) {
+  const docs = getPengajuanDokumen(item)
+  const entries = []
+
+  const pushEntry = (id, label, meta) => {
+    const { filename, url } = readLampiranValue(meta, label)
+    if (!filename && !url) return
+    entries.push({
+      id,
+      label,
+      filename: filename || filenameFromUrl(url) || 'Dokumen tersedia',
+      url,
+      uploaded: true,
+      ext: getLampiranExt(filename || url),
+    })
+  }
+
+  if (Array.isArray(docs)) {
+    docs.forEach((meta, idx) => {
+      const label = meta?.label || meta?.jenis || meta?.field || meta?.nama_dokumen || `Dokumen ${idx + 1}`
+      pushEntry(`fallback-${idx}`, humanizeKey(label), meta)
+    })
+  } else if (docs && typeof docs === 'object') {
+    Object.entries(docs).forEach(([key, meta]) => {
+      const normalizedKey = String(key || '').trim().toLowerCase()
+      if (HIDDEN_DOKUMEN_KEYS.has(normalizedKey)) return
+      pushEntry(`fallback-${key}`, humanizeKey(key), meta)
+    })
+  }
+
+  return entries
+}
+
 function normalizeDokumenPersyaratan(item, config) {
   if (!item) return []
-  if (!config?.fields?.length) return normalizeLampiran(item)
+  if (!config?.fields?.length) return normalizeFallbackDokumenPersyaratan(item)
 
   const docs = getPengajuanDokumen(item)
   const entries = []
-  const usedKeys = new Set()
 
   config.fields.forEach((field) => {
     const key = field.backendKey || field.key
     const meta = readMetaByKey(item, docs, key) ?? readMetaByKey(item, docs, field.key)
-    if (!meta) return
 
     const { filename, url } = readLampiranValue(meta, field.label)
-    if (!filename && !url) return
-    usedKeys.add(key)
-    usedKeys.add(field.key)
     entries.push({
       id: key,
       label: field.label,
-      filename: filename || filenameFromUrl(url),
+      filename: filename || filenameFromUrl(url) || 'Belum diunggah',
       url,
+      uploaded: Boolean(filename || url),
       ext: getLampiranExt(filename || url),
     })
   })
-
-  if (docs && !Array.isArray(docs)) {
-    Object.entries(docs).forEach(([key, meta]) => {
-      if (usedKeys.has(key)) return
-      const { filename, url } = readLampiranValue(meta, key)
-      if (!filename && !url) return
-      entries.push({
-        id: `extra-${key}`,
-        label: humanizeKey(key),
-        filename: filename || filenameFromUrl(url),
-        url,
-        ext: getLampiranExt(filename || url),
-      })
-    })
-  }
 
   const seen = new Set()
   return entries.filter((entry) => {
@@ -263,8 +426,8 @@ function readSuratHasil(item) {
 
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     return {
-      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_hasil || '',
-      url: source.url || source.href || source.path || item?.url_hasil || item?.hasil_url || item?.file_url || '',
+      nama: source.nama || source.name || source.filename || source.file_name || source.nama_file || item?.nama_file_hasil || '',
+      url: buildFileLink(source.url || source.href || source.path || source.file_url || item?.url_hasil || item?.hasil_url || item?.file_url || ''),
       file: null,
     }
   }
@@ -272,9 +435,15 @@ function readSuratHasil(item) {
   const url = item?.url_hasil || item?.hasil_url || item?.file_url || (typeof source === 'string' ? source : '')
   return {
     nama: item?.nama_file_hasil || item?.nama_surat_hasil || '',
-    url: url || '',
+    url: buildFileLink(url) || url || '',
     file: null,
   }
+}
+
+function hasUploadedSuratHasil(item, suratForm) {
+  const saved = readSuratHasil(item)
+  const draft = suratForm || {}
+  return Boolean(saved?.url || saved?.nama || (draft?.nama && !draft?.file) || (draft?.url && !draft?.file))
 }
 
 function isAllowedSuratFile(file) {
@@ -346,7 +515,7 @@ function readSuratUploadResult(data, fallbackName) {
 
   return {
     nama: String(nama || fallbackName || '').trim(),
-    url: String(url || '').trim(),
+    url: buildFileLink(String(url || '').trim()) || String(url || '').trim(),
   }
 }
 
@@ -369,50 +538,56 @@ export default function DetailPengajuanPetugas() {
   const [saving, setSaving] = useState(false)
   const [savingSurat, setSavingSurat] = useState(false)
   const [suratForm, setSuratForm] = useState(() => readSuratHasil(initialSubmission))
-  const [dokumenFiles, setDokumenFiles] = useState({})
-  const [dokumenErrors, setDokumenErrors] = useState([])
-  const [dokumenInputVersion, setDokumenInputVersion] = useState(0)
   const [toast, setToast] = useState(null)
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [submissionId])
 
   useEffect(() => {
     let alive = true
     const refresh = async () => {
       setLoading(true)
-      const res = await getSemuaPengajuanPetugas()
-      if (!alive) return
-      if (!res?.success) {
-        setError(res?.message || 'Gagal memuat detail pengajuan.')
-        setLoading(false)
-        return
-      }
+      try {
+        const res = await getSemuaPengajuanPetugas()
+        if (!alive) return
+        if (!res?.success) {
+          setError(res?.message || 'Gagal memuat detail pengajuan.')
+          setLoading(false)
+          return
+        }
 
-      const items = res.items || []
-      const found =
-        items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
-        items.find((item) => getPengajuanId(item) === String(submissionId))
+        const items = res.items || []
+        const found =
+          items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
+          items.find((item) => getPengajuanId(item) === String(submissionId)) ||
+          initialSubmission
 
-      if (!found) {
-        setSubmission(null)
-        setError('Detail pengajuan tidak ditemukan.')
-      } else {
-        setSubmission(found)
-        setStatusBaru(normalizePengajuanStatus(found))
-        setCatatanPetugas(getPengajuanCatatanPetugas(found))
-        setSuratForm(readSuratHasil(found))
-        setDokumenFiles({})
-        setDokumenErrors([])
-        setDokumenInputVersion((version) => version + 1)
+        if (!found) {
+          setSubmission(null)
+          setError('Detail pengajuan tidak ditemukan.')
+          setLoading(false)
+          return
+        }
+
+        const detailRes = submissionId ? await getDetailPengajuan(submissionId, found) : null
+        if (!alive) return
+        const finalSubmission = detailRes?.success ? detailRes.data || found : found
+
+        setSubmission(finalSubmission)
+        setStatusBaru(normalizePengajuanStatus(finalSubmission))
+        setCatatanPetugas(getPengajuanCatatanPetugas(finalSubmission))
+        setSuratForm(readSuratHasil(finalSubmission))
         setError('')
+      } finally {
+        if (alive) setLoading(false)
       }
-      setLoading(false)
     }
 
     refresh()
-    window.addEventListener('focus', refresh)
     return () => {
       alive = false
-      window.removeEventListener('focus', refresh)
     }
   }, [stateEndpoint, submissionId])
 
@@ -436,8 +611,22 @@ export default function DetailPengajuanPetugas() {
 
   const pengajuanId = getPengajuanId(submission) || submissionId || ''
   const endpoint = submission?.__endpoint || stateEndpoint || ''
-  const dokumenConfig = useMemo(() => getDokumenConfigForPengajuan(submission || { __endpoint: endpoint }), [endpoint, submission])
-  const dokumenPersyaratan = useMemo(() => normalizeDokumenPersyaratan(submission, dokumenConfig), [dokumenConfig, submission])
+  const dokumenPersyaratan = useMemo(() => normalizePengajuanDokumenPersyaratan(submission), [submission])
+  const suratHasilTersedia = hasUploadedSuratHasil(submission, suratForm)
+  const layananPengajuan = getPengajuanLayanan(submission)
+  const dataFormEntries = useMemo(() => {
+    if (!submission || typeof submission !== 'object') return []
+    const source = getDetailFormSource(submission)
+    return Object.entries(source).filter(([key, value]) => {
+      const normalizedKey = String(key || '').trim().toLowerCase()
+      if (!normalizedKey || normalizedKey.startsWith('__') || HIDDEN_DETAIL_DATA_KEYS.has(normalizedKey)) return false
+      if (normalizedKey.includes('file') || normalizedKey.includes('dokumen') || normalizedKey.includes('hasil')) return false
+      if (value === undefined || value === null) return false
+      if (typeof value === 'string' && !value.trim()) return false
+      if (source === submission && typeof value === 'object') return false
+      return true
+    })
+  }, [submission])
 
   async function simpanStatus(nextStatus = statusBaru, successMessage = 'Perubahan berhasil disimpan.') {
     if (!submission) return
@@ -452,18 +641,8 @@ export default function DetailPengajuanPetugas() {
       return
     }
 
-    const shouldUploadDokumen = hasSelectedDokumenFiles(dokumenFiles)
-    if (shouldUploadDokumen && !dokumenConfig?.fields?.length) {
-      const errors = ['Jenis layanan belum memiliki konfigurasi upload dokumen.']
-      setDokumenErrors(errors)
-      showToast(errors[0], 'danger')
-      return
-    }
-
-    const fileErrors = shouldUploadDokumen ? validateSelectedDokumenFiles(dokumenFiles, dokumenConfig.fields) : []
-    if (fileErrors.length > 0) {
-      setDokumenErrors(fileErrors)
-      showToast(fileErrors[0], 'danger')
+    if (normalized === 'Selesai' && !suratHasilTersedia) {
+      showToast('Upload surat hasil terlebih dahulu sebelum menyelesaikan pengajuan.', 'danger')
       return
     }
 
@@ -482,42 +661,28 @@ export default function DetailPengajuanPetugas() {
       return
     }
 
-    let uploadedDokumenMeta = {}
-    if (shouldUploadDokumen) {
-      const uploadEndpoint = dokumenConfig.endpoint || endpoint
-      const uploadRes = await uploadDokumenPengajuan(uploadEndpoint, pengajuanId, buildDokumenFormDataFromFiles(dokumenFiles, dokumenConfig.fields))
-
-      if (!uploadRes?.success) {
-        const errors = handleBackendValidationError(uploadRes, uploadRes?.message || 'Gagal upload ulang dokumen.')
-        setDokumenErrors(errors)
-        setSaving(false)
-        showToast(errors[0] || 'Gagal upload ulang dokumen.', 'danger')
-        return
-      }
-
-      uploadedDokumenMeta = dokumenConfig.fields.reduce((acc, field) => {
-        const file = dokumenFiles[field.key]
-        if (file) acc[field.backendKey || field.key] = { name: file.name }
-        return acc
-      }, {})
-      setDokumenFiles({})
-      setDokumenErrors([])
-      setDokumenInputVersion((version) => version + 1)
-    }
-
-    setSaving(false)
-    setStatusBaru(normalized)
-    setSubmission((prev) => ({
-      ...(prev || {}),
+    const refreshedDetail = await getDetailPengajuan(pengajuanId, {
+      ...(submission || {}),
       status: normalized,
       status_pengajuan: normalized,
       catatan_petugas: catatanPetugas,
       catatanPetugas,
-      dokumen: {
-        ...getPengajuanDokumen(prev),
-        ...uploadedDokumenMeta,
-      },
-    }))
+    })
+
+    const nextSubmission =
+      refreshedDetail?.success && refreshedDetail?.data
+        ? refreshedDetail.data
+        : {
+            ...(submission || {}),
+            status: normalized,
+            status_pengajuan: normalized,
+            catatan_petugas: catatanPetugas,
+            catatanPetugas,
+          }
+
+    setSaving(false)
+    setStatusBaru(normalized)
+    setSubmission(nextSubmission)
     showToast(successMessage, 'success')
   }
 
@@ -539,27 +704,8 @@ export default function DetailPengajuanPetugas() {
       ...prev,
       file,
       nama: file.name,
-      url: '',
+      url: prev?.url || '',
     }))
-  }
-
-  function handleDokumenFileChange(field, e) {
-    const file = e.target.files?.[0] || null
-    if (!file) {
-      setDokumenFiles((prev) => ({ ...prev, [field.key]: null }))
-      return
-    }
-
-    const errors = validateSelectedDokumenFiles({ [field.key]: file }, [field])
-    if (errors.length > 0) {
-      setDokumenErrors(errors)
-      e.target.value = ''
-      setDokumenFiles((prev) => ({ ...prev, [field.key]: null }))
-      return
-    }
-
-    setDokumenErrors([])
-    setDokumenFiles((prev) => ({ ...prev, [field.key]: file }))
   }
 
   async function simpanSuratHasil() {
@@ -576,11 +722,7 @@ export default function DetailPengajuanPetugas() {
     }
 
     setSavingSurat(true)
-    const formData = new FormData()
-    formData.append('file_hasil', file)
-    formData.append('nama_file_hasil', file.name)
-
-    const res = await updatePengajuan(endpoint, pengajuanId, formData)
+    const res = await uploadSuratHasilPengajuan(endpoint, pengajuanId, file)
 
     if (!res?.success) {
       setSavingSurat(false)
@@ -597,19 +739,50 @@ export default function DetailPengajuanPetugas() {
       dokumen_hasil: dokumenHasil,
       nama_file_hasil: uploaded.nama,
     }
-    const metadataRes = await updatePengajuan(endpoint, pengajuanId, metadataPayload)
+    let nextSubmission = null
+    let backendErrorMessage = ''
+
+    const refreshedAfterUpload = await getDetailPengajuan(pengajuanId, {
+      ...(submission || {}),
+      ...metadataPayload,
+    })
+
+    if (refreshedAfterUpload?.success && hasUploadedSuratHasil(refreshedAfterUpload.data, null)) {
+      nextSubmission = refreshedAfterUpload.data
+    } else {
+      const metadataRes = await updatePengajuan(endpoint, pengajuanId, metadataPayload)
+      if (!metadataRes?.success) {
+        backendErrorMessage = metadataRes?.message || 'Surat terunggah, tetapi metadata surat hasil gagal disimpan.'
+      } else {
+        const refreshedAfterMetadata = await getDetailPengajuan(pengajuanId, {
+          ...(submission || {}),
+          ...metadataPayload,
+        })
+        if (refreshedAfterMetadata?.success) {
+          nextSubmission = refreshedAfterMetadata.data
+        }
+      }
+    }
+
+    if (!nextSubmission && (uploaded.url || uploaded.nama)) {
+      nextSubmission = {
+        ...(submission || {}),
+        ...metadataPayload,
+      }
+    }
+
     setSavingSurat(false)
 
-    if (!metadataRes?.success) {
-      showToast(metadataRes?.message || 'Surat terunggah, tetapi metadata surat hasil gagal disimpan.', 'danger')
+    if (!nextSubmission || !hasUploadedSuratHasil(nextSubmission, null)) {
+      showToast(
+        backendErrorMessage || 'Upload surat hasil belum dapat diverifikasi dari response backend. Periksa contract endpoint upload surat hasil.',
+        'danger'
+      )
       return
     }
 
-    setSubmission((prev) => ({
-      ...(prev || {}),
-      ...metadataPayload,
-    }))
-    setSuratForm({ nama: uploaded.nama, url: uploaded.url, file: null })
+    setSubmission(nextSubmission)
+    setSuratForm(readSuratHasil(nextSubmission))
     showToast('Surat hasil berhasil disimpan.', 'success')
   }
 
@@ -663,7 +836,7 @@ export default function DetailPengajuanPetugas() {
 
           <div className="ptg-content">
             <div className="ptg-body">
-              <section className="ptg-card ptg-section" aria-label="Header detail pengajuan">
+              <section className="ptg-card ptg-section ptg-detailIntro" aria-label="Header detail pengajuan">
                 <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
                   <h2>Ringkasan</h2>
                   <div className="ptg-actionsRow">
@@ -689,23 +862,25 @@ export default function DetailPengajuanPetugas() {
 
               <div className="ptg-gridTwo">
                 <div className="ptg-stack">
-                  <section className="ptg-card ptg-section" aria-label="Informasi pemohon">
+                  <section className="ptg-card ptg-section" aria-label="Data formulir pemohon">
                     <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                      <h2>Informasi Pemohon</h2>
-                      <div className="ptg-subtle">Data identitas</div>
+                      <h2>Data Formulir Pemohon</h2>
+                      <div className="ptg-subtle">Field sesuai jenis layanan</div>
                     </div>
                     <div className="ptg-divider" />
                     <div style={{ marginTop: 12 }}>
-                      <dl className="ptg-kv">
-                        <dt>Nama</dt>
-                        <dd>{getPengajuanNamaPemohon(submission)}</dd>
-
-                        <dt>NIK</dt>
-                        <dd className="ptg-mono">{getPengajuanNikPemohon(submission)}</dd>
-
-                        <dt>Username</dt>
-                        <dd className="ptg-mono">{getPengajuanUsernamePemohon(submission)}</dd>
-                      </dl>
+                      {dataFormEntries.length === 0 ? (
+                        <div className="ptg-hint">Data formulir pemohon belum tersedia untuk pengajuan ini.</div>
+                      ) : (
+                        <dl className="ptg-kv">
+                          {dataFormEntries.map(([key, value]) => (
+                            <div key={key} style={{ display: 'contents' }}>
+                              <dt>{humanizeDetailKey(key)}</dt>
+                              <dd>{formatDetailValue(value)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                     </div>
                   </section>
 
@@ -721,10 +896,16 @@ export default function DetailPengajuanPetugas() {
                         <dd className="ptg-mono">{pengajuanId || '-'}</dd>
 
                         <dt>Jenis Layanan</dt>
-                        <dd>{getPengajuanLayanan(submission)}</dd>
+                        <dd>{layananPengajuan}</dd>
+
+                        <dt>Status Pengajuan</dt>
+                        <dd>{statusBaru ? <span className={getStatusClass(statusBaru)}>{statusBaru}</span> : '-'}</dd>
 
                         <dt>Tanggal Pengajuan</dt>
-                        <dd>{formatTanggalID(getPengajuanCreatedAt(submission))}</dd>
+                        <dd>{formatTanggalWaktuID(getPengajuanCreatedAt(submission))}</dd>
+
+                        <dt>Terakhir Diperbarui</dt>
+                        <dd>{formatTanggalWaktuID(getPengajuanUpdatedAt(submission))}</dd>
 
                         <dt>Keterangan Pemohon</dt>
                         <dd style={{ fontWeight: 750, color: 'var(--ptg-muted)' }}>{getPengajuanKeterangan(submission)}</dd>
@@ -735,28 +916,30 @@ export default function DetailPengajuanPetugas() {
                     </div>
                   </section>
 
-                  <section className="ptg-card ptg-section" aria-label="Dokumen persyaratan pengajuan">
+                  <section className="ptg-card ptg-section" aria-label="Dokumen persyaratan dari masyarakat">
                     <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                      <h2>Dokumen Persyaratan</h2>
-                      <div className="ptg-subtle">Berkas yang sudah diupload</div>
+                      <h2>Dokumen Persyaratan dari Masyarakat</h2>
+                      <div className="ptg-subtle">Dokumen dari masyarakat sesuai jenis layanan</div>
                     </div>
                     <div className="ptg-divider" />
                     <div style={{ marginTop: 12 }}>
                       <div className="ptg-attachments">
                         {dokumenPersyaratan.length === 0 ? (
-                          <div className="ptg-hint">Dokumen belum tersedia.</div>
+                          <div className="ptg-hint">Dokumen persyaratan belum tersedia untuk layanan ini.</div>
                         ) : (
                           dokumenPersyaratan.map((file) => (
                             <div key={file.id} className="ptg-file">
                               <div className="ptg-fileIcon" aria-hidden="true">
-                                {file.ext}
+                                {getLampiranExt(file.filename || file.url)}
                               </div>
                               <div className="ptg-fileMeta">
                                 <strong>{file.label}</strong>
                                 <span title={file.filename}>{file.filename}</span>
-                                {!file.url ? <em>Tersedia</em> : null}
+                                <em className={file.uploaded ? 'isUploaded' : 'isPending'}>
+                                  {file.uploaded ? 'Sudah diunggah' : 'Belum diunggah'}
+                                </em>
                               </div>
-                              {file.url ? (
+                              {file.uploaded && file.url ? (
                                 <a className="ptg-btn ptg-fileAction" href={file.url} target="_blank" rel="noreferrer">
                                   Lihat Dokumen
                                 </a>
@@ -765,9 +948,6 @@ export default function DetailPengajuanPetugas() {
                           ))
                         )}
                       </div>
-                      <p className="ptg-hint" style={{ marginTop: 10 }}>
-                        Dokumen ditampilkan sesuai data yang dikirim backend.
-                      </p>
                     </div>
                   </section>
                 </div>
@@ -826,94 +1006,63 @@ export default function DetailPengajuanPetugas() {
                       </div>
 
                       <p className="ptg-hint" style={{ margin: 0 }}>
-                        Perubahan status dikirim ke endpoint layanan pengajuan.
-                      </p>
-                    </div>
-                  </section>
-
-                  <section className="ptg-card ptg-section" aria-label="Upload ulang dokumen persyaratan">
-                    <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                      <h2>Upload Ulang Dokumen</h2>
-                      <div className="ptg-subtle">{dokumenConfig ? 'Sesuai jenis layanan' : 'Jenis layanan belum dikenali'}</div>
-                    </div>
-                    <div className="ptg-divider" />
-                    <div style={{ marginTop: 12 }} className="ptg-stack">
-                      {dokumenErrors.length > 0 ? (
-                        <div className="ptg-validationBox" role="alert">
-                          <strong>Validasi dokumen gagal</strong>
-                          {dokumenErrors.map((err, index) => (
-                            <p key={`${err}-${index}`}>{err}</p>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {!dokumenConfig?.fields?.length ? (
-                        <p className="ptg-hint" style={{ margin: 0 }}>
-                          Mapping dokumen untuk layanan ini belum tersedia.
-                        </p>
-                      ) : (
-                        dokumenConfig.fields.map((field) => (
-                          <div className="ptg-field" key={`${dokumenInputVersion}-${field.key}`}>
-                            <div className="ptg-label">
-                              {field.label}
-                              {!field.required ? <span className="ptg-optionalBadge">Opsional</span> : null}
-                            </div>
-                            <input
-                              className="ptg-input ptg-fileInput"
-                              type="file"
-                              accept={field.accept}
-                              onChange={(e) => handleDokumenFileChange(field, e)}
-                              disabled={!submission || saving}
-                            />
-                            <div className="ptg-hint">
-                              Format: {field.allowedTypeLabel}. Maksimal ukuran file: {field.maxSizeMB || 2}MB.
-                            </div>
-                            {dokumenFiles[field.key]?.name ? (
-                              <div className="ptg-uploadSummary">
-                                <div>
-                                  <strong>{dokumenFiles[field.key].name}</strong>
-                                  <span>File baru siap diupload saat Simpan Perubahan.</span>
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        ))
-                      )}
-
-                      <p className="ptg-hint" style={{ margin: 0 }}>
-                        Dokumen lama tetap tersimpan jika tidak ada file baru yang dipilih.
+                        Gunakan status Menunggu Verifikasi, Diproses, Selesai, atau Ditolak sesuai hasil pemeriksaan petugas.
                       </p>
                     </div>
                   </section>
 
                   <section className="ptg-card ptg-section" aria-label="Surat hasil atau dokumen final">
                     <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                      <h2>Surat Hasil / Dokumen Final</h2>
-                      <div className="ptg-subtle">Field sementara backend</div>
+                      <h2>Upload Surat Hasil</h2>
+                      <div className="ptg-subtle">Dokumen final untuk masyarakat</div>
                     </div>
                     <div className="ptg-divider" />
                     <div style={{ marginTop: 12 }} className="ptg-stack">
+                      <p className="ptg-hint" style={{ margin: 0 }}>
+                        Unggah surat rekomendasi yang sudah dibuat oleh petugas. File ini akan tampil di halaman status pengajuan masyarakat
+                        dan dapat diunduh setelah pengajuan selesai.
+                      </p>
+
+                      <div className="ptg-statusPanel">
+                        <strong>Status surat hasil</strong>
+                        <span>{suratHasilTersedia ? 'Surat hasil sudah diunggah' : 'Belum ada surat hasil diunggah'}</span>
+                      </div>
+
                       <div className="ptg-field">
-                        <div className="ptg-label">Upload Surat Hasil</div>
+                        <div className="ptg-label">File surat hasil</div>
                         <input
-                          className="ptg-input ptg-fileInput"
+                          id={SURAT_HASIL_INPUT_ID}
+                          className="ptg-hiddenInput"
                           type="file"
                           accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                           onChange={handleSuratFileChange}
                           disabled={!submission || savingSurat}
                         />
+                        <div className="ptg-actionRow">
+                          {suratForm.url ? (
+                            <a className="ptg-btn ptg-fileAction" href={suratForm.url} target="_blank" rel="noreferrer">
+                              Lihat Surat
+                            </a>
+                          ) : null}
+                          <label htmlFor={SURAT_HASIL_INPUT_ID} className="ptg-btn ptg-btnLabel">
+                            {suratHasilTersedia ? 'Ganti Surat' : 'Pilih Surat'}
+                          </label>
+                        </div>
+                        <input
+                          className="ptg-input"
+                          type="text"
+                          value={suratForm.nama || ''}
+                          placeholder="Belum ada file surat hasil yang dipilih"
+                          readOnly
+                        />
+                        <div className="ptg-hint">Format file yang diterima: PDF, DOC, atau DOCX.</div>
                       </div>
                       {suratForm.nama ? (
                         <div className="ptg-uploadSummary">
                           <div>
                             <strong>{suratForm.nama}</strong>
-                            <span>{suratForm.file ? 'Siap diunggah' : 'Tersimpan sebagai surat hasil'}</span>
+                            <span>{suratForm.file ? 'Siap diunggah sebagai surat hasil terbaru' : 'Tersimpan sebagai surat hasil'}</span>
                           </div>
-                          {suratForm.url ? (
-                            <a className="ptg-btn ptg-fileAction" href={suratForm.url} target="_blank" rel="noreferrer">
-                              Buka Surat
-                            </a>
-                          ) : null}
                         </div>
                       ) : null}
                       <div className="ptg-actionRow">
@@ -921,15 +1070,11 @@ export default function DetailPengajuanPetugas() {
                           type="button"
                           className="ptg-btn ptg-btnPrimary"
                           onClick={simpanSuratHasil}
-                          disabled={!submission || savingSurat}
+                          disabled={!submission || savingSurat || !suratForm.file}
                         >
-                          {savingSurat ? 'Menyimpan...' : 'Simpan Surat Hasil'}
+                          {savingSurat ? 'Mengunggah...' : 'Upload Surat Hasil'}
                         </button>
                       </div>
-                      <p className="ptg-hint" style={{ margin: 0 }}>
-                        Unggah file PDF, DOC, atau DOCX. Hasil upload disimpan sebagai file_hasil, surat_hasil, url_hasil, dokumen_hasil,
-                        dan nama_file_hasil agar bisa dibaca di Status Pengajuan masyarakat.
-                      </p>
                     </div>
                   </section>
                 </aside>
