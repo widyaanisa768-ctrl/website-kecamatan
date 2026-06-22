@@ -70,16 +70,6 @@ const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key,
 
 const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
-function normalizeData(data) {
-  const base = data && typeof data === 'object' ? data : {}
-  return {
-    nama_lengkap: base.nama_lengkap ?? base.nama ?? '',
-    alamat_asal: base.alamat_asal ?? base.alamatAsal ?? '',
-    alamat_pindah: base.alamat_pindah ?? base.alamatPindah ?? '',
-    keterangan: base.keterangan ?? '',
-  }
-}
-
 export default function SuratPindahForm() {
   const navigate = useNavigate()
 
@@ -97,9 +87,7 @@ export default function SuratPindahForm() {
   }, [])
 
   useEffect(() => {
-    if (validationErrors.length > 0) {
-      setValidationErrors([])
-    }
+    setValidationErrors((current) => (current.length > 0 ? [] : current))
   }, [form, files])
 
   const setField = (key) => (e) => {

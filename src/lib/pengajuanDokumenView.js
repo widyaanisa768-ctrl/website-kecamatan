@@ -168,7 +168,7 @@ export function filenameFromDokumenPath(value) {
   }
 }
 
-function readDokumenMeta(meta, fallbackLabel) {
+function readDokumenMeta(meta) {
   if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
     const rawUrl =
       meta.url_file ||

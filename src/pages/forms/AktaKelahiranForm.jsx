@@ -80,16 +80,6 @@ const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key,
 
 const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
-function normalizeData(data) {
-  const base = data && typeof data === 'object' ? data : {}
-  return {
-    nama_pemohon: base.nama_pemohon ?? base.nama ?? '',
-    alamat: base.alamat ?? '',
-    nik: base.nik ?? '',
-    no_hp: base.no_hp ?? base.noHp ?? '',
-  }
-}
-
 export default function AktaKelahiranForm() {
   const navigate = useNavigate()
 
@@ -100,14 +90,12 @@ export default function AktaKelahiranForm() {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const requiredFiles = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
-
   useEffect(() => {
     setNotice('')
   }, [])
 
   useEffect(() => {
-    if (validationErrors.length > 0) setValidationErrors([])
+    setValidationErrors((current) => (current.length > 0 ? [] : current))
   }, [form, files])
 
   const validators = useMemo(

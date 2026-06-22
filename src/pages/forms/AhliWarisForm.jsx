@@ -67,19 +67,6 @@ const FILE_FIELD_MAP = Object.fromEntries(FILE_FIELDS.map((field) => [field.key,
 
 const INITIAL_FILES = Object.fromEntries(FILE_FIELDS.map((field) => [field.key, null]))
 
-function normalizeData(data) {
-  const base = data && typeof data === 'object' ? data : {}
-  return {
-    nama_pewaris: base.nama_pewaris ?? '',
-    nik_pewaris: base.nik_pewaris ?? '',
-    alamat_pewaris: base.alamat_pewaris ?? '',
-    nama_pemohon: base.nama_pemohon ?? base.nama ?? '',
-    nik_pemohon: base.nik_pemohon ?? base.nik ?? '',
-    alamat_pemohon: base.alamat_pemohon ?? base.alamat ?? '',
-    no_hp: base.no_hp ?? base.noHp ?? '',
-  }
-}
-
 export default function AhliWarisForm() {
   const navigate = useNavigate()
 
@@ -103,16 +90,12 @@ export default function AhliWarisForm() {
     []
   )
 
-  const requiredKeys = useMemo(() => FILE_FIELDS.filter((field) => field.required).map((field) => field.key), [])
-
   useEffect(() => {
     setNotice('')
   }, [])
 
   useEffect(() => {
-    if (validationErrors.length > 0) {
-      setValidationErrors([])
-    }
+    setValidationErrors((current) => (current.length > 0 ? [] : current))
   }, [form, files])
 
   const setField = (key) => (e) => {

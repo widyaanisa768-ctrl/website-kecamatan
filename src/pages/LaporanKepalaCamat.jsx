@@ -42,20 +42,6 @@ function normalizeText(value) {
     .replace(/\s+/g, ' ')
 }
 
-function formatTanggalID(date) {
-  if (!date) return '-'
-  try {
-    return new Date(date).toLocaleDateString('id-ID', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return '-'
-  }
-}
-
 function formatTanggalPendekID(date) {
   if (!date) return '-'
   try {
@@ -331,8 +317,27 @@ export default function LaporanKepalaCamat() {
   }, [])
 
   useEffect(() => {
-    refreshData()
-  }, [refreshData])
+    let active = true
+
+    const loadInitialData = async () => {
+      const res = await getSemuaPengajuanPetugas()
+      if (!active) return
+
+      if (res?.success) {
+        setSubmissions(res.items || [])
+        setError('')
+      } else {
+        setSubmissions([])
+        setError(res?.message || `${EMPTY_TITLE} ${EMPTY_DESC}`)
+      }
+      setLoading(false)
+    }
+
+    loadInitialData()
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const syncAuth = () => setAuthState(getProfile())

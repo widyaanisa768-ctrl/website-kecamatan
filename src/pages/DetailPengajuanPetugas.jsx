@@ -28,34 +28,6 @@ const SURAT_HASIL_TYPES = [
 const SURAT_HASIL_EXTENSIONS = ['pdf', 'doc', 'docx']
 const SURAT_HASIL_INPUT_ID = 'ptg-upload-surat-hasil'
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
-const HIDDEN_DOKUMEN_KEYS = new Set([
-  'id',
-  '_id',
-  'id_pengajuan',
-  'pengajuan_id',
-  'id_user',
-  'user_id',
-  'created_at',
-  'updated_at',
-  'createdat',
-  'updatedat',
-  'created',
-  'updated',
-  'status',
-  'status_pengajuan',
-  'catatan_petugas',
-  'catatanpetugas',
-  'nama_pemohon',
-  'nama_lengkap',
-  'alamat',
-  'no_hp',
-  'nik',
-  'email',
-  'username',
-  'layanan',
-  'jenis_layanan',
-  'keterangan',
-])
 const HIDDEN_DETAIL_DATA_KEYS = new Set([
   '__endpoint',
   'created_by',
@@ -204,14 +176,6 @@ function buildFileLink(value) {
   return `${base}${path}`
 }
 
-function humanizeKey(key) {
-  return String(key || 'Lampiran')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
 function humanizeDetailKey(key) {
   const normalized = String(key || '').trim().toLowerCase()
   if (DETAIL_LABEL_OVERRIDES[normalized]) return DETAIL_LABEL_OVERRIDES[normalized]
@@ -252,168 +216,6 @@ function filenameFromUrl(url) {
   } catch {
     return String(url || '')
   }
-}
-
-function readLampiranValue(meta, fallbackLabel) {
-  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-    const rawUrl =
-      meta.url ||
-      meta.secure_url ||
-      meta.href ||
-      meta.path ||
-      meta.file_url ||
-      meta.dokumen_url ||
-      meta.lampiran_url ||
-      ''
-    const url = buildFileLink(rawUrl)
-    const filename =
-      meta.name ||
-      meta.nama ||
-      meta.filename ||
-      meta.file_name ||
-      meta.originalname ||
-      meta.public_id ||
-      (rawUrl ? filenameFromUrl(rawUrl) : '')
-    return { filename, url }
-  }
-
-  if (typeof meta === 'string') {
-    return {
-      filename: isFileLink(meta) ? filenameFromUrl(meta) : meta,
-      url: buildFileLink(meta),
-    }
-  }
-
-  return { filename: '', url: '' }
-}
-
-function normalizeLampiran(item) {
-  const docs = getPengajuanDokumen(item)
-  const entries = []
-
-  const pushEntry = (label, meta) => {
-    if (!meta) return
-    const { filename, url } = readLampiranValue(meta, label)
-    if (!filename && !url) return
-    entries.push({
-      id: `F${entries.length + 1}`,
-      label: humanizeKey(label),
-      filename: filename || filenameFromUrl(url),
-      url,
-      ext: getLampiranExt(filename || url),
-    })
-  }
-
-  if (Array.isArray(docs)) {
-    docs.forEach((meta, idx) => pushEntry(meta?.label || meta?.jenis || meta?.field || `Lampiran ${idx + 1}`, meta))
-  } else {
-    Object.entries(docs || {}).forEach(([key, meta]) => {
-      if (HIDDEN_DOKUMEN_KEYS.has(String(key || '').trim().toLowerCase())) return
-      pushEntry(key, meta)
-    })
-  }
-
-  const knownFields = [
-    'dokumen',
-    'dokumen_url',
-    'file_url',
-    'ktp_mahasiswa',
-    'ktm_mahasiswa',
-    'surat_rekomendasi_riset_univ_kesbangpol',
-    'fotocopy_ktp',
-    'file',
-    'lampiran',
-  ]
-
-  knownFields.forEach((key) => {
-    const value = item?.[key]
-    if (Array.isArray(value)) {
-      value.forEach((meta, idx) => pushEntry(`${key} ${idx + 1}`, meta))
-    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      Object.entries(value).forEach(([childKey, meta]) => pushEntry(childKey, meta))
-    } else {
-      pushEntry(key, value)
-    }
-  })
-
-  const seen = new Set()
-  return entries.filter((entry) => {
-    const key = `${entry.label}|${entry.filename}|${entry.url}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-function readMetaByKey(item, docs, key) {
-  if (!key) return null
-  if (docs && !Array.isArray(docs) && Object.prototype.hasOwnProperty.call(docs, key)) return docs[key]
-  if (item && Object.prototype.hasOwnProperty.call(item, key)) return item[key]
-  return null
-}
-
-function normalizeFallbackDokumenPersyaratan(item) {
-  const docs = getPengajuanDokumen(item)
-  const entries = []
-
-  const pushEntry = (id, label, meta) => {
-    const { filename, url } = readLampiranValue(meta, label)
-    if (!filename && !url) return
-    entries.push({
-      id,
-      label,
-      filename: filename || filenameFromUrl(url) || 'Dokumen tersedia',
-      url,
-      uploaded: true,
-      ext: getLampiranExt(filename || url),
-    })
-  }
-
-  if (Array.isArray(docs)) {
-    docs.forEach((meta, idx) => {
-      const label = meta?.label || meta?.jenis || meta?.field || meta?.nama_dokumen || `Dokumen ${idx + 1}`
-      pushEntry(`fallback-${idx}`, humanizeKey(label), meta)
-    })
-  } else if (docs && typeof docs === 'object') {
-    Object.entries(docs).forEach(([key, meta]) => {
-      const normalizedKey = String(key || '').trim().toLowerCase()
-      if (HIDDEN_DOKUMEN_KEYS.has(normalizedKey)) return
-      pushEntry(`fallback-${key}`, humanizeKey(key), meta)
-    })
-  }
-
-  return entries
-}
-
-function normalizeDokumenPersyaratan(item, config) {
-  if (!item) return []
-  if (!config?.fields?.length) return normalizeFallbackDokumenPersyaratan(item)
-
-  const docs = getPengajuanDokumen(item)
-  const entries = []
-
-  config.fields.forEach((field) => {
-    const key = field.backendKey || field.key
-    const meta = readMetaByKey(item, docs, key) ?? readMetaByKey(item, docs, field.key)
-
-    const { filename, url } = readLampiranValue(meta, field.label)
-    entries.push({
-      id: key,
-      label: field.label,
-      filename: filename || filenameFromUrl(url) || 'Belum diunggah',
-      url,
-      uploaded: Boolean(filename || url),
-      ext: getLampiranExt(filename || url),
-    })
-  })
-
-  const seen = new Set()
-  return entries.filter((entry) => {
-    const key = `${entry.label}|${entry.filename}|${entry.url}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }
 
 function readSuratHasil(item) {
@@ -589,7 +391,7 @@ export default function DetailPengajuanPetugas() {
     return () => {
       alive = false
     }
-  }, [stateEndpoint, submissionId])
+  }, [initialSubmission, stateEndpoint, submissionId])
 
   useEffect(() => {
     const syncAuth = () => setAuthState(getAuth())

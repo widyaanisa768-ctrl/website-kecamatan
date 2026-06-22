@@ -21,7 +21,6 @@ import { getAuth } from '../lib/rkLocal'
 import {
   deletePengajuan,
   getDetailPengajuan,
-  getPengajuanDokumen,
   getPengajuanId,
   getPengajuanSaya,
   updatePengajuan,
@@ -36,8 +35,6 @@ import {
 } from '../lib/pengajuanDokumenConfig'
 import { normalizePengajuanDokumenPersyaratan } from '../lib/pengajuanDokumenView'
 import './PengajuanSaya.css'
-
-const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
 
 function safeParse(raw, fallback = null) {
   try {
@@ -208,183 +205,6 @@ function formatDataValue(value) {
       .join(', ')
   }
   return String(value)
-}
-
-function isFileLikePath(value) {
-  const text = String(value || '').trim()
-  return /^https?:\/\//i.test(text) || text.startsWith('/') || text.startsWith('uploads/')
-}
-
-function buildDokumenUrl(value) {
-  const text = String(value || '').trim()
-  if (!text) return ''
-  if (/^https?:\/\//i.test(text)) return text
-  if (!isFileLikePath(text)) return ''
-  if (!RAW_API_BASE_URL) return text
-
-  const base = RAW_API_BASE_URL.replace(/\/+$/, '').replace(/\/api$/i, '')
-  const path = text.startsWith('/') ? text : `/${text}`
-  return `${base}${path}`
-}
-
-function filenameFromPath(value) {
-  const text = String(value || '').trim()
-  if (!text) return ''
-  try {
-    const parsed = new URL(text)
-    return decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || text)
-  } catch {
-    return decodeURIComponent(text.split('?')[0].split('/').filter(Boolean).pop() || text)
-  }
-}
-
-function readDokumenMeta(meta, fallbackLabel) {
-  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-    const rawUrl =
-      meta.url_file ||
-      meta.url ||
-      meta.href ||
-      meta.path ||
-      meta.path_file ||
-      meta.file_path ||
-      meta.file_url ||
-      meta.dokumen_url ||
-      meta.lampiran_url ||
-      meta.download_url ||
-      ''
-    const url = buildDokumenUrl(rawUrl)
-    const filename =
-      meta.name ||
-      meta.nama ||
-      meta.filename ||
-      meta.file_name ||
-      meta.originalname ||
-      meta.nama_file ||
-      (rawUrl ? filenameFromPath(rawUrl) : '')
-    return { filename, url }
-  }
-
-  if (typeof meta === 'string') {
-    return {
-      filename: isFileLikePath(meta) ? filenameFromPath(meta) : meta,
-      url: buildDokumenUrl(meta),
-    }
-  }
-
-  return { filename: fallbackLabel, url: '' }
-}
-
-function normalizeDokumenKey(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-}
-
-function getDokumenIdentityCandidates(entry) {
-  return [
-    entry?.field,
-    entry?.key,
-    entry?.jenis,
-    entry?.jenis_dokumen,
-    entry?.jenisDokumen,
-    entry?.nama_dokumen,
-    entry?.namaDokumen,
-    entry?.tipe_dokumen,
-    entry?.kategori,
-    entry?.backendKey,
-  ].filter(Boolean)
-}
-
-function readDokumenByField(item, docs, field) {
-  const backendKey = field?.backendKey || field?.key
-  if (!backendKey) return null
-  if (docs && !Array.isArray(docs) && Object.prototype.hasOwnProperty.call(docs, backendKey)) return docs[backendKey]
-  if (docs && !Array.isArray(docs) && Object.prototype.hasOwnProperty.call(docs, field.key)) return docs[field.key]
-
-  if (Array.isArray(docs)) {
-    const expectedKeys = [backendKey, field.key, field.label, ...(field.aliases || [])]
-      .map(normalizeDokumenKey)
-      .filter(Boolean)
-    const match = docs.find((entry) => {
-      const actualKeys = getDokumenIdentityCandidates(entry).map(normalizeDokumenKey)
-      return actualKeys.some((actual) =>
-        expectedKeys.some((expected) => actual === expected || actual.endsWith(`_${expected}`) || expected.endsWith(`_${actual}`))
-      )
-    })
-    if (match) return match
-  }
-
-  if (item && Object.prototype.hasOwnProperty.call(item, backendKey)) return item[backendKey]
-  if (item && Object.prototype.hasOwnProperty.call(item, field.key)) return item[field.key]
-  return null
-}
-
-function normalizeDokumenPersyaratan(item) {
-  if (!item) return []
-  const config = getDokumenConfigForPengajuan(item)
-  const docs = getPengajuanDokumen(item)
-  const entries = []
-  const usedKeys = new Set()
-
-  const pushEntry = (id, label, meta, extra = {}) => {
-    const { filename, url } = readDokumenMeta(meta, label)
-    const uploaded = Boolean(meta) && Boolean(filename || url)
-    entries.push({
-      id,
-      label,
-      filename: uploaded ? filename || filenameFromPath(url) || 'Dokumen tersedia' : 'Belum diunggah',
-      url: uploaded ? url : '',
-      uploaded,
-      ...extra,
-    })
-  }
-
-  if (config?.fields?.length) {
-    config.fields.forEach((field) => {
-      const backendKey = field.backendKey || field.key
-      const meta = readDokumenByField(item, docs, field)
-      ;[backendKey, field.key, field.label, ...(field.aliases || [])].forEach((value) => usedKeys.add(normalizeDokumenKey(value)))
-      pushEntry(backendKey, field.label, meta, {
-        key: field.key,
-        backendKey,
-        required: field.required,
-      })
-    })
-  }
-
-  if (Array.isArray(docs)) {
-    docs.forEach((meta, index) => {
-      const label =
-        meta?.label || meta?.jenis_dokumen || meta?.jenis || meta?.nama_dokumen || meta?.tipe_dokumen || meta?.kategori || `Dokumen ${index + 1}`
-      const docKeyCandidates = [
-        meta?.field,
-        meta?.key,
-        meta?.jenis_dokumen,
-        meta?.nama_dokumen,
-        meta?.tipe_dokumen,
-        meta?.kategori,
-        label,
-      ]
-      const isMapped = docKeyCandidates.some((candidate) => usedKeys.has(normalizeDokumenKey(candidate)))
-      if (isMapped) return
-      pushEntry(`dokumen-${index}`, label, meta)
-    })
-  } else if (docs && typeof docs === 'object') {
-    Object.entries(docs).forEach(([key, meta]) => {
-      if (usedKeys.has(normalizeDokumenKey(key))) return
-      pushEntry(`dokumen-${key}`, humanizeLabel(key), meta)
-    })
-  }
-
-  const seen = new Set()
-  return entries.filter((entry) => {
-    const key = `${entry.label}|${entry.filename}|${entry.url}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }
 
 const RESULT_FILE_KEYS = [

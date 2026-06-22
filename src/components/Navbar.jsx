@@ -62,13 +62,13 @@ export default function Navbar() {
   const userAvatar = normalizeProfileAvatar(user?.avatar || user?.photo || user?.foto || '')
   const userInitials = getInitials(userLabel || user?.username)
 
-  const auth = useMemo(() => {
+  const auth = (() => {
     try {
       return getAuth()
     } catch {
       return null
     }
-  }, [user, token])
+  })()
 
   const role = useMemo(() => {
     try {
