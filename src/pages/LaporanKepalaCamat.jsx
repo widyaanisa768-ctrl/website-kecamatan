@@ -17,22 +17,85 @@ import {
 } from 'react-icons/fi'
 import { getAuth } from '../lib/rkLocal'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
+import { getKepalaCamatLaporan, getKepalaCamatLaporanDetail } from '../services/kepalaCamatService'
 import {
   getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
   getPengajuanId,
-  getPengajuanKeterangan,
   getPengajuanLayanan,
   getPengajuanNamaPemohon,
-  getPengajuanNikPemohon,
   getPengajuanStatusKind,
-  getPengajuanUsernamePemohon,
-  getSemuaPengajuanPetugas,
 } from '../services/pengajuanService'
 import './DashboardKepalaCamat.css'
 
 const EMPTY_TITLE = 'Data monitoring belum dapat dimuat.'
 const EMPTY_DESC = 'Pastikan backend dan akses Kepala Camat sudah tersedia.'
+const EMPTY_RINGKASAN = {
+  total_pengajuan: 0,
+  rekap_status: {
+    menunggu_verifikasi: 0,
+    verifikasi: 0,
+    diproses: 0,
+    selesai: 0,
+    ditolak: 0,
+  },
+  rekap_layanan: [],
+  daftar_pengajuan: [],
+}
+
+const FIELD_LABELS = {
+  nomor_pengajuan: 'Nomor Pengajuan',
+  nama_pemohon: 'Nama Pemohon',
+  nama_lengkap: 'Nama Pemohon',
+  jenis_layanan: 'Jenis Layanan',
+  tanggal_pengajuan: 'Tanggal Pengajuan',
+  status: 'Status',
+  catatan_petugas: 'Catatan Petugas',
+  nik: 'NIK',
+  no_hp: 'Nomor HP',
+  nomor_hp: 'Nomor HP',
+  email: 'Email',
+  alamat: 'Alamat',
+  alamat_asal: 'Alamat Asal',
+  alamat_pindah: 'Alamat Pindah',
+  tempat_lahir: 'Tempat Lahir',
+  tanggal_lahir: 'Tanggal Lahir',
+  jenis_kelamin: 'Jenis Kelamin',
+  pekerjaan: 'Pekerjaan',
+  agama: 'Agama',
+  status_perkawinan: 'Status Perkawinan',
+  kewarganegaraan: 'Kewarganegaraan',
+  keterangan: 'Keterangan',
+  keperluan: 'Keperluan',
+  tujuan_pindah: 'Tujuan Pindah',
+  alasan_pindah: 'Alasan Pindah',
+  lama_tinggal: 'Lama Tinggal',
+  nama_usaha: 'Nama Usaha',
+  jabatan: 'Jabatan',
+  instansi: 'Instansi',
+  lokasi_penelitian: 'Lokasi Penelitian',
+  topik_penelitian: 'Topik Penelitian',
+  nama_file_surat_hasil: 'Nama File Surat Hasil',
+}
+
+const DETAIL_EXCLUDED_KEYS = new Set([
+  'id',
+  'id_pengajuan',
+  'nomor_pengajuan',
+  'nama_pemohon',
+  'nama_lengkap',
+  'jenis_layanan',
+  'layanan',
+  'tanggal_pengajuan',
+  'status',
+  'catatan_petugas',
+  'file_surat_hasil',
+  'nama_file_surat_hasil',
+  'data_pemohon',
+  'data_pengajuan',
+  'daftar_dokumen',
+  'detail_pengajuan',
+])
 
 function normalizeText(value) {
   return String(value || '')
@@ -40,6 +103,14 @@ function normalizeText(value) {
     .toLowerCase()
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
+}
+
+function hasValue(value) {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'string') return value.trim() !== ''
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === 'object') return Object.keys(value).length > 0
+  return true
 }
 
 function formatTanggalPendekID(date) {
@@ -53,6 +124,93 @@ function formatTanggalPendekID(date) {
   } catch {
     return '-'
   }
+}
+
+function formatLabel(key) {
+  if (FIELD_LABELS[key]) return FIELD_LABELS[key]
+  return String(key || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function formatValue(key, value) {
+  if (!hasValue(value)) return ''
+  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak'
+  if (Array.isArray(value)) return value.filter(hasValue).join(', ')
+  if (typeof value === 'number') return String(value)
+  if (key.includes('tanggal')) return formatTanggalPendekID(value)
+  return String(value).trim()
+}
+
+function findValue(source, keys) {
+  if (!source || typeof source !== 'object') return undefined
+
+  for (const key of keys) {
+    const directValue = source[key]
+    if (hasValue(directValue)) return directValue
+  }
+
+  for (const value of Object.values(source)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const nested = findValue(value, keys)
+      if (hasValue(nested)) return nested
+    }
+  }
+
+  return undefined
+}
+
+function buildKeyedEntries(sources, fields) {
+  return fields
+    .map((field) => {
+      const value = sources.reduce((found, source) => (hasValue(found) ? found : findValue(source, field.keys)), undefined)
+      if (!hasValue(value)) return null
+      return {
+        key: field.keys[0],
+        label: field.label || formatLabel(field.keys[0]),
+        value: field.render ? field.render(value) : formatValue(field.keys[0], value),
+      }
+    })
+    .filter(Boolean)
+}
+
+function collectRemainingEntries(source, excludeKeys = new Set()) {
+  const entries = []
+  const seen = new Set()
+
+  const visit = (value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return
+
+    for (const [key, nextValue] of Object.entries(value)) {
+      if (excludeKeys.has(key) || seen.has(key) || !hasValue(nextValue)) continue
+
+      if (Array.isArray(nextValue)) {
+        if (nextValue.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item))) {
+          entries.push({ key, label: formatLabel(key), value: formatValue(key, nextValue) })
+          seen.add(key)
+        }
+        continue
+      }
+
+      if (typeof nextValue === 'object') {
+        visit(nextValue)
+        continue
+      }
+
+      entries.push({ key, label: formatLabel(key), value: formatValue(key, nextValue) })
+      seen.add(key)
+    }
+  }
+
+  visit(source)
+  return entries
+}
+
+function renderEntryValue(entry) {
+  if (typeof entry.value === 'string') return entry.value
+  return entry.value
 }
 
 function readStoredUser() {
@@ -108,6 +266,8 @@ function getStatusClass(status) {
 
 function readSuratHasil(item) {
   const source =
+    item?.file_surat_hasil ||
+    item?.nama_file_surat_hasil ||
     item?.dokumen_hasil ||
     item?.surat_hasil ||
     item?.hasilSurat ||
@@ -117,16 +277,60 @@ function readSuratHasil(item) {
 
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     return {
-      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_hasil || '',
+      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_surat_hasil || '',
       url: source.url || source.href || source.path || item?.url_hasil || item?.hasil_url || item?.file_url || '',
     }
   }
 
   const stringSource = typeof source === 'string' ? source : ''
   return {
-    nama: item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
+    nama: item?.nama_file_surat_hasil || item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
     url: item?.url_hasil || item?.hasil_url || item?.file_url || stringSource,
   }
+}
+
+function getDokumenInfo(item, index) {
+  if (typeof item === 'string') {
+    return { label: item, url: item, key: `${item}-${index}` }
+  }
+
+  const source = item && typeof item === 'object' ? item : {}
+  const label =
+    source.nama_dokumen ||
+    source.jenis_dokumen ||
+    source.nama_file ||
+    source.file_name ||
+    source.nama ||
+    `Dokumen ${index + 1}`
+  const url = source.url || source.href || source.path || source.file || source.file_url || ''
+  return {
+    label,
+    url,
+    key: `${source.id || source.uuid || label}-${index}`,
+  }
+}
+
+function DetailSection({ title, entries, children }) {
+  if ((!entries || entries.length === 0) && !children) return null
+
+  return (
+    <section className="kcm-detailSection">
+      <div className="kcm-detailSectionHead">
+        <h4>{title}</h4>
+      </div>
+      {entries && entries.length > 0 ? (
+        <dl className="kcm-detailList">
+          {entries.map((entry) => (
+            <div className="kcm-detailItem" key={entry.key}>
+              <dt>{entry.label}</dt>
+              <dd>{renderEntryValue(entry)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {children}
+    </section>
+  )
 }
 
 function SidebarKepalaCamat({ active }) {
@@ -190,11 +394,37 @@ function SidebarKepalaCamat({ active }) {
   )
 }
 
-function DetailModal({ row, onClose }) {
+function DetailModal({ row, onClose, loading = false, error = '' }) {
   if (!row) return null
 
   const status = getDisplayStatus(row)
   const surat = readSuratHasil(row)
+  const dokumenList = Array.isArray(row?.daftar_dokumen) ? row.daftar_dokumen : []
+  const infoPengajuan = buildKeyedEntries([row], [
+    { keys: ['nomor_pengajuan'] },
+    { keys: ['jenis_layanan'] },
+    { keys: ['tanggal_pengajuan'] },
+    { keys: ['status'], render: (value) => <span className={getStatusClass(value)}>{formatValue('status', value)}</span> },
+    { keys: ['catatan_petugas'] },
+  ])
+  const infoPemohon = buildKeyedEntries([row?.data_pemohon, row], [
+    { keys: ['nama_lengkap', 'nama_pemohon'] },
+    { keys: ['nik'] },
+    { keys: ['no_hp', 'nomor_hp'] },
+    { keys: ['email'] },
+    { keys: ['alamat'] },
+    { keys: ['tempat_lahir'] },
+    { keys: ['tanggal_lahir'] },
+    { keys: ['jenis_kelamin'] },
+    { keys: ['pekerjaan'] },
+    { keys: ['agama'] },
+    { keys: ['status_perkawinan'] },
+    { keys: ['kewarganegaraan'] },
+  ])
+  const detailLayanan = collectRemainingEntries(
+    { ...(row?.data_pengajuan || {}), ...(row?.detail_pengajuan || {}) },
+    DETAIL_EXCLUDED_KEYS
+  )
 
   return (
     <div className="ptg-modalOverlay" role="presentation" onMouseDown={onClose}>
@@ -213,41 +443,55 @@ function DetailModal({ row, onClose }) {
         </div>
 
         <div className="ptg-modalBody">
-          <dl className="kcm-detailGrid">
-            <dt>No. Pengajuan</dt>
-            <dd className="ptg-mono">{getPengajuanId(row) || '-'}</dd>
+          {loading ? <div className="kcm-empty">Memuat detail laporan...</div> : null}
+          {error ? (
+            <div className="kcm-emptyState is-compact">
+              <div>
+                <strong>Detail belum dapat dimuat.</strong>
+                <p>{error}</p>
+              </div>
+            </div>
+          ) : null}
 
-            <dt>Nama Pemohon</dt>
-            <dd>{getPengajuanNamaPemohon(row)}</dd>
+          <div className="kcm-detailLayout">
+            <DetailSection title="Informasi Pengajuan" entries={infoPengajuan} />
+            <DetailSection title="Informasi Pemohon" entries={infoPemohon} />
+            <DetailSection title="Detail Layanan" entries={detailLayanan}>
+              {detailLayanan.length === 0 ? (
+                <p className="kcm-detailEmpty">Belum ada detail layanan tambahan.</p>
+              ) : null}
+            </DetailSection>
 
-            <dt>NIK Pemohon</dt>
-            <dd className="ptg-mono">{getPengajuanNikPemohon(row)}</dd>
+            <DetailSection title="Dokumen Pendukung" entries={null}>
+              {dokumenList.length > 0 ? (
+                <div className="kcm-docList">
+                  {dokumenList.map((item, index) => {
+                    const dokumen = getDokumenInfo(item, index)
+                    return (
+                      <div key={dokumen.key} className="kcm-docItem">
+                        <div className="kcm-docMeta">
+                          <strong>{dokumen.label}</strong>
+                        </div>
+                        {dokumen.url ? (
+                          <a className="kcm-outlineBtn" href={dokumen.url} target="_blank" rel="noreferrer">
+                            Buka Dokumen
+                          </a>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="kcm-detailEmpty">Tidak ada dokumen pendukung.</p>
+              )}
+            </DetailSection>
 
-            <dt>Akun Pemohon</dt>
-            <dd>{getPengajuanUsernamePemohon(row)}</dd>
-
-            <dt>Jenis Layanan</dt>
-            <dd>{getPengajuanLayanan(row)}</dd>
-
-            <dt>Tanggal Pengajuan</dt>
-            <dd>{formatTanggalPendekID(getPengajuanCreatedAt(row))}</dd>
-
-            <dt>Status</dt>
-            <dd>
-              <span className={getStatusClass(status)}>{status}</span>
-            </dd>
-
-            <dt>Keterangan</dt>
-            <dd>{getPengajuanKeterangan(row)}</dd>
-
-            <dt>Catatan Petugas</dt>
-            <dd>{getPengajuanCatatanPetugas(row) || '-'}</dd>
-
-            <dt>Surat Hasil</dt>
-            <dd>
+            <DetailSection title="Surat Hasil" entries={null}>
               {surat.nama || surat.url ? (
-                <div className="kcm-fileLine">
-                  <span>{surat.nama || 'Surat hasil tersedia'}</span>
+                <div className="kcm-docItem">
+                  <div className="kcm-docMeta">
+                    <strong>{surat.nama || 'Surat hasil tersedia'}</strong>
+                  </div>
                   {surat.url ? (
                     <a className="kcm-outlineBtn" href={surat.url} target="_blank" rel="noreferrer">
                       Buka Surat
@@ -255,10 +499,10 @@ function DetailModal({ row, onClose }) {
                   ) : null}
                 </div>
               ) : (
-                '-'
+                <p className="kcm-detailEmpty">Belum ada surat hasil.</p>
               )}
-            </dd>
-          </dl>
+            </DetailSection>
+          </div>
         </div>
 
         <div className="ptg-modalFoot">
@@ -271,10 +515,13 @@ function DetailModal({ row, onClose }) {
   )
 }
 
-function EmptyState({ loading, onRetry }) {
+function EmptyState({ loading, onRetry, error = '' }) {
   if (loading) {
     return <div className="kcm-empty">Memuat data rekapitulasi...</div>
   }
+
+  const title = error ? EMPTY_TITLE : 'Belum ada data laporan.'
+  const description = error || 'Data backend berhasil dimuat, tetapi belum ada pengajuan untuk ditampilkan.'
 
   return (
     <div className="kcm-emptyState">
@@ -282,12 +529,14 @@ function EmptyState({ loading, onRetry }) {
         <FiFileText />
       </div>
       <div>
-        <strong>{EMPTY_TITLE}</strong>
-        <p>{EMPTY_DESC}</p>
-        <button type="button" className="kcm-retryBtn" onClick={onRetry}>
-          <FiRefreshCw aria-hidden="true" />
-          Coba Muat Ulang
-        </button>
+        <strong>{title}</strong>
+        <p>{description}</p>
+        {error ? (
+          <button type="button" className="kcm-retryBtn" onClick={onRetry}>
+            <FiRefreshCw aria-hidden="true" />
+            Coba Muat Ulang
+          </button>
+        ) : null}
       </div>
     </div>
   )
@@ -295,22 +544,26 @@ function EmptyState({ loading, onRetry }) {
 
 export default function LaporanKepalaCamat() {
   const [auth, setAuthState] = useState(() => getProfile())
-  const [submissions, setSubmissions] = useState([])
+  const [reportData, setReportData] = useState(EMPTY_RINGKASAN)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
   const [layananFilter, setLayananFilter] = useState('semua')
   const [selectedSubmission, setSelectedSubmission] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
+
+  const submissions = reportData.daftar_pengajuan || []
 
   const refreshData = useCallback(async () => {
     setLoading(true)
-    const res = await getSemuaPengajuanPetugas()
+    const res = await getKepalaCamatLaporan()
     if (res?.success) {
-      setSubmissions(res.items || [])
+      setReportData(res.data || EMPTY_RINGKASAN)
       setError('')
     } else {
-      setSubmissions([])
+      setReportData(EMPTY_RINGKASAN)
       setError(res?.message || `${EMPTY_TITLE} ${EMPTY_DESC}`)
     }
     setLoading(false)
@@ -320,14 +573,14 @@ export default function LaporanKepalaCamat() {
     let active = true
 
     const loadInitialData = async () => {
-      const res = await getSemuaPengajuanPetugas()
+      const res = await getKepalaCamatLaporan()
       if (!active) return
 
       if (res?.success) {
-        setSubmissions(res.items || [])
+        setReportData(res.data || EMPTY_RINGKASAN)
         setError('')
       } else {
-        setSubmissions([])
+        setReportData(EMPTY_RINGKASAN)
         setError(res?.message || `${EMPTY_TITLE} ${EMPTY_DESC}`)
       }
       setLoading(false)
@@ -353,18 +606,20 @@ export default function LaporanKepalaCamat() {
   }, [])
 
   const stats = useMemo(() => {
-    const total = submissions.length
-    const menunggu = submissions.filter((s) => getDisplayStatusKind(s) === 'menunggu').length
-    const diproses = submissions.filter((s) => getDisplayStatusKind(s) === 'diproses').length
-    const selesai = submissions.filter((s) => getDisplayStatusKind(s) === 'selesai').length
-    const ditolak = submissions.filter((s) => getDisplayStatusKind(s) === 'ditolak').length
-    return { total, menunggu, diproses, selesai, ditolak }
-  }, [submissions])
+    const rekapStatus = reportData.rekap_status || EMPTY_RINGKASAN.rekap_status
+    return {
+      total: Number(reportData.total_pengajuan || 0),
+      menunggu: Number(rekapStatus.menunggu_verifikasi || 0),
+      diproses: Number(rekapStatus.diproses || 0),
+      selesai: Number(rekapStatus.selesai || 0),
+      ditolak: Number(rekapStatus.ditolak || 0),
+    }
+  }, [reportData])
 
   const layananOptions = useMemo(() => {
     const seen = new Set()
     return submissions
-      .map((item) => getPengajuanLayanan(item))
+      .map((item) => item?.jenis_layanan || getPengajuanLayanan(item))
       .filter((value) => value && value !== '-')
       .filter((value) => {
         if (seen.has(value)) return false
@@ -374,33 +629,22 @@ export default function LaporanKepalaCamat() {
       .sort((a, b) => a.localeCompare(b))
   }, [submissions])
 
-  const rekapLayanan = useMemo(() => {
-    const map = new Map()
-    submissions.forEach((row) => {
-      const layanan = getPengajuanLayanan(row)
-      if (!layanan || layanan === '-') return
-      const current = map.get(layanan) || { layanan, total: 0, menunggu: 0, diproses: 0, selesai: 0, ditolak: 0 }
-      const kind = getDisplayStatusKind(row)
-      current.total += 1
-      current[kind] += 1
-      map.set(layanan, current)
-    })
-    return Array.from(map.values()).sort((a, b) => b.total - a.total || a.layanan.localeCompare(b.layanan))
-  }, [submissions])
+  const rekapLayanan = useMemo(() => reportData.rekap_layanan || [], [reportData])
 
   const filteredSubmissions = useMemo(() => {
     const query = normalizeText(search)
     return [...submissions].filter((row) => {
       if (statusFilter !== 'semua' && getDisplayStatusKind(row) !== statusFilter) return false
-      if (layananFilter !== 'semua' && getPengajuanLayanan(row) !== layananFilter) return false
+      const layananLabel = row?.jenis_layanan || getPengajuanLayanan(row)
+      if (layananFilter !== 'semua' && layananLabel !== layananFilter) return false
       if (!query) return true
 
       const haystack = normalizeText(
         [
-          getPengajuanId(row),
-          getPengajuanNamaPemohon(row),
-          getPengajuanLayanan(row),
-          getPengajuanUsernamePemohon(row),
+          row?.nomor_pengajuan || getPengajuanId(row),
+          row?.nama_pemohon || getPengajuanNamaPemohon(row),
+          layananLabel,
+          row?.layanan || '',
         ].join(' ')
       )
       return haystack.includes(query)
@@ -414,6 +658,23 @@ export default function LaporanKepalaCamat() {
     setSearch('')
     setStatusFilter('semua')
     setLayananFilter('semua')
+  }
+
+  async function openDetail(row) {
+    setSelectedSubmission(row)
+    setDetailLoading(true)
+    setDetailError('')
+
+    const res = await getKepalaCamatLaporanDetail(row?.layanan, row?.id_pengajuan || row?.id)
+    if (res?.success) {
+      setSelectedSubmission(res.data || row)
+      setDetailError('')
+    } else {
+      setSelectedSubmission(row)
+      setDetailError(res?.message || 'Detail laporan belum dapat dimuat.')
+    }
+
+    setDetailLoading(false)
   }
 
   return (
@@ -480,13 +741,13 @@ export default function LaporanKepalaCamat() {
             </div>
 
             {rekapLayanan.length === 0 ? (
-              <EmptyState loading={loading} onRetry={refreshData} />
+              <EmptyState loading={loading} onRetry={refreshData} error={error} />
             ) : (
               <div className="kcm-reportGrid">
                 {rekapLayanan.map((item) => (
                   <article className="kcm-reportCard" key={item.layanan}>
-                    <span>{item.layanan}</span>
-                    <strong>{item.total}</strong>
+                    <span>{item.jenis_layanan || item.layanan}</span>
+                    <strong>{item.total_pengajuan || 0}</strong>
                     <p>Total pengajuan</p>
                   </article>
                 ))}
@@ -580,34 +841,38 @@ export default function LaporanKepalaCamat() {
                     <tr>
                       <td colSpan={7} className="ptg-empty">
                         {submissions.length === 0
-                          ? error || EMPTY_TITLE
+                          ? error || 'Belum ada data pengajuan.'
                           : 'Tidak ada pengajuan yang sesuai dengan filter saat ini.'}
                       </td>
                     </tr>
                   ) : (
                     filteredSubmissions.map((row, idx) => {
-                      const id = getPengajuanId(row)
+                      const id = row?.nomor_pengajuan || getPengajuanId(row)
                       const status = getDisplayStatus(row)
                       return (
                         <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
                           <td>{idx + 1}</td>
                           <td className="ptg-mono">{id || '-'}</td>
-                          <td>{getPengajuanNamaPemohon(row)}</td>
-                          <td>{getPengajuanLayanan(row)}</td>
-                          <td>{formatTanggalPendekID(getPengajuanCreatedAt(row))}</td>
+                          <td>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
+                          <td>{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
+                          <td>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</td>
                           <td>
-                            <span className={getStatusClass(status)}>{status}</span>
+                            <div className="kcm-statusCell">
+                              <span className={getStatusClass(status)}>{status}</span>
+                            </div>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className="ptg-btn ptg-btnIcon kcm-eyeBtn"
-                              aria-label="Lihat Detail"
-                              title="Lihat Detail"
-                              onClick={() => setSelectedSubmission(row)}
-                            >
-                              <FiEye aria-hidden="true" />
-                            </button>
+                            <div className="kcm-actionCell">
+                              <button
+                                type="button"
+                                className="ptg-btn ptg-btnIcon kcm-eyeBtn"
+                                aria-label="Lihat Detail"
+                                title="Lihat Detail"
+                                onClick={() => void openDetail(row)}
+                              >
+                                <FiEye aria-hidden="true" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -617,11 +882,19 @@ export default function LaporanKepalaCamat() {
               </table>
             </div>
           </section>
-
         </div>
       </main>
 
-      <DetailModal row={selectedSubmission} onClose={() => setSelectedSubmission(null)} />
+      <DetailModal
+        row={selectedSubmission}
+        loading={detailLoading}
+        error={detailError}
+        onClose={() => {
+          setSelectedSubmission(null)
+          setDetailError('')
+          setDetailLoading(false)
+        }}
+      />
     </div>
   )
 }

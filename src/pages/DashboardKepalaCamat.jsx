@@ -15,23 +15,32 @@ import {
 } from 'react-icons/fi'
 import { getAuth } from '../lib/rkLocal'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
+import { getKepalaCamatDashboard, getKepalaCamatLaporanDetail } from '../services/kepalaCamatService'
 import {
   getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
   getPengajuanId,
-  getPengajuanKeterangan,
   getPengajuanLayanan,
   getPengajuanNamaPemohon,
-  getPengajuanNikPemohon,
   getPengajuanStatusKind,
-  getPengajuanUsernamePemohon,
-  getSemuaPengajuanPetugas,
 } from '../services/pengajuanService'
 import '../styles/petugas-ui.css'
 import './DashboardKepalaCamat.css'
 
 const MONITORING_EMPTY_TITLE = 'Data monitoring belum dapat dimuat.'
 const MONITORING_EMPTY_DESC = 'Pastikan backend dan akses Kepala Camat sudah tersedia.'
+const EMPTY_RINGKASAN = {
+  total_pengajuan: 0,
+  rekap_status: {
+    menunggu_verifikasi: 0,
+    verifikasi: 0,
+    diproses: 0,
+    selesai: 0,
+    ditolak: 0,
+  },
+  rekap_layanan: [],
+  daftar_pengajuan: [],
+}
 
 function formatTanggalPendekID(date) {
   if (!date) return '-'
@@ -105,6 +114,8 @@ function getKepalaCamatProfile() {
 
 function readSuratHasil(item) {
   const source =
+    item?.file_surat_hasil ||
+    item?.nama_file_surat_hasil ||
     item?.dokumen_hasil ||
     item?.surat_hasil ||
     item?.hasilSurat ||
@@ -114,22 +125,59 @@ function readSuratHasil(item) {
 
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     return {
-      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_hasil || '',
+      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_surat_hasil || '',
       url: source.url || source.href || source.path || item?.url_hasil || item?.hasil_url || item?.file_url || '',
     }
   }
 
   const stringSource = typeof source === 'string' ? source : ''
   return {
-    nama: item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
+    nama: item?.nama_file_surat_hasil || item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
     url: item?.url_hasil || item?.hasil_url || item?.file_url || stringSource,
   }
 }
 
-function EmptyState({ loading, onRetry, compact = false, showRetry = false }) {
+function hasObjectValues(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0
+}
+
+function renderJsonBlock(value) {
+  if (!hasObjectValues(value)) return '-'
+  return (
+    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  )
+}
+
+function getDokumenInfo(item, index) {
+  if (typeof item === 'string') {
+    return { label: item, url: item, key: `${item}-${index}` }
+  }
+
+  const source = item && typeof item === 'object' ? item : {}
+  const label =
+    source.nama_dokumen ||
+    source.jenis_dokumen ||
+    source.nama_file ||
+    source.file_name ||
+    source.nama ||
+    `Dokumen ${index + 1}`
+  const url = source.url || source.href || source.path || source.file || source.file_url || ''
+  return {
+    label,
+    url,
+    key: `${source.id || source.uuid || label}-${index}`,
+  }
+}
+
+function EmptyState({ loading, onRetry, compact = false, showRetry = false, error = '' }) {
   if (loading) {
     return <div className="kcm-empty">Memuat data monitoring...</div>
   }
+
+  const title = error ? MONITORING_EMPTY_TITLE : 'Belum ada data monitoring.'
+  const description = error || 'Data backend berhasil dimuat, tetapi belum ada pengajuan untuk ditampilkan.'
 
   return (
     <div className={`kcm-emptyState ${compact ? 'is-compact' : ''}`}>
@@ -137,9 +185,9 @@ function EmptyState({ loading, onRetry, compact = false, showRetry = false }) {
         <FiFileText />
       </div>
       <div>
-        <strong>{MONITORING_EMPTY_TITLE}</strong>
-        <p>{MONITORING_EMPTY_DESC}</p>
-        {showRetry ? (
+        <strong>{title}</strong>
+        <p>{description}</p>
+        {showRetry && error ? (
           <button type="button" className="kcm-retryBtn" onClick={onRetry}>
             <FiRefreshCw aria-hidden="true" />
             Coba Muat Ulang
@@ -150,11 +198,12 @@ function EmptyState({ loading, onRetry, compact = false, showRetry = false }) {
   )
 }
 
-function DetailModal({ row, onClose }) {
+function DetailModal({ row, onClose, loading = false, error = '' }) {
   if (!row) return null
 
   const status = getDisplayStatus(row)
   const surat = readSuratHasil(row)
+  const dokumenList = Array.isArray(row?.daftar_dokumen) ? row.daftar_dokumen : []
 
   return (
     <div className="ptg-modalOverlay" role="presentation" onMouseDown={onClose}>
@@ -173,24 +222,28 @@ function DetailModal({ row, onClose }) {
         </div>
 
         <div className="ptg-modalBody">
+          {loading ? <div className="kcm-empty">Memuat detail laporan...</div> : null}
+          {error ? (
+            <div className="kcm-emptyState is-compact">
+              <div>
+                <strong>Detail belum dapat dimuat.</strong>
+                <p>{error}</p>
+              </div>
+            </div>
+          ) : null}
+
           <dl className="kcm-detailGrid">
             <dt>No. Pengajuan</dt>
-            <dd className="ptg-mono">{getPengajuanId(row) || '-'}</dd>
+            <dd className="ptg-mono">{row?.nomor_pengajuan || getPengajuanId(row) || '-'}</dd>
 
             <dt>Nama Pemohon</dt>
-            <dd>{getPengajuanNamaPemohon(row)}</dd>
-
-            <dt>NIK Pemohon</dt>
-            <dd className="ptg-mono">{getPengajuanNikPemohon(row)}</dd>
-
-            <dt>Akun Pemohon</dt>
-            <dd>{getPengajuanUsernamePemohon(row)}</dd>
+            <dd>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</dd>
 
             <dt>Layanan</dt>
-            <dd>{getPengajuanLayanan(row)}</dd>
+            <dd>{row?.jenis_layanan || getPengajuanLayanan(row)}</dd>
 
             <dt>Tanggal</dt>
-            <dd>{formatTanggalPendekID(getPengajuanCreatedAt(row))}</dd>
+            <dd>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</dd>
 
             <dt>Status</dt>
             <dd>
@@ -198,10 +251,39 @@ function DetailModal({ row, onClose }) {
             </dd>
 
             <dt>Keterangan</dt>
-            <dd>{getPengajuanKeterangan(row)}</dd>
+            <dd>{renderJsonBlock(row?.detail_pengajuan || row?.data_pengajuan)}</dd>
 
             <dt>Catatan Petugas</dt>
-            <dd>{getPengajuanCatatanPetugas(row) || '-'}</dd>
+            <dd>{row?.catatan_petugas || getPengajuanCatatanPetugas(row) || '-'}</dd>
+
+            <dt>Data Pemohon</dt>
+            <dd>{renderJsonBlock(row?.data_pemohon)}</dd>
+
+            <dt>Data Pengajuan</dt>
+            <dd>{renderJsonBlock(row?.data_pengajuan)}</dd>
+
+            <dt>Daftar Dokumen</dt>
+            <dd>
+              {dokumenList.length > 0 ? (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {dokumenList.map((item, index) => {
+                    const dokumen = getDokumenInfo(item, index)
+                    return (
+                      <div key={dokumen.key} className="kcm-fileLine">
+                        <span>{dokumen.label}</span>
+                        {dokumen.url ? (
+                          <a className="kcm-outlineBtn" href={dokumen.url} target="_blank" rel="noreferrer">
+                            Buka Dokumen
+                          </a>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                '-'
+              )}
+            </dd>
 
             <dt>Surat Hasil</dt>
             <dd>
@@ -235,19 +317,21 @@ export default function DashboardKepalaCamat() {
   const navigate = useNavigate()
 
   const [auth, setAuthState] = useState(() => getKepalaCamatProfile())
-  const [submissions, setSubmissions] = useState([])
+  const [dashboardData, setDashboardData] = useState(EMPTY_RINGKASAN)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedSubmission, setSelectedSubmission] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
 
   const refreshData = useCallback(async () => {
     setLoading(true)
-    const res = await getSemuaPengajuanPetugas()
+    const res = await getKepalaCamatDashboard()
     if (res?.success) {
-      setSubmissions(res.items || [])
+      setDashboardData(res.data || EMPTY_RINGKASAN)
       setError('')
     } else {
-      setSubmissions([])
+      setDashboardData(EMPTY_RINGKASAN)
       setError(res?.message || `${MONITORING_EMPTY_TITLE} ${MONITORING_EMPTY_DESC}`)
     }
     setLoading(false)
@@ -257,13 +341,13 @@ export default function DashboardKepalaCamat() {
     let alive = true
     const run = async () => {
       setLoading(true)
-      const res = await getSemuaPengajuanPetugas()
+      const res = await getKepalaCamatDashboard()
       if (!alive) return
       if (res?.success) {
-        setSubmissions(res.items || [])
+        setDashboardData(res.data || EMPTY_RINGKASAN)
         setError('')
       } else {
-        setSubmissions([])
+        setDashboardData(EMPTY_RINGKASAN)
         setError(res?.message || `${MONITORING_EMPTY_TITLE} ${MONITORING_EMPTY_DESC}`)
       }
       setLoading(false)
@@ -291,13 +375,14 @@ export default function DashboardKepalaCamat() {
   }, [])
 
   const stats = useMemo(() => {
-    const total = submissions.length
-    const menunggu = submissions.filter((s) => getDisplayStatusKind(s) === 'menunggu').length
-    const diproses = submissions.filter((s) => getDisplayStatusKind(s) === 'diproses').length
-    const selesai = submissions.filter((s) => getDisplayStatusKind(s) === 'selesai').length
-    const ditolak = submissions.filter((s) => getDisplayStatusKind(s) === 'ditolak').length
+    const rekapStatus = dashboardData.rekap_status || EMPTY_RINGKASAN.rekap_status
+    const total = Number(dashboardData.total_pengajuan || 0)
+    const menunggu = Number(rekapStatus.menunggu_verifikasi || 0)
+    const diproses = Number(rekapStatus.diproses || 0)
+    const selesai = Number(rekapStatus.selesai || 0)
+    const ditolak = Number(rekapStatus.ditolak || 0)
     return { total, menunggu, diproses, selesai, ditolak }
-  }, [submissions])
+  }, [dashboardData])
 
   const statCards = useMemo(
     () => [
@@ -311,23 +396,31 @@ export default function DashboardKepalaCamat() {
   )
 
   const layananTerbanyak = useMemo(() => {
-    const counts = new Map()
-    submissions.forEach((row) => {
-      const layanan = getPengajuanLayanan(row)
-      if (!layanan || layanan === '-') return
-      counts.set(layanan, (counts.get(layanan) || 0) + 1)
-    })
-    return Array.from(counts.entries())
-      .map(([layanan, jumlah]) => ({ layanan, jumlah }))
-      .sort((a, b) => b.jumlah - a.jumlah || a.layanan.localeCompare(b.layanan))
-      .slice(0, 6)
-  }, [submissions])
+    return (dashboardData.rekap_layanan || []).slice(0, 6)
+  }, [dashboardData])
 
   const latestSubmissions = useMemo(() => {
-    return [...submissions]
+    return [...(dashboardData.daftar_pengajuan || [])]
       .sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
       .slice(0, 5)
-  }, [submissions])
+  }, [dashboardData])
+
+  const openDetail = useCallback(async (row) => {
+    setSelectedSubmission(row)
+    setDetailLoading(true)
+    setDetailError('')
+
+    const res = await getKepalaCamatLaporanDetail(row?.layanan, row?.id_pengajuan || row?.id)
+    if (res?.success) {
+      setSelectedSubmission(res.data || row)
+      setDetailError('')
+    } else {
+      setSelectedSubmission(row)
+      setDetailError(res?.message || 'Detail laporan belum dapat dimuat.')
+    }
+
+    setDetailLoading(false)
+  }, [])
 
   async function handleLogout() {
     await remoteLogout()
@@ -336,7 +429,7 @@ export default function DashboardKepalaCamat() {
   }
 
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
-  const hasMonitoringIssue = !loading && (Boolean(error) || submissions.length === 0)
+  const hasMonitoringIssue = !loading && Boolean(error)
 
   return (
     <div className="kcm-page">
@@ -432,7 +525,7 @@ export default function DashboardKepalaCamat() {
               </div>
 
               {layananTerbanyak.length === 0 ? (
-                <EmptyState loading={loading} onRetry={refreshData} compact />
+                <EmptyState loading={loading} onRetry={refreshData} compact error={error} />
               ) : (
                 <div className="kcm-serviceTable" role="table" aria-label="Ringkasan layanan">
                   <div className="kcm-serviceHead" role="row">
@@ -440,13 +533,14 @@ export default function DashboardKepalaCamat() {
                     <span role="columnheader">Jumlah Pengajuan</span>
                   </div>
                   {layananTerbanyak.map((item) => {
-                    const width = stats.total > 0 ? Math.max(8, Math.round((item.jumlah / stats.total) * 100)) : 0
+                    const totalPengajuan = Number(item.total_pengajuan || 0)
+                    const width = stats.total > 0 ? Math.max(8, Math.round((totalPengajuan / stats.total) * 100)) : 0
                     return (
                       <div className="kcm-serviceRow" role="row" key={item.layanan}>
-                        <span role="cell">{item.layanan}</span>
+                        <span role="cell">{item.jenis_layanan || item.layanan}</span>
                         <span className="kcm-serviceCount" role="cell">
                           <i style={{ width: `${width}%` }} aria-hidden="true" />
-                          <strong>{item.jumlah}</strong>
+                          <strong>{totalPengajuan}</strong>
                         </span>
                       </div>
                     )
@@ -479,19 +573,19 @@ export default function DashboardKepalaCamat() {
                     {latestSubmissions.length === 0 ? (
                       <tr>
                         <td colSpan={6}>
-                          <EmptyState loading={loading} onRetry={refreshData} compact />
+                          <EmptyState loading={loading} onRetry={refreshData} compact error={error} />
                         </td>
                       </tr>
                     ) : (
                       latestSubmissions.map((row, idx) => {
-                        const id = getPengajuanId(row)
+                        const id = row?.nomor_pengajuan || getPengajuanId(row)
                         const status = getDisplayStatus(row)
                         return (
                           <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
                             <td className="ptg-mono">{id || '-'}</td>
-                            <td>{getPengajuanLayanan(row)}</td>
-                            <td>{getPengajuanNamaPemohon(row)}</td>
-                            <td>{formatTanggalPendekID(getPengajuanCreatedAt(row))}</td>
+                            <td>{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
+                            <td>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
+                            <td>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</td>
                             <td>
                               <span className={getStatusClass(status)}>{status}</span>
                             </td>
@@ -501,7 +595,7 @@ export default function DashboardKepalaCamat() {
                                 className="ptg-btn ptg-btnIcon kcm-eyeBtn"
                                 aria-label="Lihat Detail"
                                 title="Lihat Detail"
-                                onClick={() => setSelectedSubmission(row)}
+                                onClick={() => void openDetail(row)}
                               >
                                 <FiEye aria-hidden="true" />
                               </button>
@@ -518,13 +612,22 @@ export default function DashboardKepalaCamat() {
 
           {hasMonitoringIssue ? (
             <section className="kcm-wideEmpty" aria-label="Status data monitoring">
-              <EmptyState loading={false} onRetry={refreshData} showRetry />
+              <EmptyState loading={false} onRetry={refreshData} showRetry error={error} />
             </section>
           ) : null}
         </div>
       </main>
 
-      <DetailModal row={selectedSubmission} onClose={() => setSelectedSubmission(null)} />
+      <DetailModal
+        row={selectedSubmission}
+        loading={detailLoading}
+        error={detailError}
+        onClose={() => {
+          setSelectedSubmission(null)
+          setDetailError('')
+          setDetailLoading(false)
+        }}
+      />
     </div>
   )
 }
