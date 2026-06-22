@@ -7,4 +7,22 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    clearMocks: true,
+    restoreMocks: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary'],
+      include: [
+        'src/lib/formValidation.js',
+        'src/lib/authRoles.js',
+        'src/services/authService.js',
+        'src/services/pengajuanService.js',
+        'src/pages/login.jsx',
+      ],
+      exclude: ['src/**/*.test.{js,jsx}', 'src/test/**'],
+    },
+  },
 })
