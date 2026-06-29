@@ -224,7 +224,7 @@ export default function YayasanOrmasForm() {
         <section className="rk-formSection" aria-label="Form yayasan atau ormas">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-formCardHead">

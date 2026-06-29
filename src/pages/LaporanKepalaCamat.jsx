@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { useNavigate } from 'react-router-dom'
 import {
   FiBarChart2,
+  FiCalendar,
   FiCheckCircle,
   FiClock,
   FiEye,
@@ -15,11 +18,11 @@ import {
   FiUser,
   FiXCircle,
 } from 'react-icons/fi'
+import DetailPengajuanKepalaCamatModal from '../components/DetailPengajuanKepalaCamatModal'
 import { getAuth } from '../lib/rkLocal'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
 import { getKepalaCamatLaporan, getKepalaCamatLaporanDetail } from '../services/kepalaCamatService'
 import {
-  getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
   getPengajuanId,
   getPengajuanLayanan,
@@ -43,74 +46,12 @@ const EMPTY_RINGKASAN = {
   daftar_pengajuan: [],
 }
 
-const FIELD_LABELS = {
-  nomor_pengajuan: 'Nomor Pengajuan',
-  nama_pemohon: 'Nama Pemohon',
-  nama_lengkap: 'Nama Pemohon',
-  jenis_layanan: 'Jenis Layanan',
-  tanggal_pengajuan: 'Tanggal Pengajuan',
-  status: 'Status',
-  catatan_petugas: 'Catatan Petugas',
-  nik: 'NIK',
-  no_hp: 'Nomor HP',
-  nomor_hp: 'Nomor HP',
-  email: 'Email',
-  alamat: 'Alamat',
-  alamat_asal: 'Alamat Asal',
-  alamat_pindah: 'Alamat Pindah',
-  tempat_lahir: 'Tempat Lahir',
-  tanggal_lahir: 'Tanggal Lahir',
-  jenis_kelamin: 'Jenis Kelamin',
-  pekerjaan: 'Pekerjaan',
-  agama: 'Agama',
-  status_perkawinan: 'Status Perkawinan',
-  kewarganegaraan: 'Kewarganegaraan',
-  keterangan: 'Keterangan',
-  keperluan: 'Keperluan',
-  tujuan_pindah: 'Tujuan Pindah',
-  alasan_pindah: 'Alasan Pindah',
-  lama_tinggal: 'Lama Tinggal',
-  nama_usaha: 'Nama Usaha',
-  jabatan: 'Jabatan',
-  instansi: 'Instansi',
-  lokasi_penelitian: 'Lokasi Penelitian',
-  topik_penelitian: 'Topik Penelitian',
-  nama_file_surat_hasil: 'Nama File Surat Hasil',
-}
-
-const DETAIL_EXCLUDED_KEYS = new Set([
-  'id',
-  'id_pengajuan',
-  'nomor_pengajuan',
-  'nama_pemohon',
-  'nama_lengkap',
-  'jenis_layanan',
-  'layanan',
-  'tanggal_pengajuan',
-  'status',
-  'catatan_petugas',
-  'file_surat_hasil',
-  'nama_file_surat_hasil',
-  'data_pemohon',
-  'data_pengajuan',
-  'daftar_dokumen',
-  'detail_pengajuan',
-])
-
 function normalizeText(value) {
   return String(value || '')
     .trim()
     .toLowerCase()
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
-}
-
-function hasValue(value) {
-  if (value === null || value === undefined) return false
-  if (typeof value === 'string') return value.trim() !== ''
-  if (Array.isArray(value)) return value.length > 0
-  if (typeof value === 'object') return Object.keys(value).length > 0
-  return true
 }
 
 function formatTanggalPendekID(date) {
@@ -126,91 +67,76 @@ function formatTanggalPendekID(date) {
   }
 }
 
-function formatLabel(key) {
-  if (FIELD_LABELS[key]) return FIELD_LABELS[key]
-  return String(key || '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+function formatDateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-function formatValue(key, value) {
-  if (!hasValue(value)) return ''
-  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak'
-  if (Array.isArray(value)) return value.filter(hasValue).join(', ')
-  if (typeof value === 'number') return String(value)
-  if (key.includes('tanggal')) return formatTanggalPendekID(value)
-  return String(value).trim()
+function getSubmissionDate(row) {
+  const rawDate = row?.tanggal_pengajuan || getPengajuanCreatedAt(row)
+  if (!rawDate) return null
+
+  const parsedDate = new Date(rawDate)
+  if (Number.isNaN(parsedDate.getTime())) return null
+
+  parsedDate.setHours(0, 0, 0, 0)
+  return parsedDate
 }
 
-function findValue(source, keys) {
-  if (!source || typeof source !== 'object') return undefined
+function isCurrentWeek(date, now) {
+  const current = new Date(now)
+  current.setHours(0, 0, 0, 0)
+  const dayIndex = (current.getDay() + 6) % 7
+  const weekStart = new Date(current)
+  weekStart.setDate(current.getDate() - dayIndex)
 
-  for (const key of keys) {
-    const directValue = source[key]
-    if (hasValue(directValue)) return directValue
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 6)
+
+  return date >= weekStart && date <= weekEnd
+}
+
+function isCurrentMonth(date, now) {
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+}
+
+function handlePeriodeFilterChange(nextValue, setPeriode, setTanggal) {
+  setPeriode(nextValue)
+  if (nextValue !== 'tanggal') {
+    setTanggal('')
   }
-
-  for (const value of Object.values(source)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const nested = findValue(value, keys)
-      if (hasValue(nested)) return nested
-    }
-  }
-
-  return undefined
 }
 
-function buildKeyedEntries(sources, fields) {
-  return fields
-    .map((field) => {
-      const value = sources.reduce((found, source) => (hasValue(found) ? found : findValue(source, field.keys)), undefined)
-      if (!hasValue(value)) return null
-      return {
-        key: field.keys[0],
-        label: field.label || formatLabel(field.keys[0]),
-        value: field.render ? field.render(value) : formatValue(field.keys[0], value),
-      }
-    })
-    .filter(Boolean)
+function formatPeriodeLabel(value, tanggal) {
+  if (value === 'hari_ini') return 'Hari Ini'
+  if (value === 'minggu_ini') return 'Minggu Ini'
+  if (value === 'bulan_ini') return 'Bulan Ini'
+  if (value === 'tanggal' && tanggal) return `Tanggal ${formatTanggalPendekID(tanggal)}`
+  return ''
 }
 
-function collectRemainingEntries(source, excludeKeys = new Set()) {
-  const entries = []
-  const seen = new Set()
-
-  const visit = (value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return
-
-    for (const [key, nextValue] of Object.entries(value)) {
-      if (excludeKeys.has(key) || seen.has(key) || !hasValue(nextValue)) continue
-
-      if (Array.isArray(nextValue)) {
-        if (nextValue.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item))) {
-          entries.push({ key, label: formatLabel(key), value: formatValue(key, nextValue) })
-          seen.add(key)
-        }
-        continue
-      }
-
-      if (typeof nextValue === 'object') {
-        visit(nextValue)
-        continue
-      }
-
-      entries.push({ key, label: formatLabel(key), value: formatValue(key, nextValue) })
-      seen.add(key)
-    }
-  }
-
-  visit(source)
-  return entries
+function buildFilterSummary({ search, statusFilter, layananFilter, periodeFilter, tanggalFilter }) {
+  const filters = []
+  if (search) filters.push(`Pencarian: ${search}`)
+  if (statusFilter !== 'semua') filters.push(`Status: ${getDisplayStatus(statusFilter)}`)
+  if (layananFilter !== 'semua') filters.push(`Jenis Layanan: ${layananFilter}`)
+  const periodeLabel = formatPeriodeLabel(periodeFilter, tanggalFilter)
+  if (periodeLabel) filters.push(`Periode: ${periodeLabel}`)
+  return filters
 }
 
-function renderEntryValue(entry) {
-  if (typeof entry.value === 'string') return entry.value
-  return entry.value
+function buildPdfTableRows(rows) {
+  return rows.map((row, index) => [
+    index + 1,
+    row?.nomor_pengajuan || getPengajuanId(row) || '-',
+    row?.nama_pemohon || getPengajuanNamaPemohon(row) || '-',
+    row?.jenis_layanan || getPengajuanLayanan(row) || '-',
+    formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row)),
+    getDisplayStatus(row),
+  ])
 }
 
 function readStoredUser() {
@@ -262,52 +188,6 @@ function getStatusClass(status) {
   if (kind === 'selesai') return 'kcm-status kcm-status--done'
   if (kind === 'ditolak') return 'kcm-status kcm-status--reject'
   return 'kcm-status'
-}
-
-function readSuratHasil(item) {
-  const source =
-    item?.file_surat_hasil ||
-    item?.nama_file_surat_hasil ||
-    item?.dokumen_hasil ||
-    item?.surat_hasil ||
-    item?.hasilSurat ||
-    item?.file_hasil ||
-    item?.hasil ||
-    null
-
-  if (source && typeof source === 'object' && !Array.isArray(source)) {
-    return {
-      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_surat_hasil || '',
-      url: source.url || source.href || source.path || item?.url_hasil || item?.hasil_url || item?.file_url || '',
-    }
-  }
-
-  const stringSource = typeof source === 'string' ? source : ''
-  return {
-    nama: item?.nama_file_surat_hasil || item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
-    url: item?.url_hasil || item?.hasil_url || item?.file_url || stringSource,
-  }
-}
-
-function getDokumenInfo(item, index) {
-  if (typeof item === 'string') {
-    return { label: item, url: item, key: `${item}-${index}` }
-  }
-
-  const source = item && typeof item === 'object' ? item : {}
-  const label =
-    source.nama_dokumen ||
-    source.jenis_dokumen ||
-    source.nama_file ||
-    source.file_name ||
-    source.nama ||
-    `Dokumen ${index + 1}`
-  const url = source.url || source.href || source.path || source.file || source.file_url || ''
-  return {
-    label,
-    url,
-    key: `${source.id || source.uuid || label}-${index}`,
-  }
 }
 
 function DetailSection({ title, entries, children }) {
@@ -394,127 +274,6 @@ function SidebarKepalaCamat({ active }) {
   )
 }
 
-function DetailModal({ row, onClose, loading = false, error = '' }) {
-  if (!row) return null
-
-  const status = getDisplayStatus(row)
-  const surat = readSuratHasil(row)
-  const dokumenList = Array.isArray(row?.daftar_dokumen) ? row.daftar_dokumen : []
-  const infoPengajuan = buildKeyedEntries([row], [
-    { keys: ['nomor_pengajuan'] },
-    { keys: ['jenis_layanan'] },
-    { keys: ['tanggal_pengajuan'] },
-    { keys: ['status'], render: (value) => <span className={getStatusClass(value)}>{formatValue('status', value)}</span> },
-    { keys: ['catatan_petugas'] },
-  ])
-  const infoPemohon = buildKeyedEntries([row?.data_pemohon, row], [
-    { keys: ['nama_lengkap', 'nama_pemohon'] },
-    { keys: ['nik'] },
-    { keys: ['no_hp', 'nomor_hp'] },
-    { keys: ['email'] },
-    { keys: ['alamat'] },
-    { keys: ['tempat_lahir'] },
-    { keys: ['tanggal_lahir'] },
-    { keys: ['jenis_kelamin'] },
-    { keys: ['pekerjaan'] },
-    { keys: ['agama'] },
-    { keys: ['status_perkawinan'] },
-    { keys: ['kewarganegaraan'] },
-  ])
-  const detailLayanan = collectRemainingEntries(
-    { ...(row?.data_pengajuan || {}), ...(row?.detail_pengajuan || {}) },
-    DETAIL_EXCLUDED_KEYS
-  )
-
-  return (
-    <div className="ptg-modalOverlay" role="presentation" onMouseDown={onClose}>
-      <section
-        className="ptg-modal kcm-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Detail pengajuan"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="ptg-modalHead">
-          <h3>Detail Pengajuan</h3>
-          <button type="button" className="ptg-modalClose" onClick={onClose}>
-            Kembali
-          </button>
-        </div>
-
-        <div className="ptg-modalBody">
-          {loading ? <div className="kcm-empty">Memuat detail laporan...</div> : null}
-          {error ? (
-            <div className="kcm-emptyState is-compact">
-              <div>
-                <strong>Detail belum dapat dimuat.</strong>
-                <p>{error}</p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="kcm-detailLayout">
-            <DetailSection title="Informasi Pengajuan" entries={infoPengajuan} />
-            <DetailSection title="Informasi Pemohon" entries={infoPemohon} />
-            <DetailSection title="Detail Layanan" entries={detailLayanan}>
-              {detailLayanan.length === 0 ? (
-                <p className="kcm-detailEmpty">Belum ada detail layanan tambahan.</p>
-              ) : null}
-            </DetailSection>
-
-            <DetailSection title="Dokumen Pendukung" entries={null}>
-              {dokumenList.length > 0 ? (
-                <div className="kcm-docList">
-                  {dokumenList.map((item, index) => {
-                    const dokumen = getDokumenInfo(item, index)
-                    return (
-                      <div key={dokumen.key} className="kcm-docItem">
-                        <div className="kcm-docMeta">
-                          <strong>{dokumen.label}</strong>
-                        </div>
-                        {dokumen.url ? (
-                          <a className="kcm-outlineBtn" href={dokumen.url} target="_blank" rel="noreferrer">
-                            Buka Dokumen
-                          </a>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="kcm-detailEmpty">Tidak ada dokumen pendukung.</p>
-              )}
-            </DetailSection>
-
-            <DetailSection title="Surat Hasil" entries={null}>
-              {surat.nama || surat.url ? (
-                <div className="kcm-docItem">
-                  <div className="kcm-docMeta">
-                    <strong>{surat.nama || 'Surat hasil tersedia'}</strong>
-                  </div>
-                  {surat.url ? (
-                    <a className="kcm-outlineBtn" href={surat.url} target="_blank" rel="noreferrer">
-                      Buka Surat
-                    </a>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="kcm-detailEmpty">Belum ada surat hasil.</p>
-              )}
-            </DetailSection>
-          </div>
-        </div>
-
-        <div className="ptg-modalFoot">
-          <button type="button" className="kcm-outlineBtn" onClick={onClose}>
-            Kembali
-          </button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
 function EmptyState({ loading, onRetry, error = '' }) {
   if (loading) {
     return <div className="kcm-empty">Memuat data rekapitulasi...</div>
@@ -550,6 +309,8 @@ export default function LaporanKepalaCamat() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
   const [layananFilter, setLayananFilter] = useState('semua')
+  const [periodeFilter, setPeriodeFilter] = useState('semua')
+  const [tanggalFilter, setTanggalFilter] = useState('')
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
@@ -630,13 +391,28 @@ export default function LaporanKepalaCamat() {
   }, [submissions])
 
   const rekapLayanan = useMemo(() => reportData.rekap_layanan || [], [reportData])
+  const hasDateData = useMemo(() => submissions.some((row) => getSubmissionDate(row)), [submissions])
 
   const filteredSubmissions = useMemo(() => {
     const query = normalizeText(search)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
     return [...submissions].filter((row) => {
       if (statusFilter !== 'semua' && getDisplayStatusKind(row) !== statusFilter) return false
       const layananLabel = row?.jenis_layanan || getPengajuanLayanan(row)
       if (layananFilter !== 'semua' && layananLabel !== layananFilter) return false
+
+      if (periodeFilter !== 'semua') {
+        const submissionDate = getSubmissionDate(row)
+        if (!submissionDate) return false
+
+        if (periodeFilter === 'hari_ini' && formatDateKey(submissionDate) !== formatDateKey(today)) return false
+        if (periodeFilter === 'minggu_ini' && !isCurrentWeek(submissionDate, today)) return false
+        if (periodeFilter === 'bulan_ini' && !isCurrentMonth(submissionDate, today)) return false
+        if (periodeFilter === 'tanggal' && tanggalFilter && formatDateKey(submissionDate) !== tanggalFilter) return false
+      }
+
       if (!query) return true
 
       const haystack = normalizeText(
@@ -649,15 +425,19 @@ export default function LaporanKepalaCamat() {
       )
       return haystack.includes(query)
     })
-  }, [layananFilter, search, statusFilter, submissions])
+  }, [layananFilter, periodeFilter, search, statusFilter, submissions, tanggalFilter])
 
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
-  const hasActiveFilter = Boolean(search || statusFilter !== 'semua' || layananFilter !== 'semua')
+  const hasActiveFilter = Boolean(
+    search || statusFilter !== 'semua' || layananFilter !== 'semua' || periodeFilter !== 'semua' || tanggalFilter
+  )
 
   function resetFilters() {
     setSearch('')
     setStatusFilter('semua')
     setLayananFilter('semua')
+    setPeriodeFilter('semua')
+    setTanggalFilter('')
   }
 
   async function openDetail(row) {
@@ -675,6 +455,122 @@ export default function LaporanKepalaCamat() {
     }
 
     setDetailLoading(false)
+  }
+
+  function handleDownloadRekap() {
+    if (typeof window === 'undefined' || filteredSubmissions.length === 0) return
+    const filters = buildFilterSummary({
+      search,
+      statusFilter,
+      layananFilter,
+      periodeFilter,
+      tanggalFilter,
+    })
+    const printedAt = new Date().toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: 'a4',
+      })
+
+      const pageWidth = doc.internal.pageSize.getWidth()
+      let currentY = 42
+
+      doc.setProperties({
+        title: 'laporan-rekapitulasi-kepala-camat.pdf',
+        subject: 'Laporan Rekapitulasi Pengajuan Kepala Camat',
+        author: 'Website Kecamatan Rantau Kopar',
+        creator: 'Website Kecamatan Rantau Kopar',
+      })
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text('Laporan Rekapitulasi Pengajuan Kepala Camat', pageWidth / 2, currentY, { align: 'center' })
+
+      currentY += 20
+      doc.setFontSize(12)
+      doc.setTextColor(70, 85, 105)
+      doc.text('Kecamatan Rantau Kopar', pageWidth / 2, currentY, { align: 'center' })
+
+      currentY += 18
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(51, 65, 85)
+      doc.text(`Tanggal cetak: ${printedAt}`, 40, currentY)
+
+      if (filters.length > 0) {
+        currentY += 22
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        doc.setTextColor(11, 42, 74)
+        doc.text('Filter aktif:', 40, currentY)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.setTextColor(51, 65, 85)
+        filters.forEach((filter) => {
+          currentY += 15
+          const wrappedLines = doc.splitTextToSize(`- ${filter}`, pageWidth - 80)
+          doc.text(wrappedLines, 48, currentY)
+          currentY += Math.max((wrappedLines.length - 1) * 11, 0)
+        })
+      }
+
+      autoTable(doc, {
+        startY: currentY + 20,
+        head: [['No', 'Nomor Pengajuan', 'Nama Pemohon', 'Jenis Layanan', 'Tanggal Pengajuan', 'Status']],
+        body: buildPdfTableRows(filteredSubmissions),
+        margin: { top: 32, right: 40, bottom: 32, left: 40 },
+        styles: {
+          font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 6,
+          lineColor: [203, 213, 225],
+          lineWidth: 0.6,
+          textColor: [15, 23, 42],
+          valign: 'middle',
+        },
+        headStyles: {
+          fillColor: [234, 241, 251],
+          textColor: [8, 36, 90],
+          fontStyle: 'bold',
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        columnStyles: {
+          0: { cellWidth: 34, halign: 'center' },
+          1: { cellWidth: 110 },
+          2: { cellWidth: 140 },
+          3: { cellWidth: 160 },
+          4: { cellWidth: 92 },
+          5: { cellWidth: 90 },
+        },
+        didDrawPage: () => {
+          const pageHeight = doc.internal.pageSize.getHeight()
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.setTextColor(100, 116, 139)
+          doc.text(`Dicetak pada ${printedAt}`, 40, pageHeight - 16)
+        },
+      })
+
+      doc.save('laporan-rekapitulasi-kepala-camat.pdf')
+    } catch (error) {
+      console.error('[KepalaCamat] Gagal membuat file PDF rekap.', error)
+      window.alert('PDF rekap gagal dibuat. Silakan coba lagi.')
+    }
   }
 
   return (
@@ -804,11 +700,54 @@ export default function LaporanKepalaCamat() {
                     </select>
                   </div>
                 </label>
+
+                {hasDateData ? (
+                  <label className="kcm-filterField">
+                    <span>Periode</span>
+                    <div className="kcm-filterInputWrap">
+                      <FiCalendar aria-hidden="true" />
+                      <select
+                        value={periodeFilter}
+                        onChange={(event) =>
+                          handlePeriodeFilterChange(event.target.value, setPeriodeFilter, setTanggalFilter)
+                        }
+                      >
+                        <option value="semua">Semua Periode</option>
+                        <option value="hari_ini">Hari Ini</option>
+                        <option value="minggu_ini">Minggu Ini</option>
+                        <option value="bulan_ini">Bulan Ini</option>
+                        <option value="tanggal">Pilih Tanggal</option>
+                      </select>
+                    </div>
+                  </label>
+                ) : null}
+
+                {hasDateData && periodeFilter === 'tanggal' ? (
+                  <label className="kcm-filterField">
+                    <span>Tanggal Pengajuan</span>
+                    <div className="kcm-filterInputWrap">
+                      <FiCalendar aria-hidden="true" />
+                      <input
+                        type="date"
+                        value={tanggalFilter}
+                        onChange={(event) => setTanggalFilter(event.target.value)}
+                      />
+                    </div>
+                  </label>
+                ) : null}
               </div>
 
               <div className="kcm-filterActions">
                 <button type="button" className="ptg-linkBtn" onClick={resetFilters} disabled={!hasActiveFilter}>
                   Reset Filter
+                </button>
+                <button
+                  type="button"
+                  className="kcm-outlineBtn"
+                  onClick={handleDownloadRekap}
+                  disabled={filteredSubmissions.length === 0}
+                >
+                  Unduh Rekap
                 </button>
                 <button type="button" className="kcm-retryBtn" onClick={refreshData} disabled={loading}>
                   <FiRefreshCw aria-hidden="true" />
@@ -821,13 +760,13 @@ export default function LaporanKepalaCamat() {
               <table className="kcm-table kcm-reportTable">
                 <thead>
                   <tr>
-                    <th>No</th>
-                    <th>Nomor Pengajuan</th>
-                    <th>Nama Pemohon</th>
-                    <th>Jenis Layanan</th>
-                    <th>Tanggal Pengajuan</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
+                    <th className="kcm-colIndex">No</th>
+                    <th className="kcm-colNomor">Nomor Pengajuan</th>
+                    <th className="kcm-colPemohon">Nama Pemohon</th>
+                    <th className="kcm-colLayanan">Jenis Layanan</th>
+                    <th className="kcm-colTanggal">Tanggal Pengajuan</th>
+                    <th className="kcm-colStatus">Status</th>
+                    <th className="kcm-colAction">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -851,17 +790,19 @@ export default function LaporanKepalaCamat() {
                       const status = getDisplayStatus(row)
                       return (
                         <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
-                          <td>{idx + 1}</td>
-                          <td className="ptg-mono">{id || '-'}</td>
-                          <td>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
-                          <td>{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
-                          <td>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</td>
-                          <td>
+                          <td className="kcm-colIndex">{idx + 1}</td>
+                          <td className="ptg-mono kcm-colNomor">{id || '-'}</td>
+                          <td className="kcm-colPemohon">{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
+                          <td className="kcm-colLayanan">{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
+                          <td className="kcm-colTanggal">
+                            {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
+                          </td>
+                          <td className="kcm-colStatus">
                             <div className="kcm-statusCell">
                               <span className={getStatusClass(status)}>{status}</span>
                             </div>
                           </td>
-                          <td>
+                          <td className="kcm-colAction">
                             <div className="kcm-actionCell">
                               <button
                                 type="button"
@@ -871,6 +812,7 @@ export default function LaporanKepalaCamat() {
                                 onClick={() => void openDetail(row)}
                               >
                                 <FiEye aria-hidden="true" />
+                                <span className="kcm-eyeBtnLabel">Detail</span>
                               </button>
                             </div>
                           </td>
@@ -885,7 +827,7 @@ export default function LaporanKepalaCamat() {
         </div>
       </main>
 
-      <DetailModal
+      <DetailPengajuanKepalaCamatModal
         row={selectedSubmission}
         loading={detailLoading}
         error={detailError}

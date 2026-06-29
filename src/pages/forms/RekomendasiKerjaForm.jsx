@@ -30,7 +30,7 @@ const FILE_FIELDS = [
   {
     key: 'fotocopy_ktp',
     backendKey: 'ktp',
-    label: 'Fotocopy KTP',
+    label: 'Fotokopi KTP',
     required: true,
     maxSizeMB: 2,
     ...FILE_TYPE_PRESETS.PDF_PNG,
@@ -186,7 +186,7 @@ export default function RekomendasiKerjaForm() {
         <section className="rk-formSection" aria-label="Form rekomendasi kerja">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-statusRow" aria-label="Status awal">
@@ -306,7 +306,7 @@ export default function RekomendasiKerjaForm() {
               <div className="rk-docGrid">
                 <div className="rk-docField">
                   <label className="rk-label" htmlFor="fotocopy_ktp">
-                    Fotocopy KTP <span className="rk-required">*</span>
+                    Fotokopi KTP <span className="rk-required">*</span>
                   </label>
                   <input
                     id="fotocopy_ktp"

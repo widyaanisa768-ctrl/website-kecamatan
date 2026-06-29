@@ -223,7 +223,7 @@ export default function SuratTanahForm() {
         <section className="rk-formSection" aria-label="Form surat tanah">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-formCardHead">

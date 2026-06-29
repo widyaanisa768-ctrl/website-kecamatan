@@ -215,7 +215,7 @@ export default function KartuKeluargaForm() {
         <section className="rk-formSection" aria-label="Form rekomendasi kartu keluarga">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-formCardHead">

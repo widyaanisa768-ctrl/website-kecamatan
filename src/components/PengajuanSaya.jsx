@@ -1078,7 +1078,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
 
       {editItem ? (
         <div className="rk-modalOverlay" role="dialog" aria-modal="true" aria-labelledby="rk-editPengajuanTitle">
-          <form className="rk-modal rk-editModal" onSubmit={onEditSubmit}>
+          <form className="rk-modal rk-editModal" onSubmit={onEditSubmit} noValidate>
             <div className="rk-modalHead">
               <div>
                 <div id="rk-editPengajuanTitle" className="rk-modalTitle">Edit Pengajuan</div>

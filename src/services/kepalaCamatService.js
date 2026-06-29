@@ -1,4 +1,5 @@
 import { apiRequest } from './api'
+import { getDetailPengajuanByContext, SERVICE_ROUTES } from './pengajuanService'
 
 const IS_DEV = !!import.meta.env.DEV
 const DASHBOARD_ENDPOINT = '/api/kepala-camat/dashboard'
@@ -15,6 +16,72 @@ function pickMessage(res, fallback = 'Permintaan Kepala Camat gagal.') {
 function unwrapData(payload) {
   if (!payload || typeof payload !== 'object') return {}
   return payload.data && typeof payload.data === 'object' ? payload.data : payload
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[-_/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+}
+
+export function unwrapArray(payload, preferredKeys = []) {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return []
+
+  for (const key of preferredKeys) {
+    if (Array.isArray(payload[key])) return payload[key]
+  }
+
+  for (const key of preferredKeys) {
+    const nested = unwrapArray(payload[key], preferredKeys)
+    if (nested.length > 0) return nested
+  }
+
+  for (const value of Object.values(payload)) {
+    if (
+      Array.isArray(value) &&
+      value.some(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          (item.nomor_pengajuan || item.id_pengajuan || item.pengajuan_id || item.nama_pemohon || item.status)
+      )
+    ) {
+      return value
+    }
+  }
+
+  for (const value of Object.values(payload)) {
+    if (value && typeof value === 'object') {
+      const nested = unwrapArray(value, preferredKeys)
+      if (nested.length > 0) return nested
+    }
+  }
+
+  return []
+}
+
+function resolveEndpointFromSubmission(itemOrLayanan, jenisLayanan = '') {
+  const rawValue = typeof itemOrLayanan === 'object' ? itemOrLayanan?.layanan || itemOrLayanan?.jenis_layanan || '' : itemOrLayanan
+  const layananKey = normalizeText(rawValue)
+  const jenisKey = normalizeText(jenisLayanan || (typeof itemOrLayanan === 'object' ? itemOrLayanan?.jenis_layanan || '' : ''))
+
+  const matchedRoute = SERVICE_ROUTES.find((route) => {
+    const routeKey = normalizeText(route.key)
+    const routeJenis = normalizeText(route.jenis_layanan)
+    const routeEndpoint = normalizeText(route.endpoint)
+    return (
+      routeKey === layananKey ||
+      routeKey.replace(/\s+/g, '_') === String(rawValue || '').trim().toLowerCase() ||
+      routeJenis === layananKey ||
+      routeJenis === jenisKey ||
+      routeEndpoint === layananKey
+    )
+  })
+
+  return matchedRoute?.endpoint || ''
 }
 
 function normalizeStatus(status) {
@@ -39,6 +106,7 @@ function normalizePengajuanItem(item) {
 
   return {
     ...source,
+    __endpoint: source.__endpoint || resolveEndpointFromSubmission(source, source.jenis_layanan),
     id: String(idPengajuan || ''),
     id_pengajuan: idPengajuan,
     pengajuan_id: idPengajuan,
@@ -82,9 +150,15 @@ function normalizeRekapLayanan(items) {
 
 function normalizeRingkasanData(value) {
   const source = value && typeof value === 'object' ? value : {}
-  const daftarPengajuan = Array.isArray(source.daftar_pengajuan)
-    ? source.daftar_pengajuan.map(normalizePengajuanItem)
-    : []
+  const daftarPengajuan = unwrapArray(source, [
+    'daftar_pengajuan',
+    'pengajuan_terbaru',
+    'pengajuanTerbaru',
+    'recent',
+    'laporan',
+    'items',
+    'data',
+  ]).map(normalizePengajuanItem)
 
   return {
     total_pengajuan: Number(source.total_pengajuan ?? daftarPengajuan.length ?? 0),
@@ -104,6 +178,12 @@ function normalizeDetailData(value) {
     data_pemohon: source.data_pemohon && typeof source.data_pemohon === 'object' ? source.data_pemohon : {},
     data_pengajuan: source.data_pengajuan && typeof source.data_pengajuan === 'object' ? source.data_pengajuan : {},
     daftar_dokumen: Array.isArray(source.daftar_dokumen) ? source.daftar_dokumen : [],
+    dokumen: source.dokumen ?? normalized.dokumen ?? source.daftar_dokumen ?? [],
+    dokumen_meta: source.dokumen_meta ?? source.dokumenMeta ?? null,
+    documents: source.documents ?? null,
+    files: source.files ?? null,
+    lampiran: source.lampiran ?? null,
+    berkas: source.berkas ?? null,
     file_surat_hasil: source.file_surat_hasil ?? null,
     nama_file_surat_hasil: source.nama_file_surat_hasil ?? normalized.nama_file_surat_hasil ?? null,
     detail_pengajuan: source.detail_pengajuan && typeof source.detail_pengajuan === 'object' ? source.detail_pengajuan : {},
@@ -169,8 +249,22 @@ export async function getKepalaCamatLaporanDetail(layanan, id) {
   const result = await requestKepalaCamat(path, 'Detail laporan Kepala Camat belum dapat dimuat.')
   if (!result.success) return result
 
+  const normalizedDetail = normalizeDetailData({
+    ...result.data,
+    __endpoint: resolveEndpointFromSubmission(layanan, result.data?.jenis_layanan),
+  })
+
+  const fallbackDetail = await getDetailPengajuanByContext(id, normalizedDetail)
+  const mergedDetail = fallbackDetail?.success
+    ? normalizeDetailData({
+        ...normalizedDetail,
+        ...(fallbackDetail.data || {}),
+        __endpoint: fallbackDetail.data?.__endpoint || normalizedDetail.__endpoint,
+      })
+    : normalizedDetail
+
   return {
     ...result,
-    data: normalizeDetailData(result.data),
+    data: mergedDetail,
   }
 }

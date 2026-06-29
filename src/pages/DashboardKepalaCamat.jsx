@@ -13,11 +13,11 @@ import {
   FiUser,
   FiXCircle,
 } from 'react-icons/fi'
+import DetailPengajuanKepalaCamatModal from '../components/DetailPengajuanKepalaCamatModal'
 import { getAuth } from '../lib/rkLocal'
 import { clearAuthArtifacts, logout as remoteLogout } from '../services/authService'
-import { getKepalaCamatDashboard, getKepalaCamatLaporanDetail } from '../services/kepalaCamatService'
+import { getKepalaCamatDashboard, getKepalaCamatLaporan, getKepalaCamatLaporanDetail } from '../services/kepalaCamatService'
 import {
-  getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
   getPengajuanId,
   getPengajuanLayanan,
@@ -112,65 +112,6 @@ function getKepalaCamatProfile() {
   }
 }
 
-function readSuratHasil(item) {
-  const source =
-    item?.file_surat_hasil ||
-    item?.nama_file_surat_hasil ||
-    item?.dokumen_hasil ||
-    item?.surat_hasil ||
-    item?.hasilSurat ||
-    item?.file_hasil ||
-    item?.hasil ||
-    null
-
-  if (source && typeof source === 'object' && !Array.isArray(source)) {
-    return {
-      nama: source.nama || source.name || source.filename || source.file_name || item?.nama_file_surat_hasil || '',
-      url: source.url || source.href || source.path || item?.url_hasil || item?.hasil_url || item?.file_url || '',
-    }
-  }
-
-  const stringSource = typeof source === 'string' ? source : ''
-  return {
-    nama: item?.nama_file_surat_hasil || item?.nama_file_hasil || item?.nama_surat_hasil || stringSource,
-    url: item?.url_hasil || item?.hasil_url || item?.file_url || stringSource,
-  }
-}
-
-function hasObjectValues(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0
-}
-
-function renderJsonBlock(value) {
-  if (!hasObjectValues(value)) return '-'
-  return (
-    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  )
-}
-
-function getDokumenInfo(item, index) {
-  if (typeof item === 'string') {
-    return { label: item, url: item, key: `${item}-${index}` }
-  }
-
-  const source = item && typeof item === 'object' ? item : {}
-  const label =
-    source.nama_dokumen ||
-    source.jenis_dokumen ||
-    source.nama_file ||
-    source.file_name ||
-    source.nama ||
-    `Dokumen ${index + 1}`
-  const url = source.url || source.href || source.path || source.file || source.file_url || ''
-  return {
-    label,
-    url,
-    key: `${source.id || source.uuid || label}-${index}`,
-  }
-}
-
 function EmptyState({ loading, onRetry, compact = false, showRetry = false, error = '' }) {
   if (loading) {
     return <div className="kcm-empty">Memuat data monitoring...</div>
@@ -198,119 +139,56 @@ function EmptyState({ loading, onRetry, compact = false, showRetry = false, erro
   )
 }
 
-function DetailModal({ row, onClose, loading = false, error = '' }) {
-  if (!row) return null
+function hasMonitoringData(data) {
+  if (!data || typeof data !== 'object') return false
+  if (Array.isArray(data.daftar_pengajuan) && data.daftar_pengajuan.length > 0) return true
+  if (Array.isArray(data.rekap_layanan) && data.rekap_layanan.length > 0) return true
+  if (Number(data.total_pengajuan || 0) > 0) return true
+  const rekapStatus = data.rekap_status && typeof data.rekap_status === 'object' ? data.rekap_status : {}
+  return Object.values(rekapStatus).some((value) => Number(value || 0) > 0)
+}
 
-  const status = getDisplayStatus(row)
-  const surat = readSuratHasil(row)
-  const dokumenList = Array.isArray(row?.daftar_dokumen) ? row.daftar_dokumen : []
+function mergeDashboardData(dashboardPayload, laporanPayload) {
+  const dashboardData = dashboardPayload && typeof dashboardPayload === 'object' ? dashboardPayload : EMPTY_RINGKASAN
+  const laporanData = laporanPayload && typeof laporanPayload === 'object' ? laporanPayload : EMPTY_RINGKASAN
+  const latestItems =
+    Array.isArray(dashboardData.daftar_pengajuan) && dashboardData.daftar_pengajuan.length > 0
+      ? dashboardData.daftar_pengajuan
+      : Array.isArray(laporanData.daftar_pengajuan)
+        ? laporanData.daftar_pengajuan
+        : []
+  const dashboardStatus = dashboardData.rekap_status && typeof dashboardData.rekap_status === 'object' ? dashboardData.rekap_status : {}
+  const laporanStatus = laporanData.rekap_status && typeof laporanData.rekap_status === 'object' ? laporanData.rekap_status : {}
+  const hasDashboardStatus = Object.values(dashboardStatus).some((value) => Number(value || 0) > 0)
 
-  return (
-    <div className="ptg-modalOverlay" role="presentation" onMouseDown={onClose}>
-      <section
-        className="ptg-modal kcm-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Detail pengajuan"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="ptg-modalHead">
-          <h3>Detail Pengajuan</h3>
-          <button type="button" className="ptg-modalClose" onClick={onClose}>
-            Kembali
-          </button>
-        </div>
+  return {
+    total_pengajuan: Number(dashboardData.total_pengajuan || laporanData.total_pengajuan || latestItems.length || 0),
+    rekap_status: hasDashboardStatus ? dashboardStatus : laporanStatus,
+    rekap_layanan:
+      Array.isArray(dashboardData.rekap_layanan) && dashboardData.rekap_layanan.length > 0
+        ? dashboardData.rekap_layanan
+        : laporanData.rekap_layanan || [],
+    daftar_pengajuan: latestItems,
+  }
+}
 
-        <div className="ptg-modalBody">
-          {loading ? <div className="kcm-empty">Memuat detail laporan...</div> : null}
-          {error ? (
-            <div className="kcm-emptyState is-compact">
-              <div>
-                <strong>Detail belum dapat dimuat.</strong>
-                <p>{error}</p>
-              </div>
-            </div>
-          ) : null}
+async function loadDashboardBundle() {
+  const [dashboardRes, laporanRes] = await Promise.all([getKepalaCamatDashboard(), getKepalaCamatLaporan()])
 
-          <dl className="kcm-detailGrid">
-            <dt>No. Pengajuan</dt>
-            <dd className="ptg-mono">{row?.nomor_pengajuan || getPengajuanId(row) || '-'}</dd>
+  if (dashboardRes?.success || laporanRes?.success) {
+    return {
+      success: true,
+      data: mergeDashboardData(dashboardRes?.data, laporanRes?.data),
+      message: '',
+    }
+  }
 
-            <dt>Nama Pemohon</dt>
-            <dd>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</dd>
-
-            <dt>Layanan</dt>
-            <dd>{row?.jenis_layanan || getPengajuanLayanan(row)}</dd>
-
-            <dt>Tanggal</dt>
-            <dd>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</dd>
-
-            <dt>Status</dt>
-            <dd>
-              <span className={getStatusClass(status)}>{status}</span>
-            </dd>
-
-            <dt>Keterangan</dt>
-            <dd>{renderJsonBlock(row?.detail_pengajuan || row?.data_pengajuan)}</dd>
-
-            <dt>Catatan Petugas</dt>
-            <dd>{row?.catatan_petugas || getPengajuanCatatanPetugas(row) || '-'}</dd>
-
-            <dt>Data Pemohon</dt>
-            <dd>{renderJsonBlock(row?.data_pemohon)}</dd>
-
-            <dt>Data Pengajuan</dt>
-            <dd>{renderJsonBlock(row?.data_pengajuan)}</dd>
-
-            <dt>Daftar Dokumen</dt>
-            <dd>
-              {dokumenList.length > 0 ? (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {dokumenList.map((item, index) => {
-                    const dokumen = getDokumenInfo(item, index)
-                    return (
-                      <div key={dokumen.key} className="kcm-fileLine">
-                        <span>{dokumen.label}</span>
-                        {dokumen.url ? (
-                          <a className="kcm-outlineBtn" href={dokumen.url} target="_blank" rel="noreferrer">
-                            Buka Dokumen
-                          </a>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                '-'
-              )}
-            </dd>
-
-            <dt>Surat Hasil</dt>
-            <dd>
-              {surat.nama || surat.url ? (
-                <div className="kcm-fileLine">
-                  <span>{surat.nama || 'Surat hasil tersedia'}</span>
-                  {surat.url ? (
-                    <a className="kcm-outlineBtn" href={surat.url} target="_blank" rel="noreferrer">
-                      Buka Surat
-                    </a>
-                  ) : null}
-                </div>
-              ) : (
-                '-'
-              )}
-            </dd>
-          </dl>
-        </div>
-
-        <div className="ptg-modalFoot">
-          <button type="button" className="kcm-outlineBtn" onClick={onClose}>
-            Kembali
-          </button>
-        </div>
-      </section>
-    </div>
-  )
+  return {
+    success: false,
+    data: EMPTY_RINGKASAN,
+    message:
+      dashboardRes?.message || laporanRes?.message || `${MONITORING_EMPTY_TITLE} ${MONITORING_EMPTY_DESC}`,
+  }
 }
 
 export default function DashboardKepalaCamat() {
@@ -326,7 +204,7 @@ export default function DashboardKepalaCamat() {
 
   const refreshData = useCallback(async () => {
     setLoading(true)
-    const res = await getKepalaCamatDashboard()
+    const res = await loadDashboardBundle()
     if (res?.success) {
       setDashboardData(res.data || EMPTY_RINGKASAN)
       setError('')
@@ -341,7 +219,7 @@ export default function DashboardKepalaCamat() {
     let alive = true
     const run = async () => {
       setLoading(true)
-      const res = await getKepalaCamatDashboard()
+      const res = await loadDashboardBundle()
       if (!alive) return
       if (res?.success) {
         setDashboardData(res.data || EMPTY_RINGKASAN)
@@ -429,7 +307,7 @@ export default function DashboardKepalaCamat() {
   }
 
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
-  const hasMonitoringIssue = !loading && Boolean(error)
+  const hasMonitoringIssue = !loading && Boolean(error) && !hasMonitoringData(dashboardData)
 
   return (
     <div className="kcm-page">
@@ -558,15 +436,15 @@ export default function DashboardKepalaCamat() {
               </div>
 
               <div className="kcm-tableWrap" role="region" aria-label="Tabel pengajuan terbaru">
-                <table className="kcm-table">
+                <table className="kcm-table kcm-latestTable">
                   <thead>
                     <tr>
-                      <th>No. Pengajuan</th>
-                      <th>Layanan</th>
-                      <th>Pemohon</th>
-                      <th>Tanggal</th>
-                      <th>Status</th>
-                      <th>Aksi</th>
+                      <th className="kcm-colNomor">No. Pengajuan</th>
+                      <th className="kcm-colLayanan">Layanan</th>
+                      <th className="kcm-colPemohon">Pemohon</th>
+                      <th className="kcm-colTanggal">Tanggal</th>
+                      <th className="kcm-colStatus">Status</th>
+                      <th className="kcm-colAction">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -582,23 +460,30 @@ export default function DashboardKepalaCamat() {
                         const status = getDisplayStatus(row)
                         return (
                           <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
-                            <td className="ptg-mono">{id || '-'}</td>
-                            <td>{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
-                            <td>{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
-                            <td>{formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}</td>
-                            <td>
-                              <span className={getStatusClass(status)}>{status}</span>
+                            <td className="ptg-mono kcm-colNomor">{id || '-'}</td>
+                            <td className="kcm-colLayanan">{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
+                            <td className="kcm-colPemohon">{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
+                            <td className="kcm-colTanggal">
+                              {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
                             </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="ptg-btn ptg-btnIcon kcm-eyeBtn"
-                                aria-label="Lihat Detail"
-                                title="Lihat Detail"
-                                onClick={() => void openDetail(row)}
-                              >
-                                <FiEye aria-hidden="true" />
-                              </button>
+                            <td className="kcm-colStatus">
+                              <div className="kcm-statusCell">
+                                <span className={getStatusClass(status)}>{status}</span>
+                              </div>
+                            </td>
+                            <td className="kcm-colAction">
+                              <div className="kcm-actionCell">
+                                <button
+                                  type="button"
+                                  className="ptg-btn ptg-btnIcon kcm-eyeBtn"
+                                  aria-label="Lihat Detail"
+                                  title="Lihat Detail"
+                                  onClick={() => void openDetail(row)}
+                                >
+                                  <FiEye aria-hidden="true" />
+                                  <span className="kcm-eyeBtnLabel">Detail</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
@@ -618,7 +503,7 @@ export default function DashboardKepalaCamat() {
         </div>
       </main>
 
-      <DetailModal
+      <DetailPengajuanKepalaCamatModal
         row={selectedSubmission}
         loading={detailLoading}
         error={detailError}

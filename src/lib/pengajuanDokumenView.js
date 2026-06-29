@@ -73,6 +73,37 @@ const HIDDEN_DATA_KEYS = new Set([
   'keterangan',
   'keperluan',
 ])
+
+const TECHNICAL_DOKUMEN_KEYS = new Set([
+  'file',
+  'file_name',
+  'filename',
+  'name',
+  'nama_file',
+  'original_name',
+  'originalname',
+  'original_filename',
+  'path',
+  'path_file',
+  'file_path',
+  'filepath',
+  'lokasi_file',
+  'url',
+  'url_file',
+  'href',
+  'file_url',
+  'dokumen_url',
+  'lampiran_url',
+  'download_url',
+  'secure_url',
+  'mimetype',
+  'mime_type',
+  'type',
+  'size',
+  'bytes',
+  'extension',
+  'ext',
+])
 const DOCUMENT_FIELD_HINTS = [
   'dokumen',
   'document',
@@ -128,15 +159,66 @@ function isFileLikePath(value) {
   return /^https?:\/\//i.test(text) || text.startsWith('/uploads') || text.startsWith('uploads/') || text.startsWith('/storage') || text.startsWith('storage/')
 }
 
+function isFileNameLike(value) {
+  const text = String(value || '').trim()
+  return /\.(pdf|png|jpe?g|webp|gif|docx?|xlsx?|odt|ods)$/i.test(text.split('?')[0])
+}
+
 function hasFileLikeUrl(value) {
   if (!value) return false
-  if (typeof value === 'string') return isFileLikePath(value)
+  if (typeof value === 'string') return isFileLikePath(value) || isFileNameLike(value)
   if (Array.isArray(value)) return value.some((entry) => hasFileLikeUrl(entry))
   if (typeof value !== 'object') return false
 
-  return ['url_file', 'url', 'href', 'path', 'path_file', 'file_path', 'file_url', 'dokumen_url', 'lampiran_url', 'download_url', 'secure_url'].some(
-    (key) => isFileLikePath(value[key])
+  return [
+    'url_file',
+    'url',
+    'href',
+    'path',
+    'path_file',
+    'file_path',
+    'filepath',
+    'lokasi_file',
+    'file',
+    'file_url',
+    'dokumen_url',
+    'lampiran_url',
+    'download_url',
+    'secure_url',
+    'file_name',
+    'filename',
+    'nama_file',
+    'originalname',
+  ].some(
+    (key) => isFileLikePath(value[key]) || isFileNameLike(value[key])
   )
+}
+
+function hasDirectFileEvidence(value) {
+  if (!value) return false
+  if (typeof value === 'string') return isFileLikePath(value) || isFileNameLike(value)
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+
+  return [
+    'url_file',
+    'url',
+    'href',
+    'path',
+    'path_file',
+    'file_path',
+    'filepath',
+    'lokasi_file',
+    'file',
+    'file_url',
+    'dokumen_url',
+    'lampiran_url',
+    'download_url',
+    'secure_url',
+    'file_name',
+    'filename',
+    'nama_file',
+    'originalname',
+  ].some((key) => isFileLikePath(value[key]) || isFileNameLike(value[key]))
 }
 
 function isDocumentLikeKey(value) {
@@ -170,39 +252,49 @@ export function filenameFromDokumenPath(value) {
 
 function readDokumenMeta(meta) {
   if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-    const rawUrl =
+    const fileNameCandidate =
+      meta.file_name ||
+      meta.filename ||
+      meta.nama_file ||
+      meta.original_name ||
+      meta.originalname ||
+      meta.original_filename ||
+      meta.fileName ||
+      meta.name ||
+      meta.nama ||
+      ''
+    const rawUrlCandidate =
       meta.url_file ||
       meta.url ||
       meta.href ||
       meta.path ||
       meta.path_file ||
       meta.file_path ||
+      meta.filepath ||
+      meta.lokasi_file ||
+      meta.file ||
       meta.file_url ||
       meta.dokumen_url ||
       meta.lampiran_url ||
       meta.download_url ||
       meta.secure_url ||
+      (isFileLikePath(fileNameCandidate) ? fileNameCandidate : '') ||
       ''
+    const rawUrl = isFileLikePath(rawUrlCandidate) ? rawUrlCandidate : ''
     const url = buildPengajuanDokumenUrl(rawUrl)
     const filename =
-      meta.name ||
-      meta.nama ||
-      meta.filename ||
-      meta.file_name ||
-      meta.originalname ||
-      meta.nama_file ||
-      meta.fileName ||
-      (rawUrl ? filenameFromDokumenPath(rawUrl) : '')
+      fileNameCandidate ||
+      (rawUrlCandidate ? filenameFromDokumenPath(rawUrlCandidate) : '')
     return { filename, url }
   }
 
   if (typeof meta === 'string') {
-    if (!isFileLikePath(meta)) {
+    if (!isFileLikePath(meta) && !isFileNameLike(meta)) {
       return { filename: '', url: '' }
     }
     return {
       filename: filenameFromDokumenPath(meta),
-      url: buildPengajuanDokumenUrl(meta),
+      url: isFileLikePath(meta) ? buildPengajuanDokumenUrl(meta) : '',
     }
   }
 
@@ -229,10 +321,66 @@ function getDokumenIdentityCandidates(entry) {
     entry?.tipe_dokumen,
     entry?.kategori,
     entry?.backendKey,
+    entry?.file_name,
+    entry?.filename,
+    entry?.nama_file,
+    entry?.original_name,
+    entry?.originalname,
+    entry?.original_filename,
+    entry?.path,
+    entry?.file_path,
+    entry?.filepath,
+    entry?.lokasi_file,
+    entry?.file,
+    entry?.file_url,
+    entry?.url,
   ].filter(Boolean)
 }
 
-function readDokumenByField(item, docs, field) {
+function isDokumenKeyMatch(actualValue, expectedKeys) {
+  const actual = normalizeDokumenKey(actualValue)
+  if (!actual) return false
+  return expectedKeys.some(
+    (expected) =>
+      actual === expected ||
+      actual.endsWith(`_${expected}`) ||
+      expected.endsWith(`_${actual}`) ||
+      actual.includes(expected) ||
+      expected.includes(actual)
+  )
+}
+
+function collectNestedDokumenCandidates(source) {
+  const candidates = []
+  const visited = new Set()
+
+  const visit = (value, identity = '') => {
+    if (!value || typeof value !== 'object' || visited.has(value)) return
+    visited.add(value)
+
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        if (entry && typeof entry === 'object' && hasDirectFileEvidence(entry)) {
+          candidates.push({ identity: identity || `dokumen_${index + 1}`, meta: entry })
+        }
+        visit(entry, identity)
+      })
+      return
+    }
+
+    Object.entries(value).forEach(([key, entry]) => {
+      if (hasDirectFileEvidence(entry)) {
+        candidates.push({ identity: key, meta: entry })
+      }
+      if (entry && typeof entry === 'object') visit(entry, key)
+    })
+  }
+
+  visit(source)
+  return candidates
+}
+
+function readDokumenByField(item, docs, field, nestedCandidates = []) {
   const backendKey = field?.backendKey || field?.key
   const expectedKeys = [backendKey, field?.key, field?.label, ...(field?.aliases || [])].map(normalizeDokumenKey).filter(Boolean)
   if (!backendKey) return null
@@ -242,16 +390,7 @@ function readDokumenByField(item, docs, field) {
   if (Array.isArray(docs)) {
     const match = docs.find((entry) => {
       const actualKeys = getDokumenIdentityCandidates(entry).map(normalizeDokumenKey)
-      return actualKeys.some((actual) =>
-        expectedKeys.some(
-          (expected) =>
-            actual === expected ||
-            actual.endsWith(`_${expected}`) ||
-            expected.endsWith(`_${actual}`) ||
-            actual.includes(expected) ||
-            expected.includes(actual)
-        )
-      )
+      return actualKeys.some((actual) => isDokumenKeyMatch(actual, expectedKeys))
     })
     if (match) return match
   }
@@ -262,18 +401,16 @@ function readDokumenByField(item, docs, field) {
   const objectSources = [docs, item].filter((source) => source && typeof source === 'object' && !Array.isArray(source))
   for (const source of objectSources) {
     for (const [actualKey, value] of Object.entries(source)) {
-      const normalizedActual = normalizeDokumenKey(actualKey)
-      const isMatch = expectedKeys.some(
-        (expected) =>
-          normalizedActual === expected ||
-          normalizedActual.endsWith(`_${expected}`) ||
-          expected.endsWith(`_${normalizedActual}`) ||
-          normalizedActual.includes(expected) ||
-          expected.includes(normalizedActual)
-      )
+      const isMatch = isDokumenKeyMatch(actualKey, expectedKeys)
       if (isMatch && hasFileLikeUrl(value)) return value
     }
   }
+
+  const nestedMatch = nestedCandidates.find(({ identity, meta }) => {
+    const actualKeys = [identity, ...getDokumenIdentityCandidates(meta)]
+    return actualKeys.some((actual) => isDokumenKeyMatch(actual, expectedKeys))
+  })
+  if (nestedMatch) return nestedMatch.meta
 
   return null
 }
@@ -285,6 +422,7 @@ function collectLegacyDokumenEntries(source, usedKeys) {
     .filter(([key, value]) => {
       const normalizedKey = normalizeDokumenKey(key)
       if (usedKeys.has(normalizedKey)) return false
+      if (TECHNICAL_DOKUMEN_KEYS.has(normalizedKey)) return false
       if (!isDocumentLikeKey(key)) return false
       return hasFileLikeUrl(value)
     })
@@ -299,12 +437,13 @@ export function normalizePengajuanDokumenPersyaratan(item) {
   if (!item) return []
   const config = getDokumenConfigForPengajuan(item)
   const docs = getPengajuanDokumen(item)
+  const nestedCandidates = collectNestedDokumenCandidates(item)
   const entries = []
   const usedKeys = new Set()
 
   const pushEntry = (id, label, meta, extra = {}) => {
-    const { filename, url } = readDokumenMeta(meta, label)
-    const uploaded = Boolean(url)
+    const { filename, url } = readDokumenMeta(meta)
+    const uploaded = Boolean(url || filename)
     entries.push({
       id,
       label: label || humanizeLabel(extra?.key || extra?.backendKey || id),
@@ -318,13 +457,22 @@ export function normalizePengajuanDokumenPersyaratan(item) {
   if (config?.fields?.length) {
     config.fields.forEach((field) => {
       const backendKey = field.backendKey || field.key
-      const meta = readDokumenByField(item, docs, field)
+      const meta = readDokumenByField(item, docs, field, nestedCandidates)
       ;[backendKey, field.key, field.label, ...(field.aliases || [])].forEach((value) => usedKeys.add(normalizeDokumenKey(value)))
+      if (!field.required && !hasFileLikeUrl(meta)) return
       pushEntry(backendKey, field.label, meta, {
         key: field.key,
         backendKey,
         required: field.required,
       })
+    })
+
+    const seen = new Set()
+    return entries.filter((entry) => {
+      const key = `${entry.backendKey || entry.key || entry.label}|${entry.url || entry.filename}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
     })
   }
 
@@ -350,6 +498,7 @@ export function normalizePengajuanDokumenPersyaratan(item) {
     Object.entries(docs).forEach(([key, meta]) => {
       if (usedKeys.has(normalizeDokumenKey(key))) return
       if (HIDDEN_DATA_KEYS.has(String(key || '').trim().toLowerCase())) return
+      if (TECHNICAL_DOKUMEN_KEYS.has(normalizeDokumenKey(key))) return
       if (!isDocumentLikeKey(key) || !hasFileLikeUrl(meta)) return
       pushEntry(`dokumen-${key}`, humanizeLabel(key), meta)
     })
@@ -361,6 +510,21 @@ export function normalizePengajuanDokumenPersyaratan(item) {
     legacyEntries.push(...collectLegacyDokumenEntries(dataForm, usedKeys))
   }
   legacyEntries.forEach((entry) => pushEntry(entry.id, entry.label, entry.meta))
+
+  nestedCandidates.forEach(({ identity, meta }, index) => {
+    if (!hasFileLikeUrl(meta)) return
+    const identityCandidates = [identity, ...getDokumenIdentityCandidates(meta)]
+    if (identityCandidates.some((candidate) => usedKeys.has(normalizeDokumenKey(candidate)))) return
+    const label =
+      meta?.label ||
+      meta?.jenis_dokumen ||
+      meta?.jenis ||
+      meta?.nama_dokumen ||
+      meta?.tipe_dokumen ||
+      meta?.kategori ||
+      humanizeLabel(identity || `dokumen_${index + 1}`)
+    pushEntry(`nested-${identity}-${index}`, label, meta)
+  })
 
   const seen = new Set()
   return entries.filter((entry) => {

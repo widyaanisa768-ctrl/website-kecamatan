@@ -103,7 +103,7 @@ export const DOKUMEN_CONFIGS = [
     key: 'rekomendasi_surat_kerja',
     endpoint: '/api/rekomendasi_surat_kerja',
     labels: ['rekomendasi kerja', 'surat kerja'],
-    fields: [{ key: 'ktp', backendKey: 'ktp', label: 'Fotocopy KTP', required: true, ...PDF_PNG }],
+    fields: [{ key: 'ktp', backendKey: 'ktp', label: 'Fotokopi KTP', required: true, ...PDF_PNG }],
   },
   {
     key: 'rekomendasi_surat_tanah',

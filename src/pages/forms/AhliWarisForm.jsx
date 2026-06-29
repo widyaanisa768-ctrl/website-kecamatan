@@ -213,7 +213,7 @@ export default function AhliWarisForm() {
         <section className="rk-formSection" aria-label="Form upload dokumen">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-formCardHead">

@@ -223,7 +223,7 @@ export default function AktaKelahiranForm() {
         <section className="rk-formSection" aria-label="Form akta kelahiran">
           <div className="rk-container">
             <BackToLayananLink />
-            <form className="rk-formCard" onSubmit={onSubmit}>
+            <form className="rk-formCard" onSubmit={onSubmit} noValidate>
               <ValidationAlert errors={validationErrors} />
 
               <div className="rk-formCardHead">
