@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useNavigate } from 'react-router-dom'
@@ -7,6 +7,7 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiClock,
+  FiDownload,
   FiEye,
   FiFileText,
   FiFilter,
@@ -29,6 +30,11 @@ import {
   getPengajuanNamaPemohon,
   getPengajuanStatusKind,
 } from '../services/pengajuanService'
+import {
+  buildPaginationItems,
+  buildReportSummary,
+  exportKepalaCamatReportExcel,
+} from '../lib/kepalaCamatReportExport'
 import './DashboardKepalaCamat.css'
 
 const EMPTY_TITLE = 'Data monitoring belum dapat dimuat.'
@@ -103,11 +109,12 @@ function isCurrentMonth(date, now) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
 }
 
-function handlePeriodeFilterChange(nextValue, setPeriode, setTanggal) {
+function handlePeriodeFilterChange(nextValue, setPeriode, setTanggal, setCurrentPage) {
   setPeriode(nextValue)
   if (nextValue !== 'tanggal') {
     setTanggal('')
   }
+  setCurrentPage(1)
 }
 
 function formatPeriodeLabel(value, tanggal) {
@@ -188,6 +195,10 @@ function getStatusClass(status) {
   if (kind === 'selesai') return 'kcm-status kcm-status--done'
   if (kind === 'ditolak') return 'kcm-status kcm-status--reject'
   return 'kcm-status'
+}
+
+function renderEntryValue(entry) {
+  return typeof entry.value === 'string' ? entry.value : entry.value
 }
 
 function DetailSection({ title, entries, children }) {
@@ -311,11 +322,13 @@ export default function LaporanKepalaCamat() {
   const [layananFilter, setLayananFilter] = useState('semua')
   const [periodeFilter, setPeriodeFilter] = useState('semua')
   const [tanggalFilter, setTanggalFilter] = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
 
-  const submissions = reportData.daftar_pengajuan || []
+  const submissions = useMemo(() => reportData.daftar_pengajuan || [], [reportData])
 
   const refreshData = useCallback(async () => {
     setLoading(true)
@@ -366,17 +379,6 @@ export default function LaporanKepalaCamat() {
     }
   }, [])
 
-  const stats = useMemo(() => {
-    const rekapStatus = reportData.rekap_status || EMPTY_RINGKASAN.rekap_status
-    return {
-      total: Number(reportData.total_pengajuan || 0),
-      menunggu: Number(rekapStatus.menunggu_verifikasi || 0),
-      diproses: Number(rekapStatus.diproses || 0),
-      selesai: Number(rekapStatus.selesai || 0),
-      ditolak: Number(rekapStatus.ditolak || 0),
-    }
-  }, [reportData])
-
   const layananOptions = useMemo(() => {
     const seen = new Set()
     return submissions
@@ -390,7 +392,6 @@ export default function LaporanKepalaCamat() {
       .sort((a, b) => a.localeCompare(b))
   }, [submissions])
 
-  const rekapLayanan = useMemo(() => reportData.rekap_layanan || [], [reportData])
   const hasDateData = useMemo(() => submissions.some((row) => getSubmissionDate(row)), [submissions])
 
   const filteredSubmissions = useMemo(() => {
@@ -427,6 +428,19 @@ export default function LaporanKepalaCamat() {
     })
   }, [layananFilter, periodeFilter, search, statusFilter, submissions, tanggalFilter])
 
+  const reportSummary = useMemo(() => buildReportSummary(filteredSubmissions), [filteredSubmissions])
+  const filteredSubmissionCount = reportSummary.total
+  const totalPages = filteredSubmissionCount > 0 ? Math.ceil(filteredSubmissionCount / pageSize) : 0
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const pageStart = filteredSubmissionCount === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1
+  const pageEnd = filteredSubmissionCount === 0 ? 0 : Math.min(safeCurrentPage * pageSize, filteredSubmissionCount)
+  const paginatedSubmissions = useMemo(() => {
+    if (filteredSubmissionCount === 0) return []
+    const start = (safeCurrentPage - 1) * pageSize
+    return filteredSubmissions.slice(start, start + pageSize)
+  }, [filteredSubmissions, pageSize, safeCurrentPage, filteredSubmissionCount])
+  const paginationItems = useMemo(() => buildPaginationItems(safeCurrentPage, totalPages), [safeCurrentPage, totalPages])
+
   const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
   const hasActiveFilter = Boolean(
     search || statusFilter !== 'semua' || layananFilter !== 'semua' || periodeFilter !== 'semua' || tanggalFilter
@@ -438,6 +452,7 @@ export default function LaporanKepalaCamat() {
     setLayananFilter('semua')
     setPeriodeFilter('semua')
     setTanggalFilter('')
+    setCurrentPage(1)
   }
 
   async function openDetail(row) {
@@ -526,7 +541,7 @@ export default function LaporanKepalaCamat() {
 
       autoTable(doc, {
         startY: currentY + 20,
-        head: [['No', 'Nomor Pengajuan', 'Nama Pemohon', 'Jenis Layanan', 'Tanggal Pengajuan', 'Status']],
+        head: [['No', 'Kode Pengajuan', 'Nama Pemohon', 'Jenis Layanan', 'Tanggal Pengajuan', 'Status']],
         body: buildPdfTableRows(filteredSubmissions),
         margin: { top: 32, right: 40, bottom: 32, left: 40 },
         styles: {
@@ -573,6 +588,35 @@ export default function LaporanKepalaCamat() {
     }
   }
 
+  async function handleDownloadExcel() {
+    if (typeof window === 'undefined' || filteredSubmissions.length === 0) return
+
+    const filters = buildFilterSummary({
+      search,
+      statusFilter,
+      layananFilter,
+      periodeFilter,
+      tanggalFilter,
+    })
+    const printedAt = new Date().toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    try {
+      await exportKepalaCamatReportExcel({
+        rows: filteredSubmissions,
+        filtersText: filters.length > 0 ? filters.join(' | ') : 'Semua data',
+        printedAtText: printedAt,
+      })
+    } catch (error) {
+      console.error('[KepalaCamat] Gagal membuat file Excel rekap.', error)
+      window.alert('Excel rekap gagal dibuat. Silakan coba lagi.')
+    }
+  }
+
   return (
     <div className="kcm-page">
       <SidebarKepalaCamat active="laporan" />
@@ -608,11 +652,11 @@ export default function LaporanKepalaCamat() {
 
           <section className="kcm-stats" aria-label="Ringkasan statistik pengajuan">
             {[
-              { label: 'Total Pengajuan', value: stats.total, desc: 'Total seluruh pengajuan', icon: FiFileText, tone: 'blue' },
-              { label: 'Menunggu Verifikasi', value: stats.menunggu, desc: 'Belum diverifikasi', icon: FiClock, tone: 'amber' },
-              { label: 'Diproses', value: stats.diproses, desc: 'Sedang berjalan', icon: FiSettings, tone: 'sky' },
-              { label: 'Selesai', value: stats.selesai, desc: 'Sudah selesai', icon: FiCheckCircle, tone: 'green' },
-              { label: 'Ditolak', value: stats.ditolak, desc: 'Tidak disetujui', icon: FiXCircle, tone: 'red' },
+              { label: 'Total Pengajuan', value: reportSummary.total, desc: 'Total seluruh pengajuan', icon: FiFileText, tone: 'blue' },
+              { label: 'Menunggu Verifikasi', value: reportSummary.menunggu, desc: 'Belum diverifikasi', icon: FiClock, tone: 'amber' },
+              { label: 'Diproses', value: reportSummary.diproses, desc: 'Sedang berjalan', icon: FiSettings, tone: 'sky' },
+              { label: 'Selesai', value: reportSummary.selesai, desc: 'Sudah selesai', icon: FiCheckCircle, tone: 'green' },
+              { label: 'Ditolak', value: reportSummary.ditolak, desc: 'Tidak disetujui', icon: FiXCircle, tone: 'red' },
             ].map((item) => {
               const Icon = item.icon
               return (
@@ -633,15 +677,15 @@ export default function LaporanKepalaCamat() {
           <section className="kcm-panel">
             <div className="kcm-panelHeader">
               <h2>Rekap Jumlah Pengajuan Per Layanan</h2>
-              <span className="kcm-panelCount">{rekapLayanan.length} layanan</span>
+              <span className="kcm-panelCount">{reportSummary.layanan.length} layanan</span>
             </div>
 
-            {rekapLayanan.length === 0 ? (
+            {reportSummary.layanan.length === 0 ? (
               <EmptyState loading={loading} onRetry={refreshData} error={error} />
             ) : (
               <div className="kcm-reportGrid">
-                {rekapLayanan.map((item) => (
-                  <article className="kcm-reportCard" key={item.layanan}>
+                {reportSummary.layanan.map((item) => (
+                  <article className="kcm-reportCard" key={item.jenis_layanan}>
                     <span>{item.jenis_layanan || item.layanan}</span>
                     <strong>{item.total_pengajuan || 0}</strong>
                     <p>Total pengajuan</p>
@@ -654,7 +698,7 @@ export default function LaporanKepalaCamat() {
           <section className="kcm-panel">
             <div className="kcm-panelHeader">
               <h2>Tabel Rekapitulasi Layanan</h2>
-              <span className="kcm-panelCount">{filteredSubmissions.length} data ditampilkan</span>
+              <span className="kcm-panelCount">{filteredSubmissionCount} data ditampilkan</span>
             </div>
 
             <div className="kcm-filterBar">
@@ -663,10 +707,13 @@ export default function LaporanKepalaCamat() {
                   <span>Pencarian</span>
                   <div className="kcm-filterInputWrap">
                     <FiSearch aria-hidden="true" />
-                    <input
+                  <input
                       type="search"
                       value={search}
-                      onChange={(event) => setSearch(event.target.value)}
+                      onChange={(event) => {
+                        setSearch(event.target.value)
+                        setCurrentPage(1)
+                      }}
                       placeholder="Nama pemohon, nomor pengajuan, atau jenis layanan"
                     />
                   </div>
@@ -676,7 +723,13 @@ export default function LaporanKepalaCamat() {
                   <span>Status</span>
                   <div className="kcm-filterInputWrap">
                     <FiFilter aria-hidden="true" />
-                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                    <select
+                      value={statusFilter}
+                      onChange={(event) => {
+                        setStatusFilter(event.target.value)
+                        setCurrentPage(1)
+                      }}
+                    >
                       <option value="semua">Semua Status</option>
                       <option value="menunggu">Menunggu Verifikasi</option>
                       <option value="diproses">Diproses</option>
@@ -690,7 +743,13 @@ export default function LaporanKepalaCamat() {
                   <span>Jenis Layanan</span>
                   <div className="kcm-filterInputWrap">
                     <FiBarChart2 aria-hidden="true" />
-                    <select value={layananFilter} onChange={(event) => setLayananFilter(event.target.value)}>
+                    <select
+                      value={layananFilter}
+                      onChange={(event) => {
+                        setLayananFilter(event.target.value)
+                        setCurrentPage(1)
+                      }}
+                    >
                       <option value="semua">Semua Jenis Layanan</option>
                       {layananOptions.map((layanan) => (
                         <option key={layanan} value={layanan}>
@@ -709,7 +768,7 @@ export default function LaporanKepalaCamat() {
                       <select
                         value={periodeFilter}
                         onChange={(event) =>
-                          handlePeriodeFilterChange(event.target.value, setPeriodeFilter, setTanggalFilter)
+                          handlePeriodeFilterChange(event.target.value, setPeriodeFilter, setTanggalFilter, setCurrentPage)
                         }
                       >
                         <option value="semua">Semua Periode</option>
@@ -730,7 +789,10 @@ export default function LaporanKepalaCamat() {
                       <input
                         type="date"
                         value={tanggalFilter}
-                        onChange={(event) => setTanggalFilter(event.target.value)}
+                        onChange={(event) => {
+                          setTanggalFilter(event.target.value)
+                          setCurrentPage(1)
+                        }}
                       />
                     </div>
                   </label>
@@ -741,13 +803,12 @@ export default function LaporanKepalaCamat() {
                 <button type="button" className="ptg-linkBtn" onClick={resetFilters} disabled={!hasActiveFilter}>
                   Reset Filter
                 </button>
-                <button
-                  type="button"
-                  className="kcm-outlineBtn"
-                  onClick={handleDownloadRekap}
-                  disabled={filteredSubmissions.length === 0}
-                >
-                  Unduh Rekap
+                <button type="button" className="kcm-outlineBtn isPdf" onClick={handleDownloadRekap} disabled={filteredSubmissionCount === 0}>
+                  Unduh PDF
+                </button>
+                <button type="button" className="kcm-outlineBtn isExcel" onClick={() => void handleDownloadExcel()} disabled={filteredSubmissionCount === 0}>
+                  <FiDownload aria-hidden="true" />
+                  Unduh Excel
                 </button>
                 <button type="button" className="kcm-retryBtn" onClick={refreshData} disabled={loading}>
                   <FiRefreshCw aria-hidden="true" />
@@ -756,64 +817,88 @@ export default function LaporanKepalaCamat() {
               </div>
             </div>
 
-            <div className="kcm-tableWrap" role="region" aria-label="Tabel rekapitulasi layanan">
+            {filteredSubmissionCount > 0 ? (
+              <div className="kcm-tableMetaBar">
+                <div className="kcm-tableMetaInfo">Menampilkan {pageStart}-{pageEnd} dari {filteredSubmissionCount} pengajuan</div>
+                <label className="kcm-pageSizeField">
+                  <span>Data per halaman</span>
+                  <select
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(Number(event.target.value) || 10)
+                      setCurrentPage(1)
+                    }}
+                  >
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </label>
+              </div>
+            ) : null}
+
+            <div className="kcm-tableWrap kcm-reportWrap" role="region" aria-label="Tabel rekapitulasi layanan">
               <table className="kcm-table kcm-reportTable">
                 <thead>
                   <tr>
                     <th className="kcm-colIndex">No</th>
-                    <th className="kcm-colNomor">Nomor Pengajuan</th>
+                    <th className="kcm-colNomor">Kode Pengajuan</th>
                     <th className="kcm-colPemohon">Nama Pemohon</th>
                     <th className="kcm-colLayanan">Jenis Layanan</th>
                     <th className="kcm-colTanggal">Tanggal Pengajuan</th>
                     <th className="kcm-colStatus">Status</th>
-                    <th className="kcm-colAction">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="ptg-empty">
+                      <td colSpan={6} className="ptg-empty">
                         Memuat data rekapitulasi...
                       </td>
                     </tr>
-                  ) : filteredSubmissions.length === 0 ? (
+                  ) : filteredSubmissionCount === 0 ? (
                     <tr>
-                      <td colSpan={7} className="ptg-empty">
+                      <td colSpan={6} className="ptg-empty">
                         {submissions.length === 0
                           ? error || 'Belum ada data pengajuan.'
                           : 'Tidak ada pengajuan yang sesuai dengan filter saat ini.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredSubmissions.map((row, idx) => {
+                    paginatedSubmissions.map((row, idx) => {
                       const id = row?.nomor_pengajuan || getPengajuanId(row)
                       const status = getDisplayStatus(row)
+                      const rowNumber = pageStart + idx
                       return (
                         <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
-                          <td className="kcm-colIndex">{idx + 1}</td>
-                          <td className="ptg-mono kcm-colNomor">{id || '-'}</td>
-                          <td className="kcm-colPemohon">{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
-                          <td className="kcm-colLayanan">{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
-                          <td className="kcm-colTanggal">
-                            {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
-                          </td>
-                          <td className="kcm-colStatus">
-                            <div className="kcm-statusCell">
-                              <span className={getStatusClass(status)}>{status}</span>
-                            </div>
-                          </td>
-                          <td className="kcm-colAction">
-                            <div className="kcm-actionCell">
+                          <td className="kcm-colIndex" data-label="No">{rowNumber}</td>
+                          <td className="kcm-colNomor" data-label="Kode Pengajuan">
+                            <div className="kcm-codeCell">
+                              <span className="ptg-mono kcm-codeText">{id || '-'}</span>
                               <button
                                 type="button"
-                                className="ptg-btn ptg-btnIcon kcm-eyeBtn"
-                                aria-label="Lihat Detail"
-                                title="Lihat Detail"
+                                className="kcm-eyeBtn kcm-eyeBtn--compact"
+                                aria-label="Lihat Detail Pengajuan"
+                                title="Lihat Detail Pengajuan"
                                 onClick={() => void openDetail(row)}
                               >
                                 <FiEye aria-hidden="true" />
-                                <span className="kcm-eyeBtnLabel">Detail</span>
                               </button>
+                            </div>
+                          </td>
+                          <td className="kcm-colPemohon" data-label="Nama Pemohon">
+                            <span className="kcm-reportCellText">{row?.nama_pemohon || getPengajuanNamaPemohon(row) || '-'}</span>
+                          </td>
+                          <td className="kcm-colLayanan" data-label="Jenis Layanan">
+                            <span className="kcm-reportCellText kcm-reportCellText--clamp2">{row?.jenis_layanan || getPengajuanLayanan(row) || '-'}</span>
+                          </td>
+                          <td className="kcm-colTanggal" data-label="Tanggal Pengajuan">
+                            {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
+                          </td>
+                          <td className="kcm-colStatus" data-label="Status">
+                            <div className="kcm-statusCell">
+                              <span className={getStatusClass(status)}>{status}</span>
                             </div>
                           </td>
                         </tr>
@@ -823,6 +908,48 @@ export default function LaporanKepalaCamat() {
                 </tbody>
               </table>
             </div>
+
+            {filteredSubmissionCount > 0 ? (
+              <div className="kcm-paginationBar" aria-label="Pagination laporan">
+                <button
+                  type="button"
+                  className="kcm-paginationBtn"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={safeCurrentPage <= 1}
+                >
+                  Sebelumnya
+                </button>
+
+                <div className="kcm-paginationPages" role="list" aria-label="Nomor halaman">
+                  {paginationItems.map((item, index) =>
+                    typeof item === 'number' ? (
+                      <button
+                        key={`page-${item}`}
+                        type="button"
+                        className={`kcm-paginationPage ${item === safeCurrentPage ? 'is-active' : ''}`}
+                        onClick={() => setCurrentPage(item)}
+                        aria-current={item === safeCurrentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span key={`ellipsis-${index}`} className="kcm-paginationEllipsis" aria-hidden="true">
+                        ...
+                      </span>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="kcm-paginationBtn"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                >
+                  Berikutnya
+                </button>
+              </div>
+            ) : null}
           </section>
         </div>
       </main>
@@ -840,3 +967,4 @@ export default function LaporanKepalaCamat() {
     </div>
   )
 }
+

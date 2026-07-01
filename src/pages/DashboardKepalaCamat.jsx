@@ -439,18 +439,17 @@ export default function DashboardKepalaCamat() {
                 <table className="kcm-table kcm-latestTable">
                   <thead>
                     <tr>
-                      <th className="kcm-colNomor">No. Pengajuan</th>
+                      <th className="kcm-colNomor">Kode Pengajuan</th>
                       <th className="kcm-colLayanan">Layanan</th>
                       <th className="kcm-colPemohon">Pemohon</th>
                       <th className="kcm-colTanggal">Tanggal</th>
                       <th className="kcm-colStatus">Status</th>
-                      <th className="kcm-colAction">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {latestSubmissions.length === 0 ? (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={5}>
                           <EmptyState loading={loading} onRetry={refreshData} compact error={error} />
                         </td>
                       </tr>
@@ -460,29 +459,32 @@ export default function DashboardKepalaCamat() {
                         const status = getDisplayStatus(row)
                         return (
                           <tr key={`${row.__endpoint || 'pengajuan'}-${id || idx}`}>
-                            <td className="ptg-mono kcm-colNomor">{id || '-'}</td>
-                            <td className="kcm-colLayanan">{row?.jenis_layanan || getPengajuanLayanan(row)}</td>
-                            <td className="kcm-colPemohon">{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</td>
-                            <td className="kcm-colTanggal">
-                              {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
-                            </td>
-                            <td className="kcm-colStatus">
-                              <div className="kcm-statusCell">
-                                <span className={getStatusClass(status)}>{status}</span>
-                              </div>
-                            </td>
-                            <td className="kcm-colAction">
-                              <div className="kcm-actionCell">
+                            <td className="kcm-colNomor" data-label="Kode Pengajuan">
+                              <div className="kcm-codeCell">
+                                <span className="ptg-mono kcm-codeText">{id || '-'}</span>
                                 <button
                                   type="button"
-                                  className="ptg-btn ptg-btnIcon kcm-eyeBtn"
-                                  aria-label="Lihat Detail"
-                                  title="Lihat Detail"
+                                  className="kcm-eyeBtn kcm-eyeBtn--compact"
+                                  aria-label="Lihat Detail Pengajuan"
+                                  title="Lihat Detail Pengajuan"
                                   onClick={() => void openDetail(row)}
                                 >
                                   <FiEye aria-hidden="true" />
-                                  <span className="kcm-eyeBtnLabel">Detail</span>
                                 </button>
+                              </div>
+                            </td>
+                            <td className="kcm-colLayanan" data-label="Layanan">
+                              <span className="kcm-latestClamp">{row?.jenis_layanan || getPengajuanLayanan(row)}</span>
+                            </td>
+                            <td className="kcm-colPemohon" data-label="Pemohon">
+                              <span className="kcm-latestClamp">{row?.nama_pemohon || getPengajuanNamaPemohon(row)}</span>
+                            </td>
+                            <td className="kcm-colTanggal" data-label="Tanggal">
+                              {formatTanggalPendekID(row?.tanggal_pengajuan || getPengajuanCreatedAt(row))}
+                            </td>
+                            <td className="kcm-colStatus" data-label="Status">
+                              <div className="kcm-statusCell">
+                                <span className={getStatusClass(status)}>{status}</span>
                               </div>
                             </td>
                           </tr>
