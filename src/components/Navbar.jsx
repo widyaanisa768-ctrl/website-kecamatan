@@ -176,7 +176,9 @@ export default function Navbar() {
     <header className="rk-nav bg-white shadow-sm border-b" role="banner">
       <div className="rk-container rk-navInner">
         <Link to={dashboardPath} className="rk-brand" aria-label="Kecamatan Rantau Kopar" onClick={handleNavLinkClick}>
-          <img src="/images/logo-rohil.png" alt="Logo Rohil" className="rk-logo" />
+          <span className="rk-logoShell" aria-hidden="true">
+            <img src="/images/logo-rohil.png" alt="Logo Rohil" className="rk-logo" />
+          </span>
           <span className="rk-brandText">
             <span className="rk-brandLine1">Kecamatan Rantau Kopar</span>
             <span className="rk-brandLine2">Kabupaten Rokan Hilir</span>

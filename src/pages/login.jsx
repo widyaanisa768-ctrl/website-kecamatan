@@ -4,6 +4,7 @@ import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff, FiLock, FiShield, FiUser,
 import { setAuth } from '../lib/rkLocal'
 import { getBackendErrors, validateLoginForm } from '../lib/formValidation'
 import { login } from '../services/authService'
+import { normalizeProfileUser } from '../services/profileService'
 import './Auth.css'
 
 function normalizeRole(role) {
@@ -22,14 +23,13 @@ function buildBackendAuthUser(user, usernameInput, role) {
   const source = user && typeof user === 'object' ? user : {}
   const username = source.username || source.user_name || usernameInput
   const name = source.name || source.nama || source.nama_lengkap || username
-
-  return {
+  return normalizeProfileUser({
     ...source,
     role,
     username,
     name,
     nama: source.nama || name,
-  }
+  })
 }
 
 function saveBackendAuth(payload, authUser) {

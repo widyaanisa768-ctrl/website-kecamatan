@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FiArrowLeft, FiLoader } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import PetugasAvatar from '../components/PetugasAvatar'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { getAuth } from '../lib/rkLocal'
 import {
@@ -142,12 +144,6 @@ function getStatusClass(status) {
   if (kind === 'selesai') return 'ptg-badge ptg-badge--done'
   if (kind === 'ditolak') return 'ptg-badge ptg-badge--reject'
   return 'ptg-badge'
-}
-
-function getInitials(name) {
-  const parts = String(name || 'Petugas').trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
 }
 
 function getLampiranExt(filename) {
@@ -340,58 +336,92 @@ export default function DetailPengajuanPetugas() {
   const [saving, setSaving] = useState(false)
   const [savingSurat, setSavingSurat] = useState(false)
   const [suratForm, setSuratForm] = useState(() => readSuratHasil(initialSubmission))
+  const [dokumenPersyaratan, setDokumenPersyaratan] = useState([])
+  const [documentsReady, setDocumentsReady] = useState(false)
   const [toast, setToast] = useState(null)
-  const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
+  const detailRequestRef = useRef(0)
+  const hasSubmission = Boolean(submission)
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [submissionId])
 
   useEffect(() => {
-    let alive = true
-    const refresh = async () => {
-      setLoading(true)
-      try {
-        const res = await getSemuaPengajuanPetugas()
-        if (!alive) return
-        if (!res?.success) {
-          setError(res?.message || 'Gagal memuat detail pengajuan.')
-          setLoading(false)
-          return
-        }
+    setDokumenPersyaratan([])
+    setDocumentsReady(false)
+  }, [submissionId, stateEndpoint])
 
-        const items = res.items || []
-        const found =
-          items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
-          items.find((item) => getPengajuanId(item) === String(submissionId)) ||
-          initialSubmission
+  const hydrateDocuments = useCallback((item) => {
+    const normalized = normalizePengajuanDokumenPersyaratan(item)
+    setDokumenPersyaratan(normalized)
+    setDocumentsReady(true)
+    return normalized
+  }, [])
 
-        if (!found) {
-          setSubmission(null)
-          setError('Detail pengajuan tidak ditemukan.')
-          setLoading(false)
-          return
-        }
+  const refreshDetail = useCallback(async () => {
+    const requestId = detailRequestRef.current + 1
+    detailRequestRef.current = requestId
+    let nextSubmission = null
+    const isMatchingInitialSubmission =
+      initialSubmission && getPengajuanId(initialSubmission) === String(submissionId) && (!stateEndpoint || initialSubmission?.__endpoint === stateEndpoint)
+    const fallbackSubmission = isMatchingInitialSubmission ? initialSubmission : null
 
-        const detailRes = submissionId ? await getDetailPengajuan(submissionId, found) : null
-        if (!alive) return
-        const finalSubmission = detailRes?.success ? detailRes.data || found : found
+    setLoading(true)
+    setError('')
+    setSubmission(fallbackSubmission)
 
-        setSubmission(finalSubmission)
-        setStatusBaru(normalizePengajuanStatus(finalSubmission))
-        setCatatanPetugas(getPengajuanCatatanPetugas(finalSubmission))
-        setSuratForm(readSuratHasil(finalSubmission))
-        setError('')
-      } finally {
-        if (alive) setLoading(false)
+    try {
+      const res = await getSemuaPengajuanPetugas()
+      if (detailRequestRef.current !== requestId) return
+
+      if (!res?.success) {
+        if (!fallbackSubmission) setSubmission(null)
+        setError(res?.message || 'Gagal memuat detail pengajuan.')
+        return
+      }
+
+      const items = res.items || []
+      const found =
+        items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
+        items.find((item) => getPengajuanId(item) === String(submissionId)) ||
+        fallbackSubmission
+
+      if (!found) {
+        if (!fallbackSubmission) setSubmission(null)
+        setError('Detail pengajuan tidak ditemukan.')
+        return
+      }
+
+      const detailRes = submissionId ? await getDetailPengajuan(submissionId, found) : null
+      if (detailRequestRef.current !== requestId) return
+
+      nextSubmission = detailRes?.success ? detailRes.data || found : found
+      hydrateDocuments(nextSubmission)
+
+      setSubmission(nextSubmission)
+      setStatusBaru(normalizePengajuanStatus(nextSubmission))
+      setCatatanPetugas(getPengajuanCatatanPetugas(nextSubmission))
+      setSuratForm(readSuratHasil(nextSubmission))
+      setError('')
+    } catch (err) {
+      if (detailRequestRef.current !== requestId) return
+      if (!fallbackSubmission) {
+        setSubmission(nextSubmission)
+      }
+      setError(err?.message || 'Gagal memuat detail pengajuan.')
+    } finally {
+      if (detailRequestRef.current === requestId) {
+        setLoading(false)
       }
     }
+  }, [hydrateDocuments, initialSubmission, stateEndpoint, submissionId])
 
-    refresh()
+  useEffect(() => {
+    void refreshDetail()
     return () => {
-      alive = false
+      detailRequestRef.current += 1
     }
-  }, [initialSubmission, stateEndpoint, submissionId])
+  }, [refreshDetail])
 
   useEffect(() => {
     const syncAuth = () => setAuthState(getAuth())
@@ -413,9 +443,9 @@ export default function DetailPengajuanPetugas() {
 
   const pengajuanId = getPengajuanId(submission) || submissionId || ''
   const endpoint = submission?.__endpoint || stateEndpoint || ''
-  const dokumenPersyaratan = useMemo(() => normalizePengajuanDokumenPersyaratan(submission), [submission])
   const suratHasilTersedia = hasUploadedSuratHasil(submission, suratForm)
   const layananPengajuan = getPengajuanLayanan(submission)
+  const documentsLoading = !documentsReady && loading && !submission
   const dataFormEntries = useMemo(() => {
     if (!submission || typeof submission !== 'object') return []
     const source = getDetailFormSource(submission)
@@ -484,6 +514,7 @@ export default function DetailPengajuanPetugas() {
 
     setSaving(false)
     setStatusBaru(normalized)
+    hydrateDocuments(nextSubmission)
     setSubmission(nextSubmission)
     showToast(successMessage, 'success')
   }
@@ -584,6 +615,7 @@ export default function DetailPengajuanPetugas() {
     }
 
     setSubmission(nextSubmission)
+    hydrateDocuments(nextSubmission)
     setSuratForm(readSuratHasil(nextSubmission))
     showToast('Surat hasil berhasil disimpan.', 'success')
   }
@@ -609,8 +641,8 @@ export default function DetailPengajuanPetugas() {
               <p>{formatTanggalID(today)}</p>
             </div>
 
-            <div className="ptg-topbarSearch" aria-label="Ringkasan pengajuan">
-              <div className="ptg-search" style={{ background: 'rgba(255,255,255,.88)' }}>
+            <div className="ptg-detailHeaderMeta" aria-label="Ringkasan pengajuan">
+              <div className="ptg-detailNumberPill">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
@@ -619,8 +651,12 @@ export default function DetailPengajuanPetugas() {
                   />
                   <path d="M8 8h8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                <input value={pengajuanId ? `Nomor: ${pengajuanId}` : 'Nomor: -'} readOnly aria-label="Nomor pengajuan" />
+                <span>Nomor: <strong className="ptg-mono">{pengajuanId || '-'}</strong></span>
               </div>
+              <button type="button" className="ptg-btn ptg-backBtn" onClick={() => navigate('/petugas/pengajuan')}>
+                <FiArrowLeft aria-hidden="true" />
+                Kembali
+              </button>
             </div>
 
             <div className="ptg-topbarRight" aria-label="Profil petugas">
@@ -629,40 +665,41 @@ export default function DetailPengajuanPetugas() {
                   <strong>{auth?.name || auth?.nama || 'Petugas'}</strong>
                   <span>{auth?.jabatan || 'Petugas Pelayanan Terpadu'}</span>
                 </div>
-                <div className="ptg-avatar" title={auth?.unit || 'Kantor Camat Rantau Kopar'} aria-hidden="true">
-                  {avatar ? <img src={avatar} alt="" /> : getInitials(auth?.name || auth?.nama)}
-                </div>
+                <PetugasAvatar
+                  key={auth?.avatar || auth?.foto || auth?.photo || auth?.avatar_url || auth?.foto_profil || auth?.profile_photo || auth?.username || auth?.name || 'fallback'}
+                  user={auth}
+                  title={auth?.unit || 'Kantor Camat Rantau Kopar'}
+                />
               </div>
             </div>
           </header>
 
           <div className="ptg-content">
             <div className="ptg-body">
-              <section className="ptg-card ptg-section ptg-detailIntro" aria-label="Header detail pengajuan">
-                <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                  <h2>Ringkasan</h2>
-                  <div className="ptg-actionsRow">
-                    <button type="button" className="ptg-btn" onClick={() => navigate('/petugas/pengajuan')}>
-                      Kembali
-                    </button>
-                  </div>
-                </div>
-                <div className="ptg-divider" />
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-                  <div className="ptg-subtle">
-                    Nomor: <strong className="ptg-mono">{pengajuanId || '-'}</strong>
-                  </div>
-                  <div>{statusBaru ? <span className={getStatusClass(statusBaru)}>{statusBaru}</span> : null}</div>
-                </div>
-              </section>
-
-              {loading || error ? (
+              {loading && !hasSubmission ? (
                 <section className="ptg-card ptg-section" aria-label="Status detail pengajuan">
-                  <div className="ptg-empty">{loading ? 'Memuat detail pengajuan...' : error}</div>
+                  <div className="ptg-empty">Memuat detail pengajuan...</div>
                 </section>
               ) : null}
 
-              <div className="ptg-gridTwo">
+              {!loading && error && !hasSubmission ? (
+                <section className="ptg-card ptg-section" aria-label="Status detail pengajuan">
+                  <div className="ptg-empty" style={{ display: 'grid', gap: 12 }}>
+                    <div>{error}</div>
+                    <div className="ptg-actionRow">
+                      <button type="button" className="ptg-btn" onClick={() => navigate('/petugas/pengajuan')}>
+                        Kembali
+                      </button>
+                      <button type="button" className="ptg-btn ptg-btnPrimary" onClick={() => void refreshDetail()}>
+                        Muat Ulang
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
+              {hasSubmission ? (
+                <div className="ptg-gridTwo">
                 <div className="ptg-stack">
                   <section className="ptg-card ptg-section" aria-label="Data formulir pemohon">
                     <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
@@ -718,40 +755,59 @@ export default function DetailPengajuanPetugas() {
                     </div>
                   </section>
 
-                  <section className="ptg-card ptg-section" aria-label="Dokumen persyaratan dari masyarakat">
-                    <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
-                      <h2>Dokumen Persyaratan dari Masyarakat</h2>
-                      <div className="ptg-subtle">Dokumen dari masyarakat sesuai jenis layanan</div>
-                    </div>
-                    <div className="ptg-divider" />
-                    <div style={{ marginTop: 12 }}>
-                      <div className="ptg-attachments">
-                        {dokumenPersyaratan.length === 0 ? (
-                          <div className="ptg-hint">Dokumen persyaratan belum tersedia untuk layanan ini.</div>
-                        ) : (
-                          dokumenPersyaratan.map((file) => (
-                            <div key={file.id} className="ptg-file">
-                              <div className="ptg-fileIcon" aria-hidden="true">
-                                {getLampiranExt(file.filename || file.url)}
-                              </div>
-                              <div className="ptg-fileMeta">
-                                <strong>{file.label}</strong>
-                                <span title={file.filename}>{file.filename}</span>
-                                <em className={file.uploaded ? 'isUploaded' : 'isPending'}>
-                                  {file.uploaded ? 'Sudah diunggah' : 'Belum diunggah'}
-                                </em>
-                              </div>
-                              {file.uploaded && file.url ? (
-                                <a className="ptg-btn ptg-fileAction" href={file.url} target="_blank" rel="noreferrer">
-                                  Lihat Dokumen
-                                </a>
-                              ) : null}
-                            </div>
-                          ))
-                        )}
+                  {documentsReady ? (
+                    <section className="ptg-card ptg-section" aria-label="Dokumen persyaratan dari masyarakat">
+                      <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                        <h2>Dokumen Persyaratan dari Masyarakat</h2>
+                        <div className="ptg-subtle">Dokumen dari masyarakat sesuai jenis layanan</div>
                       </div>
-                    </div>
-                  </section>
+                      <div className="ptg-divider" />
+                      <div style={{ marginTop: 12 }}>
+                        <div className="ptg-attachments">
+                          {dokumenPersyaratan.length === 0 ? (
+                            <div className="ptg-hint">Dokumen persyaratan belum tersedia untuk layanan ini.</div>
+                          ) : (
+                            dokumenPersyaratan.map((file) => (
+                              <div key={file.id} className="ptg-file">
+                                <div className="ptg-fileIcon" aria-hidden="true">
+                                  {getLampiranExt(file.filename || file.url)}
+                                </div>
+                                <div className="ptg-fileMeta">
+                                  <strong>{file.label}</strong>
+                                  <span title={file.filename}>{file.filename}</span>
+                                  <em className={file.uploaded ? 'isUploaded' : 'isPending'}>
+                                    {file.uploaded ? 'Sudah diunggah' : 'Belum diunggah'}
+                                  </em>
+                                </div>
+                                {file.uploaded && file.url ? (
+                                  <a className="ptg-btn ptg-fileAction" href={file.url} target="_blank" rel="noreferrer">
+                                    Lihat Dokumen
+                                  </a>
+                                ) : null}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  ) : documentsLoading ? (
+                    <section className="ptg-card ptg-section" aria-label="Dokumen persyaratan dari masyarakat">
+                      <div className="ptg-sectionHeader" style={{ marginBottom: 0 }}>
+                        <h2>Dokumen Persyaratan dari Masyarakat</h2>
+                        <div className="ptg-subtle">Dokumen dari masyarakat sesuai jenis layanan</div>
+                      </div>
+                      <div className="ptg-divider" />
+                      <div style={{ marginTop: 12 }}>
+                        <div className="ptg-docLoadingPanel" role="status" aria-live="polite">
+                          <FiLoader className="ptg-docLoadingSpinner ptg-spin" aria-hidden="true" />
+                          <div>
+                            <strong>Memuat dokumen persyaratan...</strong>
+                            <p>Menyiapkan daftar dokumen dari backend.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
                 </div>
 
                 <aside className="ptg-stack" aria-label="Panel aksi petugas">
@@ -880,7 +936,8 @@ export default function DetailPengajuanPetugas() {
                     </div>
                   </section>
                 </aside>
-              </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </main>

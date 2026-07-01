@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiBell } from 'react-icons/fi'
+import PetugasAvatar from '../components/PetugasAvatar'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { getAuth } from '../lib/rkLocal'
 import {
@@ -52,12 +53,6 @@ function getStatusClass(status) {
   return 'ptg-badge'
 }
 
-function getInitials(name) {
-  const parts = String(name || 'Petugas').trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
-}
-
 function toTime(value) {
   const t = new Date(value || 0).getTime()
   return Number.isFinite(t) ? t : 0
@@ -71,14 +66,12 @@ function DashboardPetugas() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [auth, setAuthState] = useState(() => getAuth())
-  const avatar = auth?.avatar || auth?.foto || auth?.photo || ''
 
   useEffect(() => {
     let alive = true
     const refresh = async () => {
       setLoading(true)
       const res = await getSemuaPengajuanPetugas()
-      console.log('[PETUGAS DATA]', res.items?.length, res.items)
       if (!alive) return
       if (res?.success) {
         setSubmissions(res.items || [])
@@ -164,9 +157,11 @@ function DashboardPetugas() {
                   <strong>{auth?.name || auth?.nama || 'Petugas'}</strong>
                   <span>{auth?.jabatan || 'Petugas Pelayanan Terpadu'}</span>
                 </div>
-                <div className="ptg-avatar" title={auth?.unit || 'Kantor Camat Rantau Kopar'} aria-hidden="true">
-                  {avatar ? <img src={avatar} alt="" /> : getInitials(auth?.name || auth?.nama)}
-                </div>
+                <PetugasAvatar
+                  key={auth?.avatar || auth?.foto || auth?.photo || auth?.avatar_url || auth?.foto_profil || auth?.profile_photo || auth?.username || auth?.name || 'fallback'}
+                  user={auth}
+                  title={auth?.unit || 'Kantor Camat Rantau Kopar'}
+                />
               </div>
             </div>
           </header>
@@ -174,7 +169,7 @@ function DashboardPetugas() {
           <div className="ptg-content">
             <div className="ptg-body">
               <div className="ptg-rowStats" aria-label="Statistik pengajuan">
-                <div className="ptg-card ptg-statCard">
+                <div className="ptg-card ptg-statCard is-total">
                   <div className="ptg-statIcon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path
@@ -191,7 +186,7 @@ function DashboardPetugas() {
                   </div>
                 </div>
 
-                <div className="ptg-card ptg-statCard">
+                <div className="ptg-card ptg-statCard is-waiting">
                   <div className="ptg-statIcon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -204,7 +199,7 @@ function DashboardPetugas() {
                   </div>
                 </div>
 
-                <div className="ptg-card ptg-statCard">
+                <div className="ptg-card ptg-statCard is-process">
                   <div className="ptg-statIcon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path d="M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -217,7 +212,7 @@ function DashboardPetugas() {
                   </div>
                 </div>
 
-                <div className="ptg-card ptg-statCard">
+                <div className="ptg-card ptg-statCard is-done">
                   <div className="ptg-statIcon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path
@@ -235,7 +230,7 @@ function DashboardPetugas() {
                   </div>
                 </div>
 
-                <div className="ptg-card ptg-statCard">
+                <div className="ptg-card ptg-statCard is-reject">
                   <div className="ptg-statIcon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

@@ -152,10 +152,19 @@
   color: var(--ptg-text);
 }
 
+.ptg-profilePetugasAvatarActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .ptg-profilePetugasAvatarBtn {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-height: 42px;
   padding: 10px 14px;
@@ -166,6 +175,28 @@
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.ptg-profilePetugasAvatarBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(47, 107, 255, 0.14);
+}
+
+.ptg-profilePetugasAvatarBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ptg-profilePetugasAvatarBtn.isDanger {
+  border-color: rgba(244, 63, 94, 0.26);
+  background: rgba(255, 241, 242, 0.92);
+  color: #be123c;
 }
 
 .ptg-profilePetugasAvatarBtn input {
@@ -187,6 +218,24 @@
   color: #0b3a7a;
   font-size: 13px;
   font-weight: 850;
+}
+
+.ptg-profilePetugasNotice.isWarning {
+  border-color: rgba(244, 63, 94, 0.24);
+  background: rgba(255, 241, 242, 0.94);
+  color: #9f1239;
+}
+
+.ptg-profilePetugasNotice.isSuccess {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(236, 253, 245, 0.94);
+  color: #047857;
+}
+
+.ptg-profilePetugasNotice.isDanger {
+  border-color: rgba(244, 63, 94, 0.24);
+  background: rgba(255, 241, 242, 0.94);
+  color: #9f1239;
 }
 
 .ptg-profilePetugasFields {
@@ -267,6 +316,10 @@
 @media (max-width: 640px) {
   .ptg-profilePetugasFormHead {
     display: grid;
+  }
+
+  .ptg-profilePetugasAvatarActions {
+    justify-content: stretch;
   }
 
   .ptg-profilePetugasAvatarBtn,

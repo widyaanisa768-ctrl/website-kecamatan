@@ -180,6 +180,24 @@ export function normalizeProfileUser(value) {
   }
 }
 
+export function getAvatarUrl(user) {
+  if (!user || typeof user !== 'object') return ''
+
+  return normalizeProfileAvatar(
+    user.avatar ||
+      user.avatar_url ||
+      user.avatarUrl ||
+      user.foto_profil ||
+      user.fotoProfil ||
+      user.profile_photo ||
+      user.profilePhoto ||
+      user.photo ||
+      user.foto ||
+      user.image ||
+      ''
+  )
+}
+
 export function extractProfileFromResponse(payload, fallback = {}) {
   const raw = unwrapProfile(payload)
   return normalizeProfileUser({ ...(fallback || {}), ...(raw || {}) })

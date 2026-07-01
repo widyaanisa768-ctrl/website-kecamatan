@@ -243,6 +243,11 @@ export function getPengajuanId(item) {
   return id ? String(id) : ''
 }
 
+export function getPengajuanNomor(item) {
+  const nomor = item?.nomor_pengajuan || item?.nomorPengajuan || item?.nomor || ''
+  return nomor ? String(nomor) : ''
+}
+
 function normalizeText(value) {
   return String(value || '')
     .trim()
