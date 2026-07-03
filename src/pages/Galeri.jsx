@@ -6,128 +6,108 @@ import './Galeri.css'
 
 const GALLERY_ITEMS = [
   {
-    title: 'Penyerahan Bantuan Sembako',
-    desc: 'Kegiatan penyaluran bantuan kepada warga yang membutuhkan.',
-    detail:
-      'Dokumentasi penyerahan bantuan sembako kepada warga. Kegiatan ini bertujuan memastikan bantuan tepat sasaran serta mendorong koordinasi yang rapi antara perangkat kecamatan dan unsur masyarakat.',
-    date: '18 April 2026',
+    title: 'Rapat Koordinasi Kecamatan',
+    desc: 'Kegiatan koordinasi bersama perangkat dan unsur terkait di lingkungan Kecamatan Rantau Kopar.',
+    detail: 'Dokumentasi kegiatan rapat koordinasi sebagai bagian dari komunikasi dan sinergi pelayanan di Kecamatan Rantau Kopar.',
+    date: 'Tanggal kegiatan dapat diperbarui',
     location: 'Kantor Camat Rantau Kopar',
-    img: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=80',
+    img: '/images/galeri/01-Rapat-Koordinasi.jpg',
   },
   {
-    title: 'Musyawarah Warga',
-    desc: 'Dialog dan penyampaian aspirasi untuk solusi bersama.',
-    detail:
-      'Dokumentasi musyawarah bersama warga dalam rangka menyerap aspirasi dan memperkuat kolaborasi. Hasil musyawarah menjadi bahan koordinasi tindak lanjut di tingkat kecamatan.',
-    date: '09 April 2026',
-    location: 'Aula Kecamatan Rantau Kopar',
-    img: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
+    title: 'Foto Bersama Aparatur Kecamatan',
+    desc: 'Dokumentasi kebersamaan aparatur dan masyarakat di lingkungan Kantor Camat Rantau Kopar.',
+    detail: 'Dokumentasi foto bersama dalam kegiatan resmi yang melibatkan aparatur dan unsur masyarakat Kecamatan Rantau Kopar.',
+    date: 'Tanggal kegiatan dapat diperbarui',
+    location: 'Kantor Camat Rantau Kopar',
+    img: '/images/galeri/02-Foto-Bersama-Kantor.jpg',
   },
   {
-    title: 'Kegiatan Pelayanan Administrasi',
-    desc: 'Pendampingan pengurusan dokumen di loket pelayanan.',
-    detail:
-      'Dokumentasi pelayanan administrasi di loket. Petugas membantu proses pengajuan, pemeriksaan berkas, serta memberikan informasi persyaratan agar warga mendapatkan layanan yang jelas dan tertib.',
-    date: '27 Maret 2026',
-    location: 'Loket Pelayanan Kecamatan',
-    img: 'https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    title: 'Rapat Koordinasi',
-    desc: 'Koordinasi internal untuk peningkatan mutu pelayanan.',
-    detail:
-      'Dokumentasi rapat koordinasi internal untuk memastikan standar pelayanan berjalan konsisten. Agenda meliputi evaluasi, pembagian tugas, dan peningkatan kualitas layanan terpadu.',
-    date: '20 Maret 2026',
-    location: 'Ruang Rapat Kecamatan',
-    img: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    title: 'Kunjungan Lapangan',
-    desc: 'Monitoring kegiatan dan kondisi wilayah secara berkala.',
-    detail:
-      'Dokumentasi kunjungan lapangan untuk monitoring kegiatan dan kondisi wilayah. Kegiatan ini dilakukan secara berkala sebagai bagian dari pelayanan dan koordinasi lintas sektor.',
-    date: '12 Maret 2026',
+    title: 'Kunjungan dan Silaturahmi',
+    desc: 'Kegiatan silaturahmi bersama unsur masyarakat dan perangkat wilayah.',
+    detail: 'Dokumentasi kunjungan dan silaturahmi sebagai upaya memperkuat hubungan antara pemerintah kecamatan dan masyarakat.',
+    date: 'Tanggal kegiatan dapat diperbarui',
     location: 'Wilayah Kecamatan Rantau Kopar',
-    img: 'https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?auto=format&fit=crop&w=1200&q=80',
+    img: '/images/galeri/03-Kunjungan-Silaturahmi.jpg',
   },
   {
-    title: 'Kegiatan Sosial Kecamatan',
-    desc: 'Kolaborasi kecamatan dan masyarakat dalam kegiatan sosial.',
-    detail:
-      'Dokumentasi kegiatan sosial bersama masyarakat. Program sosial ini menjadi salah satu wujud kepedulian serta penguatan sinergi antara pemerintah kecamatan dan warga.',
-    date: '05 Maret 2026',
-    location: 'Lingkungan Masyarakat',
-    img: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    title: 'Dokumentasi Kantor',
-    desc: 'Lingkungan kantor dan sarana pendukung pelayanan publik.',
-    detail:
-      'Dokumentasi lingkungan kantor, sarana, dan prasarana pendukung pelayanan publik. Informasi ini ditampilkan untuk memberikan gambaran fasilitas dan kesiapan layanan di kantor kecamatan.',
-    date: '25 Februari 2026',
+    title: 'Pelayanan Administrasi Digital',
+    desc: 'Pendampingan penggunaan layanan administrasi berbasis digital.',
+    detail: 'Dokumentasi aktivitas pelayanan dan pendampingan masyarakat dalam penggunaan sistem administrasi digital.',
+    date: 'Tanggal kegiatan dapat diperbarui',
     location: 'Kantor Camat Rantau Kopar',
-    img: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
+    img: '/images/galeri/04-Pelayanan-Digital.jpg',
   },
   {
-    title: 'Pelayanan Masyarakat',
-    desc: 'Pendampingan dan informasi layanan untuk warga.',
-    detail:
-      'Dokumentasi pendampingan dan penyampaian informasi layanan kepada warga. Petugas memberikan arahan terkait alur pengajuan, kelengkapan berkas, serta estimasi waktu layanan.',
-    date: '19 Februari 2026',
-    location: 'Ruang Pelayanan',
-    img: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+    title: 'Pelantikan Pengurus BKMT',
+    desc: 'Kegiatan pelantikan pengurus organisasi masyarakat di Kecamatan Rantau Kopar.',
+    detail: 'Dokumentasi kegiatan pelantikan dan pengukuhan pengurus organisasi kemasyarakatan di wilayah Kecamatan Rantau Kopar.',
+    date: 'Tanggal kegiatan dapat diperbarui',
+    location: 'Aula Kecamatan Rantau Kopar',
+    img: '/images/galeri/05-Pelantikan-BKMT.jpg',
   },
   {
-    title: 'Kegiatan Resmi Lainnya',
-    desc: 'Agenda resmi dan kegiatan lintas sektor di wilayah kecamatan.',
-    detail:
-      'Dokumentasi agenda resmi dan kegiatan lintas sektor. Kegiatan dilakukan untuk memperkuat koordinasi, pelaksanaan program pemerintah, serta sinergi dengan pihak terkait.',
-    date: '11 Februari 2026',
+    title: 'Rapat Bersama Masyarakat',
+    desc: 'Kegiatan rapat dan penyampaian informasi kepada masyarakat.',
+    detail: 'Dokumentasi rapat bersama masyarakat sebagai ruang komunikasi, penyampaian informasi, dan koordinasi program.',
+    date: 'Tanggal kegiatan dapat diperbarui',
+    location: 'Aula Kecamatan Rantau Kopar',
+    img: '/images/galeri/06-Rapat-Masyarakat.jpg',
+  },
+  {
+    title: 'Penyerahan Bantuan Sosial',
+    desc: 'Kegiatan penyaluran bantuan kepada masyarakat di wilayah Kecamatan Rantau Kopar.',
+    detail: 'Dokumentasi kegiatan sosial dan penyerahan bantuan sebagai bentuk kepedulian kepada masyarakat.',
+    date: 'Tanggal kegiatan dapat diperbarui',
     location: 'Kecamatan Rantau Kopar',
-    img: 'https://images.unsplash.com/photo-1562577309-2592ab84b1bc?auto=format&fit=crop&w=1200&q=80',
+    img: '/images/galeri/07-Penyerahan-Bantuan.jpg',
+  },
+  {
+    title: 'Apel Kesiapsiagaan Anti Narkoba',
+    desc: 'Kegiatan bersama dalam mendukung pencegahan penyalahgunaan narkoba.',
+    detail: 'Dokumentasi kegiatan apel dan koordinasi lintas unsur dalam mendukung program pencegahan penyalahgunaan narkoba.',
+    date: 'Tanggal kegiatan dapat diperbarui',
+    location: 'Kabupaten Rokan Hilir',
+    img: '/images/galeri/08-Apel-Anti-Narkoba.jpg',
+  },
+  {
+    title: 'Bakti Sosial IBI',
+    desc: 'Kegiatan bakti sosial dan pelayanan kesehatan masyarakat.',
+    detail: 'Dokumentasi kegiatan bakti sosial bersama tenaga kesehatan dan unsur masyarakat di wilayah Rantau Kopar.',
+    date: 'Tanggal kegiatan dapat diperbarui',
+    location: 'Kecamatan Rantau Kopar',
+    img: '/images/galeri/09-Baksos-IBI.jpg',
+  },
+  {
+    title: 'Panen Raya Jagung Serentak',
+    desc: 'Kegiatan panen raya jagung dalam mendukung program ketahanan pangan.',
+    detail: 'Dokumentasi Panen Raya Jagung Serentak Ketahanan Pangan di Kepenghuluan Bagan Cempedak, Kecamatan Rantau Kopar.',
+    date: '07 Maret 2026',
+    location: 'Kepenghuluan Bagan Cempedak',
+    img: '/images/galeri/10-Panen-Raya-Jagung.jpg',
   },
 ]
-
-const ID_MONTHS = {
-  januari: 0,
-  februari: 1,
-  maret: 2,
-  april: 3,
-  mei: 4,
-  juni: 5,
-  juli: 6,
-  agustus: 7,
-  september: 8,
-  oktober: 9,
-  november: 10,
-  desember: 11,
-}
-
-function getGalleryTime(item) {
-  const rawDate = item?.date || item?.tanggal || item?.created_at || item?.createdAt || ''
-  if (!rawDate) return 0
-
-  const parsed = new Date(rawDate).getTime()
-  if (Number.isFinite(parsed)) return parsed
-
-  const match = String(rawDate)
-    .trim()
-    .toLowerCase()
-    .match(/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/)
-  if (!match) return 0
-
-  const [, day, monthName, year] = match
-  const month = ID_MONTHS[monthName]
-  if (month === undefined) return 0
-  return new Date(Number(year), month, Number(day)).getTime()
-}
 
 export default function Galeri() {
   const [selected, setSelected] = useState(null)
 
-  const heroThumbs = useMemo(() => GALLERY_ITEMS.slice(0, 4), [])
-  const limitedGalleryItems = useMemo(
-    () => [...GALLERY_ITEMS].sort((a, b) => getGalleryTime(b) - getGalleryTime(a)).slice(0, 6),
+  const heroThumbs = useMemo(
+    () => [
+      GALLERY_ITEMS[0],
+      GALLERY_ITEMS[1],
+      GALLERY_ITEMS[3],
+      GALLERY_ITEMS[4],
+    ],
+    []
+  )
+  const galleryItems = useMemo(
+    () => [
+      GALLERY_ITEMS[2],
+      GALLERY_ITEMS[5],
+      GALLERY_ITEMS[6],
+      GALLERY_ITEMS[7],
+      GALLERY_ITEMS[8],
+      GALLERY_ITEMS[9],
+    ],
     []
   )
 
@@ -167,7 +147,7 @@ export default function Galeri() {
                 <div className="rk-galeriCollageGrid">
                   {heroThumbs.map((item) => (
                     <div key={item.title} className="rk-galeriCollageItem">
-                      <img src={item.img} alt="" loading="lazy" />
+                      <img src={item.img} alt={item.title} loading="lazy" />
                     </div>
                   ))}
                 </div>
@@ -180,10 +160,10 @@ export default function Galeri() {
         <section className="rk-pageSection" aria-label="Grid galeri">
           <div className="rk-container">
             <div className="rk-galleryGridFull">
-              {limitedGalleryItems.map((item) => (
+              {galleryItems.map((item) => (
                 <article key={item.title} className="rk-galleryCard">
                   <div className="rk-galleryMedia" aria-hidden="true">
-                    <img src={item.img} alt="" loading="lazy" />
+                    <img src={item.img} alt={item.title} loading="lazy" />
                   </div>
                   <div className="rk-galleryCaption">
                     <div className="rk-galleryTitle">{item.title}</div>
