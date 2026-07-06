@@ -439,6 +439,13 @@
   gap: 12px;
 }
 
+.rk-portal .rk-sectionFooter .rk-miniBtn {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 14px 24px;
+  border-radius: 999px;
+}
+
 .rk-sectionCta:hover {
   transform: translateY(-3px);
   color: #ffffff;

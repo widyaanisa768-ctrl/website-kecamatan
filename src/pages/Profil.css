@@ -1,4 +1,4 @@
-.rk-pageHeader {
+.rk-pageProfil .rk-pageHeader {
   position: relative;
   padding: 40px 0 24px;
   background: linear-gradient(135deg, rgba(6, 28, 50, 1), rgba(11, 79, 124, 0.92));
@@ -6,7 +6,7 @@
   overflow: hidden;
 }
 
-.rk-pageHeader::after {
+.rk-pageProfil .rk-pageHeader::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -16,13 +16,13 @@
   pointer-events: none;
 }
 
-.rk-pageHeaderInner {
+.rk-pageProfil .rk-pageHeaderInner {
   position: relative;
   z-index: 1;
   max-width: 62ch;
 }
 
-.rk-pageKicker {
+.rk-pageProfil .rk-pageKicker {
   margin: 0 0 8px;
   font-weight: 800;
   letter-spacing: 0.22px;
@@ -31,7 +31,7 @@
   opacity: 0.9;
 }
 
-.rk-pageTitle {
+.rk-pageProfil .rk-pageTitle {
   margin: 0 0 8px;
  font-size: clamp(22px, 2.2vw, 28px);
   line-height: 1.18;
@@ -40,7 +40,7 @@
   color: rgba(255, 255, 255, 0.98);
 }
 
-.rk-pageSubtitle {
+.rk-pageProfil .rk-pageSubtitle {
   margin: 0;
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.86);
@@ -48,19 +48,29 @@
   font-size: 14px;
 }
 
-.rk-pageSection {
+.rk-pageProfil .rk-pageSection {
   padding: 40px 0;
 }
 
-.rk-pageAlt {
+.rk-pageProfil .rk-pageAlt {
   background: rgba(11, 79, 124, 0.05);
 }
 
-.rk-grid2 {
+.rk-pageProfil .rk-wilayahSection {
+  padding: 48px 0 44px;
+}
+
+.rk-wilayahLayout {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.rk-wilayahLeftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .rk-surfaceCard {
@@ -68,7 +78,7 @@
   border: 1px solid var(--rk-border);
   border-radius: var(--rk-radius-lg);
   box-shadow: var(--rk-shadow-soft);
-  padding: 16px;
+  padding: 18px;
 }
 
 .rk-h2 {
@@ -145,31 +155,67 @@
 
 .rk-sectionHeadCompact {
   max-width: 70ch;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+
+.rk-wilayahIntroCard {
+  margin-bottom: 22px;
+  border-radius: var(--rk-radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(11, 79, 124, 0.12);
+  box-shadow: 0 14px 34px rgba(16, 52, 83, 0.08);
+  padding: 18px 20px;
+}
+
+.rk-wilayahIntroCard p {
+  margin: 0;
+  max-width: 86ch;
+  color: var(--rk-muted);
+  font-weight: 650;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 .rk-profilGrid {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  gap: 14px;
-  align-items: center;
+  gap: 20px;
+  align-items: stretch;
 }
 
-.rk-profilMedia {
+.rk-profilCollage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 0.9fr);
+  gap: 8px;
+  min-height: 340px;
+  padding: 6px;
+  border-radius: calc(var(--rk-radius-lg) + 6px);
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(140, 191, 220, 0.42);
+  box-shadow: 0 18px 42px rgba(16, 52, 83, 0.12);
+}
+
+.rk-profilPhoto {
+  position: relative;
+  margin: 0;
+  min-height: 340px;
   border-radius: var(--rk-radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(11, 79, 124, 0.12);
-  box-shadow: 0 14px 36px rgba(16, 52, 83, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   background: rgba(255, 255, 255, 0.92);
 }
 
-.rk-profilMedia img {
+.rk-profilPhoto img {
   width: 100%;
   height: 100%;
-  max-height: 300px;
   object-fit: cover;
+  object-position: center center;
   display: block;
   filter: saturate(1.02);
+}
+
+.rk-profilPhotoSide img {
+  object-position: center center;
 }
 
 .rk-profilCard {
@@ -177,18 +223,21 @@
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(11, 79, 124, 0.12);
   box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
-  padding: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .rk-profilHighlights {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
   margin-top: 12px;
 }
 
 .rk-profilHighlight {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
@@ -198,6 +247,7 @@
   color: rgba(29, 42, 58, 0.92);
   font-weight: 800;
   font-size: 12px;
+  min-height: 38px;
 }
 
 .rk-profilHighlight svg {
@@ -229,59 +279,173 @@
 }
 
 .rk-pageProfil .rk-mapCard {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  justify-self: stretch;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 24px;
   border-radius: var(--rk-radius-lg);
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(11, 79, 124, 0.12);
   box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .rk-pageProfil .rk-mapHead {
-  padding: 14px 14px 0;
+  padding: 0;
 }
 
 .rk-pageProfil .rk-mapTitle {
   font-weight: 900;
-  letter-spacing: -0.15px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .rk-pageProfil .rk-mapHint {
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--rk-muted);
   font-weight: 600;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
-.rk-pageProfil .rk-mapBox {
-  height: 260px;
-  margin-top: 12px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(30, 136, 200, 0.16), rgba(0, 0, 0, 0) 56%),
-    linear-gradient(135deg, rgba(11, 79, 124, 0.1), rgba(245, 248, 252, 0.9));
+.rk-pageProfil .rk-mapFrame {
+  width: 100%;
+  flex: 1;
+  min-height: 290px;
+  margin: 12px 0;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: calc(var(--rk-radius-lg) - 4px);
+  overflow: hidden;
+  border: 1px solid rgba(11, 79, 124, 0.12);
+}
+
+.rk-pageProfil .rk-mapFrame iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 290px;
+  display: block;
+  border: 0;
+}
+
+.rk-pageProfil .rk-mapActions {
+  padding: 0;
+  display: flex;
+}
+
+.rk-characteristicsCard {
+  padding: 18px;
+}
+
+.rk-characterSection + .rk-characterSection {
+  margin-top: 14px;
+}
+
+.rk-characterSubhead {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.rk-characterIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
-  position: relative;
+  background: rgba(11, 79, 124, 0.08);
+  border: 1px solid rgba(11, 79, 124, 0.1);
+  color: var(--rk-primary);
 }
 
-.rk-pageProfil .rk-mapOverlay {
+.rk-characterTitle {
+  margin: 5px 0 0;
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(29, 42, 58, 0.96);
+}
+
+.rk-characterText {
+  margin: 10px 0 0;
+  color: var(--rk-muted);
+  line-height: 1.72;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rk-characterDivider {
+  height: 1px;
+  margin: 16px 0 14px;
+  background: rgba(11, 79, 124, 0.12);
+}
+
+.rk-boundaryList {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.rk-boundaryList li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: var(--rk-muted);
+  font-weight: 600;
+  line-height: 1.65;
+  font-size: 14px;
+}
+
+.rk-boundaryList li svg {
+  color: rgba(30, 136, 200, 0.95);
+  margin-top: 2px;
+}
+
+.rk-boundaryList strong {
+  color: rgba(29, 42, 58, 0.92);
+}
+
+.rk-pageProfil .rk-mapLink {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  align-self: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(11, 79, 124, 0.12);
-  background: rgba(255, 255, 255, 0.88);
-  color: rgba(29, 42, 58, 0.92);
+  background: linear-gradient(135deg, rgba(11, 79, 124, 0.98), rgba(6, 28, 50, 0.98));
+  color: rgba(255, 255, 255, 0.98);
   font-weight: 800;
   font-size: 13px;
+  text-decoration: none;
+  box-shadow: 0 14px 30px rgba(16, 52, 83, 0.18);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.rk-pageProfil .rk-mapLink:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 18px 38px rgba(16, 52, 83, 0.22);
+}
+
+.rk-pageProfil .rk-mapLink:focus-visible {
+  outline: 2px solid rgba(30, 136, 200, 0.72);
+  outline-offset: 3px;
 }
 
 .rk-dataGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .rk-dataCard {
@@ -289,7 +453,11 @@
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(11, 79, 124, 0.12);
   box-shadow: 0 14px 34px rgba(16, 52, 83, 0.1);
-  padding: 14px;
+  padding: 16px;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .rk-dataLabel {
@@ -327,7 +495,7 @@
   background: linear-gradient(135deg, rgba(30, 136, 200, 0.1), rgba(11, 79, 124, 0.05));
   border: 1px solid rgba(11, 79, 124, 0.12);
   box-shadow: 0 18px 42px rgba(16, 52, 83, 0.1);
-  padding: 16px;
+  padding: 18px;
 }
 
 .rk-commitIcon {
@@ -408,8 +576,20 @@
     grid-template-columns: 1fr;
   }
 
-  .rk-grid2 {
+  .rk-profilCollage {
+    min-height: auto;
+  }
+
+  .rk-wilayahLayout {
     grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .rk-pageProfil .rk-mapCard {
+    max-width: none;
+    height: auto;
+    justify-self: stretch;
+    padding: 18px;
   }
 
   .rk-dataGrid {
@@ -422,15 +602,15 @@
 }
 
 @media (max-width: 540px) {
-  .rk-pageHeader {
+  .rk-pageProfil .rk-pageHeader {
     padding: 32px 0 20px;
   }
 
-  .rk-pageTitle {
+  .rk-pageProfil .rk-pageTitle {
     font-size: 24px;
   }
 
-  .rk-pageSubtitle,
+  .rk-pageProfil .rk-pageSubtitle,
   .rk-p,
   .rk-list,
   .rk-tfItem,
@@ -443,11 +623,71 @@
     grid-template-columns: 1fr;
   }
 
+  .rk-profilCollage {
+    grid-template-columns: 1fr;
+  }
+
+  .rk-profilPhoto {
+    min-height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .rk-profilPhotoSide {
+    aspect-ratio: 3 / 4;
+  }
+
+  .rk-pageProfil .rk-wilayahSection {
+    padding: 34px 0 32px;
+  }
+
+  .rk-profilCard {
+    padding: 16px;
+  }
+
   .rk-dataValue {
     font-size: 20px;
   }
 
-  .rk-pageSection {
+  .rk-pageProfil .rk-pageSection {
     padding: 32px 0;
+  }
+
+  .rk-pageProfil .rk-mapFrame {
+    flex: none;
+    min-height: 240px;
+    height: 250px;
+    margin: 12px 0;
+  }
+
+  .rk-pageProfil .rk-mapFrame iframe {
+    min-height: 240px;
+  }
+
+  .rk-wilayahIntroCard {
+    padding: 15px;
+    margin-bottom: 14px;
+  }
+
+  .rk-pageProfil .rk-mapHead {
+    padding: 0;
+  }
+
+  .rk-pageProfil .rk-mapActions {
+    padding: 0;
+  }
+
+  .rk-pageProfil .rk-mapLink {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rk-characterIcon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .rk-profilHighlights {
+    grid-template-columns: 1fr;
   }
 }

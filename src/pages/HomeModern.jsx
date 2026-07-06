@@ -359,7 +359,7 @@ export default function HomeModern() {
 
             <div className="rk-sectionFooter">
               <Link to={getMasyarakatPath('/layanan')} className="rk-miniBtn rk-sectionCta" onClick={scrollPageToTop}>
-                Lihat Semua Layanan <FiArrowRight aria-hidden="true" />
+                Ajukan Layanan <FiArrowRight aria-hidden="true" />
               </Link>
             </div>
           </div>
