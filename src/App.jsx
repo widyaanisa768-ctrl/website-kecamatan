@@ -16,6 +16,7 @@ import LaporanKepalaCamat from './pages/LaporanKepalaCamat'
 import ProfilKepalaCamat from './pages/ProfilKepalaCamat'
 import DaftarPengajuanPetugas from './pages/DaftarPengajuanPetugas'
 import DetailPengajuanPetugas from './pages/DetailPengajuanPetugas'
+import KelolaGaleriPetugas from './pages/KelolaGaleriPetugas'
 import ProfilPetugas from './pages/ProfilPetugas'
 import AhliWarisForm from './pages/forms/AhliWarisForm'
 import RekomendasiKerjaForm from './pages/forms/RekomendasiKerjaForm'
@@ -211,6 +212,14 @@ function App() {
           element={
             <RequirePetugas>
               <DetailPengajuanPetugas />
+            </RequirePetugas>
+          }
+        />
+        <Route
+          path="/petugas/galeri"
+          element={
+            <RequirePetugas>
+              <KelolaGaleriPetugas />
             </RequirePetugas>
           }
         />

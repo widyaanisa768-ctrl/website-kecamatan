@@ -15,7 +15,7 @@ import {
   getPengajuanUpdatedAt,
   getSemuaPengajuanPetugas,
   normalizePengajuanStatus,
-  updatePengajuan,
+  updateStatusPengajuanPetugas,
   uploadSuratHasilPengajuan,
 } from '../services/pengajuanService'
 import { normalizePengajuanDokumenPersyaratan } from '../lib/pengajuanDokumenView'
@@ -24,10 +24,10 @@ import '../styles/petugas-ui.css'
 const STATUS_OPTIONS = ['Menunggu Verifikasi', 'Diproses', 'Selesai', 'Ditolak']
 const SURAT_HASIL_TYPES = [
   'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
 ]
-const SURAT_HASIL_EXTENSIONS = ['pdf', 'doc', 'docx']
+const SURAT_HASIL_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
 const SURAT_HASIL_INPUT_ID = 'ptg-upload-surat-hasil'
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
 const HIDDEN_DETAIL_DATA_KEYS = new Set([
@@ -460,7 +460,7 @@ export default function DetailPengajuanPetugas() {
     })
   }, [submission])
 
-  async function simpanStatus(nextStatus = statusBaru, successMessage = 'Perubahan berhasil disimpan.') {
+  async function simpanStatus(nextStatus = statusBaru) {
     if (!submission) return
     if (!endpoint || !pengajuanId) {
       showToast('Endpoint atau ID pengajuan tidak valid.', 'danger')
@@ -479,16 +479,17 @@ export default function DetailPengajuanPetugas() {
     }
 
     setSaving(true)
-    const payload = {
-      status: normalized,
-      status_pengajuan: normalized,
-      catatan_petugas: catatanPetugas,
-      catatanPetugas,
-    }
-    const res = await updatePengajuan(endpoint, pengajuanId, payload)
+    const res = await updateStatusPengajuanPetugas(endpoint, pengajuanId, normalized, catatanPetugas)
 
     if (!res?.success) {
       setSaving(false)
+      console.error('Gagal memperbarui status pengajuan petugas:', {
+        endpoint,
+        pengajuanId,
+        status: normalized,
+        catatan_petugas: catatanPetugas,
+        response: res,
+      })
       showToast(res?.message || 'Gagal menyimpan perubahan.', 'danger')
       return
     }
@@ -513,10 +514,11 @@ export default function DetailPengajuanPetugas() {
           }
 
     setSaving(false)
-    setStatusBaru(normalized)
+    setStatusBaru(normalizePengajuanStatus(nextSubmission || normalized))
+    setCatatanPetugas(getPengajuanCatatanPetugas(nextSubmission) || String(catatanPetugas || ''))
     hydrateDocuments(nextSubmission)
     setSubmission(nextSubmission)
-    showToast(successMessage, 'success')
+    showToast(res?.message || 'Perubahan berhasil disimpan.', 'success')
   }
 
   function simpanPerubahan() {
@@ -528,7 +530,7 @@ export default function DetailPengajuanPetugas() {
     if (!file) return
 
     if (!isAllowedSuratFile(file)) {
-      showToast('Format surat hasil harus PDF, DOC, atau DOCX.', 'danger')
+      showToast('Format surat hasil harus PDF, JPG, JPEG, atau PNG.', 'danger')
       e.target.value = ''
       return
     }
@@ -559,65 +561,39 @@ export default function DetailPengajuanPetugas() {
 
     if (!res?.success) {
       setSavingSurat(false)
-      showToast(res?.message || 'Gagal menyimpan surat hasil.', 'danger')
+      const message = res?.errors?.length ? res.errors.join('\n') : res?.message || 'Gagal upload surat hasil'
+      console.error('Gagal upload surat hasil:', {
+        endpoint,
+        pengajuanId,
+        response: res,
+      })
+      showToast(message, 'danger')
       return
     }
 
-    const uploaded = readSuratUploadResult(res.data, file.name)
-    const dokumenHasil = { nama_file: uploaded.nama, url: uploaded.url }
-    const metadataPayload = {
-      file_hasil: uploaded.url || uploaded.nama,
-      surat_hasil: dokumenHasil,
-      url_hasil: uploaded.url,
-      dokumen_hasil: dokumenHasil,
-      nama_file_hasil: uploaded.nama,
+    const fallbackMetadata = {
+      file_hasil: file.name,
+      surat_hasil: { nama_file: file.name, url: '' },
+      dokumen_hasil: { nama_file: file.name, url: '' },
+      nama_file_hasil: file.name,
     }
-    let nextSubmission = null
-    let backendErrorMessage = ''
-
     const refreshedAfterUpload = await getDetailPengajuan(pengajuanId, {
       ...(submission || {}),
-      ...metadataPayload,
+      ...fallbackMetadata,
     })
-
-    if (refreshedAfterUpload?.success && hasUploadedSuratHasil(refreshedAfterUpload.data, null)) {
-      nextSubmission = refreshedAfterUpload.data
-    } else {
-      const metadataRes = await updatePengajuan(endpoint, pengajuanId, metadataPayload)
-      if (!metadataRes?.success) {
-        backendErrorMessage = metadataRes?.message || 'Surat terunggah, tetapi metadata surat hasil gagal disimpan.'
-      } else {
-        const refreshedAfterMetadata = await getDetailPengajuan(pengajuanId, {
-          ...(submission || {}),
-          ...metadataPayload,
-        })
-        if (refreshedAfterMetadata?.success) {
-          nextSubmission = refreshedAfterMetadata.data
-        }
-      }
-    }
-
-    if (!nextSubmission && (uploaded.url || uploaded.nama)) {
-      nextSubmission = {
-        ...(submission || {}),
-        ...metadataPayload,
-      }
-    }
+    const nextSubmission =
+      refreshedAfterUpload?.success && refreshedAfterUpload?.data
+        ? refreshedAfterUpload.data
+        : {
+            ...(submission || {}),
+            ...fallbackMetadata,
+          }
 
     setSavingSurat(false)
-
-    if (!nextSubmission || !hasUploadedSuratHasil(nextSubmission, null)) {
-      showToast(
-        backendErrorMessage || 'Upload surat hasil belum dapat diverifikasi dari response backend. Periksa contract endpoint upload surat hasil.',
-        'danger'
-      )
-      return
-    }
-
     setSubmission(nextSubmission)
     hydrateDocuments(nextSubmission)
     setSuratForm(readSuratHasil(nextSubmission))
-    showToast('Surat hasil berhasil disimpan.', 'success')
+    showToast(res?.message || 'Surat hasil berhasil diunggah', 'success')
   }
 
   return (
@@ -892,7 +868,7 @@ export default function DetailPengajuanPetugas() {
                           id={SURAT_HASIL_INPUT_ID}
                           className="ptg-hiddenInput"
                           type="file"
-                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                           onChange={handleSuratFileChange}
                           disabled={!submission || savingSurat}
                         />
@@ -913,7 +889,7 @@ export default function DetailPengajuanPetugas() {
                           placeholder="Belum ada file surat hasil yang dipilih"
                           readOnly
                         />
-                        <div className="ptg-hint">Format file yang diterima: PDF, DOC, atau DOCX.</div>
+                        <div className="ptg-hint">Format file yang diterima: PDF, JPG, JPEG, atau PNG.</div>
                       </div>
                       {suratForm.nama ? (
                         <div className="ptg-uploadSummary">

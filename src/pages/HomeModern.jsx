@@ -222,7 +222,6 @@ export default function HomeModern() {
               <aside className="rk-heroCard" aria-label="Informasi layanan">
                 <div className="rk-heroCardHeader">
                   <span className="rk-heroCardTitle">Layanan Tersedia</span>
-                  <span className="rk-heroCardPill">Online</span>
                 </div>
 
                 <div className="rk-heroCardGrid">

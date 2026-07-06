@@ -717,11 +717,134 @@ export async function uploadSuratHasilPengajuan(endpoint, id, file) {
   if (!endpoint || !id) return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
   if (!file) return { success: false, status: 400, data: null, message: 'File surat hasil belum dipilih.' }
 
-  const formData = new FormData()
-  formData.append('file_hasil', file)
-  formData.append('nama_file_hasil', file.name || 'surat-hasil')
+  if (isLocalEndpoint(endpoint)) {
+    return updatePengajuan(endpoint, id, {
+      file_hasil: file.name || 'surat-hasil',
+      surat_hasil: { nama_file: file.name || 'surat-hasil', url: '' },
+      dokumen_hasil: { nama_file: file.name || 'surat-hasil', url: '' },
+      nama_file_hasil: file.name || 'surat-hasil',
+    })
+  }
 
-  return updatePengajuan(endpoint, id, formData)
+  const formData = new FormData()
+  formData.append('surat_hasil', file)
+
+  try {
+    const res = await apiRequest(`${endpoint}/${encodeURIComponent(id)}/surat-hasil`, {
+      method: 'POST',
+      body: formData,
+      withAuth: true,
+    })
+
+    if (!isSuccessfulMutationResponse(res)) {
+      const errors = pickErrors(res)
+      return {
+        success: false,
+        status: res.status,
+        data: res.data,
+        message: errors.length > 0 ? errors.join('\n') : pickSafePetugasMessage(res) || 'Gagal upload surat hasil',
+        errors,
+      }
+    }
+
+    return {
+      success: true,
+      status: res.status,
+      data: res.data,
+      message: pickMessage(res) || 'Surat hasil berhasil diunggah',
+      errors: [],
+    }
+  } catch (err) {
+    return {
+      success: false,
+      status: 0,
+      data: null,
+      message: err?.message || 'Gagal upload surat hasil',
+      errors: [],
+    }
+  }
+}
+
+function getPetugasStatusAction(status) {
+  const normalizedStatus = normalizePengajuanStatus(status)
+  const statusKind = getPengajuanStatusKind(normalizedStatus)
+
+  if (statusKind === 'diproses') {
+    return { status: normalizedStatus, action: 'diproses', message: 'Pengajuan sedang diproses.' }
+  }
+
+  if (statusKind === 'selesai') {
+    return { status: normalizedStatus, action: 'selesai', message: 'Pengajuan selesai diperbarui.' }
+  }
+
+  if (statusKind === 'ditolak') {
+    return { status: normalizedStatus, action: 'ditolak', message: 'Pengajuan ditolak.' }
+  }
+
+  return null
+}
+
+function isSuccessfulMutationResponse(res) {
+  const body = res?.data
+  if (!res?.ok) return false
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return true
+  if (Object.prototype.hasOwnProperty.call(body, 'success')) return body.success === true
+  return true
+}
+
+export async function updateStatusPengajuanPetugas(endpoint, id, status, catatanPetugas = '') {
+  if (!endpoint || !id) {
+    return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
+  }
+
+  const actionConfig = getPetugasStatusAction(status)
+  if (!actionConfig) {
+    return { success: false, status: 400, data: null, message: 'Status pengajuan petugas tidak valid.' }
+  }
+
+  if (isLocalEndpoint(endpoint)) {
+    return updatePengajuan(endpoint, id, {
+      status: actionConfig.status,
+      status_pengajuan: actionConfig.status,
+      catatan_petugas: String(catatanPetugas ?? ''),
+    })
+  }
+
+  const path = `${endpoint}/${encodeURIComponent(id)}/${actionConfig.action}`
+  const body = {
+    catatan_petugas: String(catatanPetugas ?? ''),
+  }
+
+  try {
+    const res = await apiRequest(path, {
+      method: 'PUT',
+      body,
+      withAuth: true,
+    })
+
+    if (!isSuccessfulMutationResponse(res)) {
+      return {
+        success: false,
+        status: res.status,
+        data: res.data,
+        message: pickSafePetugasMessage(res) || pickMessage(res) || actionConfig.message,
+      }
+    }
+
+    return {
+      success: true,
+      status: res.status,
+      data: res.data,
+      message: pickMessage(res) || actionConfig.message,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      status: 0,
+      data: null,
+      message: err?.message || 'Gagal memperbarui status pengajuan.',
+    }
+  }
 }
 
 export async function createPengajuanWithDokumen({ endpoint, dokumen = {}, ...payload }) {

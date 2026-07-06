@@ -1,18 +1,9 @@
-import { useState } from 'react'
-import { FiClock, FiGlobe, FiInfo, FiMail, FiMapPin, FiPhone, FiSend } from 'react-icons/fi'
+import { FiClock, FiExternalLink, FiInfo, FiMail, FiMapPin, FiPhone } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import './Kontak.css'
 
 export default function Kontak() {
-  const [sent, setSent] = useState(false)
-
-  const onSubmit = (e) => {
-    e.preventDefault()
-    setSent(true)
-    window.setTimeout(() => setSent(false), 3500)
-  }
-
   return (
     <div className="rk-portal rk-pageKontak">
       <Navbar />
@@ -28,17 +19,10 @@ export default function Kontak() {
                 layanan. Pesan Anda akan kami tindak lanjuti sesuai jam kerja.
               </p>
 
-              <div className="rk-contactHeroInfo" aria-label="Informasi layanan">
-                <div className="rk-heroChip">
-                  <FiClock aria-hidden="true" /> Jam layanan: Senin–Jumat 08.00–16.00
-                </div>
-                <div className="rk-heroChip">
-                  <FiGlobe aria-hidden="true" /> Layanan online: akses informasi 24 jam
-                </div>
-                <div className="rk-heroChip">
-                  <FiInfo aria-hidden="true" /> Catatan: Pesan akan ditindaklanjuti oleh petugas kecamatan.
-                </div>
-              </div>
+              <p className="rk-contactHeroNote">
+                Silakan gunakan informasi kontak dan lokasi di bawah untuk menghubungi atau mengunjungi Kantor Camat
+                Rantau Kopar sesuai kebutuhan pelayanan.
+              </p>
             </div>
 
             <div className="rk-contactHeroRight">
@@ -50,83 +34,110 @@ export default function Kontak() {
           </div>
         </header>
 
-        <section className="rk-pageSection" aria-label="Informasi kontak dan formulir">
+        <section className="rk-pageSection" aria-label="Informasi kontak dan lokasi kantor">
           <div className="rk-container">
-            <div className="rk-contactCardsGrid" aria-label="Informasi kontak">
-              <article className="rk-contactCard">
-                <div className="rk-contactIcon" aria-hidden="true">
-                  <FiMapPin />
-                </div>
-                <div>
-                  <div className="rk-contactTitle">Alamat</div>
-                  <div className="rk-contactText">Jalan Lintas Rantau Kopar</div>
-                </div>
-              </article>
-              <article className="rk-contactCard">
-                <div className="rk-contactIcon" aria-hidden="true">
-                  <FiMail />
-                </div>
-                <div>
-                  <div className="rk-contactTitle">Email</div>
-                  <div className="rk-contactText">rantaukopar.kecamatan@rohilkab.go.id</div>
-                </div>
-              </article>
-              <article className="rk-contactCard">
-                <div className="rk-contactIcon" aria-hidden="true">
-                  <FiPhone />
-                </div>
-                <div>
-                  <div className="rk-contactTitle">Telepon</div>
-                  <div className="rk-contactText">+2034 4040 3030</div>
-                </div>
-              </article>
-            </div>
-
             <div className="rk-contactGrid">
-              <article className="rk-formCard" aria-label="Form kontak">
-                <div className="rk-formHead">
-                  <h2 className="rk-formTitle">Form Kontak</h2>
-                  <p className="rk-formDesc">
-                    Form ini bersifat dummy (belum terhubung backend). Pesan akan ditindaklanjuti oleh petugas
-                    kecamatan.
+              <article className="rk-contactInfoPanel" aria-label="Informasi kontak kantor">
+                <div className="rk-contactPanelHead">
+                  <p className="rk-contactPanelKicker">Informasi Kontak Kantor</p>
+                  <h2 className="rk-contactPanelTitle">Kantor Camat Rantau Kopar</h2>
+                  <p className="rk-contactPanelDesc">
+                    Informasi resmi kantor kecamatan untuk masyarakat yang membutuhkan layanan, konsultasi
+                    persyaratan, dan koordinasi pelayanan publik.
                   </p>
                 </div>
 
-                <form className="rk-form" onSubmit={onSubmit}>
-                  <label className="rk-field">
-                    <span className="rk-label">Nama</span>
-                    <input className="rk-input" name="nama" placeholder="Nama lengkap" required />
-                  </label>
+                <div className="rk-contactInfoCard">
+                  <div className="rk-contactInfoList">
+                    <article className="rk-contactInfoItem">
+                      <div className="rk-contactIcon" aria-hidden="true">
+                        <FiMapPin />
+                      </div>
+                      <div>
+                        <div className="rk-contactTitle">Alamat</div>
+                        <div className="rk-contactText">
+                          Kantor Camat Rantau Kopar, Kecamatan Rantau Kopar, Kabupaten Rokan Hilir, Riau
+                        </div>
+                      </div>
+                    </article>
 
-                  <label className="rk-field">
-                    <span className="rk-label">Email</span>
-                    <input className="rk-input" type="email" name="email" placeholder="nama@email.com" required />
-                  </label>
+                    <article className="rk-contactInfoItem">
+                      <div className="rk-contactIcon" aria-hidden="true">
+                        <FiMail />
+                      </div>
+                      <div>
+                        <div className="rk-contactTitle">Email</div>
+                        <div className="rk-contactText">rantaukopar.kecamatan@rohilkab.go.id</div>
+                      </div>
+                    </article>
 
-                  <label className="rk-field">
-                    <span className="rk-label">Pesan</span>
-                    <textarea className="rk-textarea" name="pesan" placeholder="Tulis pesan Anda..." rows={5} required />
-                  </label>
+                    <article className="rk-contactInfoItem">
+                      <div className="rk-contactIcon" aria-hidden="true">
+                        <FiPhone />
+                      </div>
+                      <div>
+                        <div className="rk-contactTitle">Telepon</div>
+                        <div className="rk-contactText">+2034 4040 3030</div>
+                      </div>
+                    </article>
 
-                  <div className="rk-formActions">
-                    <button type="submit" className="rk-submitBtn">
-                      Kirim Pesan <FiSend aria-hidden="true" />
-                    </button>
-                    {sent ? <span className="rk-sentHint">Pesan terkirim (dummy).</span> : null}
+                    <article className="rk-contactInfoItem">
+                      <div className="rk-contactIcon" aria-hidden="true">
+                        <FiClock />
+                      </div>
+                      <div>
+                        <div className="rk-contactTitle">Jam Layanan</div>
+                        <div className="rk-contactText">Senin-Jumat, 08.00-16.00 WIB</div>
+                      </div>
+                    </article>
+
+                    <article className="rk-contactInfoItem">
+                      <div className="rk-contactIcon" aria-hidden="true">
+                        <FiInfo />
+                      </div>
+                      <div>
+                        <div className="rk-contactTitle">Catatan</div>
+                        <div className="rk-contactText">
+                          Untuk informasi pelayanan dan persyaratan, masyarakat dapat menghubungi Kantor Camat Rantau
+                          Kopar pada jam kerja.
+                        </div>
+                      </div>
+                    </article>
                   </div>
-                </form>
+                </div>
               </article>
 
-              <aside className="rk-mapCard" aria-label="Lokasi">
+              <aside className="rk-mapCard" aria-label="Lokasi kantor kecamatan">
                 <div className="rk-mapTop">
-                  <div className="rk-mapTitle">Lokasi Kantor (Placeholder)</div>
-                  <div className="rk-mapHint">Area ini dapat diganti dengan embed Google Maps.</div>
-                </div>
-                <div className="rk-mapBox" role="img" aria-label="Placeholder peta">
-                  <div className="rk-mapOverlay">
-                    <FiMapPin aria-hidden="true" />
-                    <span>Kecamatan Rantau Kopar</span>
+                  <div className="rk-mapBadge">Lokasi pelayanan publik</div>
+                  <div className="rk-mapTitle">Lokasi Kantor Kecamatan</div>
+                  <div className="rk-mapHint">
+                    Kantor Camat Rantau Kopar, Kecamatan Rantau Kopar, Kabupaten Rokan Hilir, Riau.
                   </div>
+                </div>
+
+                <div className="rk-mapFrame">
+                  <iframe
+                    title="Lokasi Kantor Camat Rantau Kopar"
+                    src="https://www.google.com/maps?q=Kantor+Camat+Rantau+Kopar,+Rokan+Hilir,+Riau&output=embed"
+                    loading="lazy"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+
+                <div className="rk-mapActions">
+                  <a
+                    className="rk-mapLink"
+                    href="https://www.google.com/maps/search/?api=1&query=Kantor+Camat+Rantau+Kopar,+Rokan+Hilir,+Riau"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FiExternalLink aria-hidden="true" />
+                    <span>Buka di Google Maps</span>
+                  </a>
                 </div>
               </aside>
             </div>

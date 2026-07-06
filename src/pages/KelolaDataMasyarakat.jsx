@@ -28,7 +28,7 @@ export default function KelolaDataMasyarakat() {
 
     const loadUsers = async () => {
       setLoading(true)
-      const res = await getMasyarakatUsers()
+      const res = await getMasyarakatUsers() 
       if (!alive) return
 
       if (res?.success) {

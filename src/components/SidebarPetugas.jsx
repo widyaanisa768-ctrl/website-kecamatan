@@ -12,6 +12,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
     () => [
       { label: 'Dashboard', to: '/petugas/dashboard', icon: 'dashboard' },
       { label: 'Daftar Pengajuan', to: '/petugas/pengajuan', icon: 'pengajuan' },
+      { label: 'Kelola Galeri', to: '/petugas/galeri', icon: 'galeri' },
       { label: 'Profil Petugas', to: '/petugas/profil', icon: 'profil' },
       { label: 'Logout', action: 'logout', icon: 'logout' },
     ],
@@ -26,6 +27,7 @@ export default function SidebarPetugas({ activeLabel = 'Dashboard' }) {
     const path = location?.pathname || ''
     if (item.to === '/petugas/dashboard') return path === '/petugas/dashboard'
     if (item.to === '/petugas/pengajuan') return path.startsWith('/petugas/pengajuan')
+    if (item.to === '/petugas/galeri') return path.startsWith('/petugas/galeri')
     if (item.to === '/petugas/profil') return path.startsWith('/petugas/profil')
     return activeLabel === item.label
   }
