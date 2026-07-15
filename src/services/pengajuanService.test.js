@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { apiRequestMock } = vi.hoisted(() => ({
   apiRequestMock: vi.fn(),
@@ -9,12 +9,58 @@ vi.mock('./api', () => ({
 }))
 
 import {
+  buildFileUrl,
   createPengajuan,
   createPengajuanWithDokumen,
+  deleteSuratHasilPengajuan,
   getPengajuanStatusKind,
+  normalizePengajuan,
   normalizePengajuanStatus,
+  updateStatusPengajuanPetugas,
   uploadDokumenPengajuan,
+  uploadSuratHasilPengajuan,
 } from './pengajuanService'
+
+describe('normalisasi detail pengajuan', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('membaca status dan metadata surat hasil dari field backend terbaru', () => {
+    vi.stubEnv('VITE_API_URL', 'https://anisa-rahma-fitri.alwaysdata.net/api')
+
+    expect(normalizePengajuan({
+      id_pengajuan: 44,
+      id_user: 17,
+      status: 'Diproses',
+      file_surat_hasil: '/uploads/surat-hasil/file.pdf',
+      nama_file_surat_hasil: 'Surat Kerja.pdf',
+    })).toMatchObject({
+      id: 44,
+      idUser: 17,
+      status: 'Diproses',
+      suratHasil: {
+        path: '/uploads/surat-hasil/file.pdf',
+        namaFile: 'Surat Kerja.pdf',
+        url: 'https://anisa-rahma-fitri.alwaysdata.net/uploads/surat-hasil/file.pdf',
+      },
+    })
+  })
+
+  it('menggabungkan path relatif dengan origin backend tanpa /api', () => {
+    vi.stubEnv('VITE_API_URL', 'https://anisa-rahma-fitri.alwaysdata.net/api')
+    expect(buildFileUrl('/uploads/surat-hasil/file.pdf')).toBe(
+      'https://anisa-rahma-fitri.alwaysdata.net/uploads/surat-hasil/file.pdf'
+    )
+  })
+
+  it.each([
+    'https://cdn.example.test/surat.pdf',
+    'http://cdn.example.test/surat.pdf',
+  ])('tidak mengubah URL absolut %s', (url) => {
+    expect(buildFileUrl(url)).toBe(url)
+  })
+})
 
 describe('status pengajuan', () => {
   it.each([
@@ -92,6 +138,64 @@ describe('API pengajuan', () => {
     expect(apiRequestMock).toHaveBeenCalledWith('/api/rekomendasi_penelitian/ID%201/dokumen', {
       method: 'POST',
       body: formData,
+      withAuth: true,
+    })
+  })
+
+  it('mengunggah surat hasil dengan field surat_hasil', async () => {
+    const file = new File(['surat'], 'surat.pdf', { type: 'application/pdf' })
+    apiRequestMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { success: true, message: 'Surat hasil berhasil diunggah', data: null },
+    })
+
+    await expect(uploadSuratHasilPengajuan('/api/rekomendasi_surat_kerja', '44', file))
+      .resolves.toMatchObject({ success: true, message: 'Surat hasil berhasil diunggah' })
+
+    const requestOptions = apiRequestMock.mock.calls[0][1]
+    expect(apiRequestMock.mock.calls[0][0]).toBe('/api/rekomendasi_surat_kerja/44/surat-hasil')
+    expect(requestOptions).toMatchObject({ method: 'POST', withAuth: true })
+    expect(requestOptions.body).toBeInstanceOf(FormData)
+    expect(requestOptions.body.get('surat_hasil')).toBe(file)
+  })
+
+  it('memperbarui status melalui endpoint status dan payload backend terbaru', async () => {
+    apiRequestMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { success: true, message: 'Status diperbarui', data: null },
+    })
+
+    await expect(updateStatusPengajuanPetugas(
+      '/api/rekomendasi_surat_kerja',
+      '44',
+      'Selesai',
+      'Sudah diverifikasi'
+    )).resolves.toMatchObject({ success: true, message: 'Status diperbarui' })
+
+    expect(apiRequestMock).toHaveBeenCalledWith('/api/rekomendasi_surat_kerja/44/status', {
+      method: 'PATCH',
+      body: {
+        status: 'Selesai',
+        status_pengajuan: 'Selesai',
+        catatan_petugas: 'Sudah diverifikasi',
+      },
+      withAuth: true,
+    })
+  })
+
+  it('menghapus surat hasil melalui endpoint yang sama', async () => {
+    apiRequestMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { success: true, message: 'Surat hasil berhasil dihapus', data: null },
+    })
+
+    await expect(deleteSuratHasilPengajuan('/api/rekomendasi_surat_kerja', '44'))
+      .resolves.toMatchObject({ success: true, message: 'Surat hasil berhasil dihapus' })
+    expect(apiRequestMock).toHaveBeenCalledWith('/api/rekomendasi_surat_kerja/44/surat-hasil', {
+      method: 'DELETE',
       withAuth: true,
     })
   })

@@ -79,15 +79,27 @@ function unwrapDetail(data) {
   return data
 }
 
+function createServiceRoute(key, jenisLayanan) {
+  const endpoint = `/api/${key}`
+  return {
+    key,
+    endpoint,
+    jenis_layanan: jenisLayanan,
+    detailUrl: (id) => `${endpoint}/${encodeURIComponent(id)}`,
+    statusUrl: (id) => `${endpoint}/${encodeURIComponent(id)}/status`,
+    suratHasilUrl: (id) => `${endpoint}/${encodeURIComponent(id)}/surat-hasil`,
+  }
+}
+
 export const SERVICE_ROUTES = [
-  { key: 'rekomendasi_penelitian', endpoint: '/api/rekomendasi_penelitian', jenis_layanan: 'Rekomendasi Penelitian / Riset' },
-  { key: 'rekomendasi_surat_pindah', endpoint: '/api/rekomendasi_surat_pindah', jenis_layanan: 'Rekomendasi Surat Pindah' },
-  { key: 'rekomendasi_akta_kelahiran', endpoint: '/api/rekomendasi_akta_kelahiran', jenis_layanan: 'Rekomendasi Akta Kelahiran' },
-  { key: 'rekomendasi_kartu_keluarga', endpoint: '/api/rekomendasi_kartu_keluarga', jenis_layanan: 'Rekomendasi Kartu Keluarga' },
-  { key: 'rekomendasi_surat_kerja', endpoint: '/api/rekomendasi_surat_kerja', jenis_layanan: 'Rekomendasi Kerja' },
-  { key: 'rekomendasi_surat_tanah', endpoint: '/api/rekomendasi_surat_tanah', jenis_layanan: 'Rekomendasi Surat Tanah SKT/SKGR' },
-  { key: 'rekomendasi_surat_ahli_waris', endpoint: '/api/rekomendasi_surat_ahli_waris', jenis_layanan: 'Surat Keterangan Ahli Waris' },
-  { key: 'rekomendasi_surat_yayasan', endpoint: '/api/rekomendasi_surat_yayasan', jenis_layanan: 'Rekomendasi Yayasan/TPQ/Ormas' },
+  createServiceRoute('rekomendasi_penelitian', 'Rekomendasi Penelitian / Riset'),
+  createServiceRoute('rekomendasi_surat_pindah', 'Rekomendasi Surat Pindah'),
+  createServiceRoute('rekomendasi_akta_kelahiran', 'Rekomendasi Akta Kelahiran'),
+  createServiceRoute('rekomendasi_kartu_keluarga', 'Rekomendasi Kartu Keluarga'),
+  createServiceRoute('rekomendasi_surat_kerja', 'Rekomendasi Kerja'),
+  createServiceRoute('rekomendasi_surat_tanah', 'Rekomendasi Surat Tanah SKT/SKGR'),
+  createServiceRoute('rekomendasi_surat_ahli_waris', 'Surat Keterangan Ahli Waris'),
+  createServiceRoute('rekomendasi_surat_yayasan', 'Rekomendasi Yayasan/TPQ/Ormas'),
 ]
 
 const PETUGAS_BACKEND_AUTH_MESSAGE =
@@ -460,23 +472,124 @@ function pickSafePetugasMessage(res) {
   return pickMessage(res)
 }
 
+export function getApiOrigin() {
+  const apiUrl = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
+  return apiUrl.replace(/\/api$/i, '')
+}
+
+export function buildFileUrl(path) {
+  const normalizedPath = String(path || '').trim()
+  if (!normalizedPath) return null
+  if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath
+
+  const origin = getApiOrigin()
+  if (!origin) return null
+  return `${origin}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`
+}
+
+function getSuratHasilSource(data) {
+  const source = [
+    data?.file_surat_hasil,
+    data?.surat_hasil,
+    data?.fileSuratHasil,
+    data?.suratHasil,
+    data?.file_hasil,
+    data?.dokumen_hasil,
+    data?.hasil_surat,
+  ].find((value) => {
+    if (typeof value === 'string') return Boolean(value.trim())
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+  })
+
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    return {
+      path: source.path || source.url || source.href || source.file_url || source.download_url || null,
+      namaFile:
+        source.namaFile ||
+        source.nama_file ||
+        source.filename ||
+        source.file_name ||
+        source.name ||
+        null,
+    }
+  }
+
+  return { path: typeof source === 'string' ? source : null, namaFile: null }
+}
+
+function getFilenameFromPath(path) {
+  const cleanPath = String(path || '').split('?')[0]
+  const filename = cleanPath.split('/').filter(Boolean).pop() || ''
+  try {
+    return decodeURIComponent(filename)
+  } catch {
+    return filename
+  }
+}
+
+export function normalizePengajuan(data = {}) {
+  const source = data && typeof data === 'object' ? data : {}
+  const resultSource = getSuratHasilSource(source)
+  const path = resultSource.path || source.url_hasil || source.hasil_url || source.file_url || null
+  const namaFile =
+    source.nama_file_surat_hasil ||
+    source.nama_surat_hasil ||
+    source.namaFileSuratHasil ||
+    resultSource.namaFile ||
+    source.nama_file_hasil ||
+    getFilenameFromPath(path) ||
+    null
+
+  return {
+    id: source.id_pengajuan ?? source.id ?? source.pengajuan_id ?? source.uuid ?? null,
+    idUser: source.id_user ?? source.user_id ?? source.userId ?? null,
+    namaPemohon: source.nama_pemohon ?? source.namaPemohon ?? null,
+    alamat: source.alamat ?? null,
+    nik: source.nik ?? null,
+    noHp: source.no_hp ?? source.noHp ?? null,
+    keterangan: source.keterangan ?? null,
+    status: normalizePengajuanStatus(source),
+    catatanPetugas: source.catatan_petugas ?? source.catatanPetugas ?? null,
+    tanggalPengajuan: source.created_at ?? source.createdAt ?? null,
+    updatedAt: source.updated_at ?? source.updatedAt ?? null,
+    suratHasil: {
+      path,
+      namaFile,
+      url: buildFileUrl(path),
+    },
+  }
+}
+
+export function canMasyarakatAccessSuratHasil(item) {
+  const normalized = normalizePengajuan(item)
+  return getPengajuanStatusKind(normalized.status) === 'selesai' && Boolean(normalized.suratHasil.url)
+}
+
 function normalizePengajuanItem(item, svc) {
+  const normalized = normalizePengajuan(item)
   const id = getPengajuanId(item)
-  const status = normalizePengajuanStatus(item)
+  const status = normalized.status
   const createdAt = getPengajuanCreatedAt(item)
   const dokumen = extractDokumenFromResponse(item)
   const layanan = getPengajuanLayanan({ ...(item || {}), __endpoint: item?.__endpoint || svc?.endpoint || '' })
   return {
     ...item,
-    id: item?.id || id,
+    ...normalized,
+    id: item?.id || normalized.id || id,
     id_pengajuan: item?.id_pengajuan || id,
     pengajuan_id: item?.pengajuan_id || id,
+    id_user: item?.id_user ?? normalized.idUser,
     jenis_layanan: layanan === '-' ? svc?.jenis_layanan || '' : layanan,
     layanan: item?.layanan || (layanan === '-' ? svc?.jenis_layanan || '' : layanan),
     status,
     status_pengajuan: status,
     created_at: item?.created_at || createdAt,
     createdAt: item?.createdAt || createdAt,
+    updatedAt: item?.updatedAt || item?.updated_at || normalized.updatedAt,
+    catatanPetugas: normalized.catatanPetugas,
+    file_surat_hasil: item?.file_surat_hasil || normalized.suratHasil.path,
+    nama_file_surat_hasil: item?.nama_file_surat_hasil || normalized.suratHasil.namaFile,
+    suratHasil: normalized.suratHasil,
     dokumen: Array.isArray(dokumen) ? dokumen : dokumen && typeof dokumen === 'object' ? dokumen : item?.dokumen,
     __endpoint: item?.__endpoint || svc?.endpoint || '',
   }
@@ -765,6 +878,55 @@ export async function uploadSuratHasilPengajuan(endpoint, id, file) {
   }
 }
 
+export async function deleteSuratHasilPengajuan(endpoint, id) {
+  if (!endpoint || !id) {
+    return { success: false, status: 400, data: null, message: 'Endpoint/ID pengajuan tidak valid.' }
+  }
+
+  if (isLocalEndpoint(endpoint)) {
+    return updatePengajuan(endpoint, id, {
+      file_hasil: '',
+      surat_hasil: null,
+      dokumen_hasil: null,
+      nama_file_hasil: '',
+    })
+  }
+
+  try {
+    const res = await apiRequest(`${endpoint}/${encodeURIComponent(id)}/surat-hasil`, {
+      method: 'DELETE',
+      withAuth: true,
+    })
+
+    if (!isSuccessfulMutationResponse(res)) {
+      const errors = pickErrors(res)
+      return {
+        success: false,
+        status: res.status,
+        data: res.data,
+        message: errors.length > 0 ? errors.join('\n') : pickSafePetugasMessage(res) || 'Gagal menghapus surat hasil.',
+        errors,
+      }
+    }
+
+    return {
+      success: true,
+      status: res.status,
+      data: res.data,
+      message: pickMessage(res) || 'Surat hasil berhasil dihapus.',
+      errors: [],
+    }
+  } catch (err) {
+    return {
+      success: false,
+      status: 0,
+      data: null,
+      message: err?.message || 'Gagal menghapus surat hasil.',
+      errors: [],
+    }
+  }
+}
+
 function getPetugasStatusAction(status) {
   const normalizedStatus = normalizePengajuanStatus(status)
   const statusKind = getPengajuanStatusKind(normalizedStatus)
@@ -781,15 +943,17 @@ function getPetugasStatusAction(status) {
     return { status: normalizedStatus, action: 'ditolak', message: 'Pengajuan ditolak.' }
   }
 
+  if (statusKind === 'menunggu') {
+    return { status: normalizedStatus, action: '', message: 'Status pengajuan diperbarui.' }
+  }
+
   return null
 }
 
 function isSuccessfulMutationResponse(res) {
   const body = res?.data
   if (!res?.ok) return false
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return true
-  if (Object.prototype.hasOwnProperty.call(body, 'success')) return body.success === true
-  return true
+  return Boolean(body && typeof body === 'object' && !Array.isArray(body) && body.success === true)
 }
 
 export async function updateStatusPengajuanPetugas(endpoint, id, status, catatanPetugas = '') {
@@ -810,17 +974,26 @@ export async function updateStatusPengajuanPetugas(endpoint, id, status, catatan
     })
   }
 
-  const path = `${endpoint}/${encodeURIComponent(id)}/${actionConfig.action}`
   const body = {
+    status: actionConfig.status,
+    status_pengajuan: actionConfig.status,
     catatan_petugas: String(catatanPetugas ?? ''),
   }
 
   try {
-    const res = await apiRequest(path, {
-      method: 'PUT',
+    let res = await apiRequest(`${endpoint}/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
       body,
       withAuth: true,
     })
+
+    if (!res.ok && actionConfig.action && [404, 405, 501].includes(res.status)) {
+      res = await apiRequest(`${endpoint}/${encodeURIComponent(id)}/${actionConfig.action}`, {
+        method: 'PUT',
+        body: { catatan_petugas: String(catatanPetugas ?? '') },
+        withAuth: true,
+      })
+    }
 
     if (!isSuccessfulMutationResponse(res)) {
       return {
@@ -1011,9 +1184,21 @@ export async function getPengajuanSaya() {
     return { success: false, status: firstErr?.status || 0, message: firstErr?.message || 'Gagal memuat pengajuan.' }
   }
 
-  merged.sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
+  const enriched = await Promise.all(
+    merged.map(async (item) => {
+      const id = getPengajuanId(item)
+      const endpoint = String(item?.__endpoint || '').trim()
+      if (!id || !endpoint || isLocalEndpoint(endpoint)) return item
 
-  return { success: true, status: 200, items: merged }
+      const detail = await tryGetDetailPath(`${endpoint}/${encodeURIComponent(id)}`)
+      if (!detail?.success) return item
+      return mergePengajuanDetail(item, unwrapDetail(detail.data), null)
+    })
+  )
+
+  enriched.sort((a, b) => toTime(getPengajuanCreatedAt(b)) - toTime(getPengajuanCreatedAt(a)))
+
+  return { success: true, status: 200, items: enriched }
 }
 
 export async function getSemuaPengajuanPetugas() {

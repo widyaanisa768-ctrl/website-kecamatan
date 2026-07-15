@@ -5,6 +5,7 @@ import PetugasAvatar from '../components/PetugasAvatar'
 import SidebarPetugas from '../components/SidebarPetugas'
 import { getAuth } from '../lib/rkLocal'
 import {
+  deleteSuratHasilPengajuan,
   getDetailPengajuan,
   getPengajuanCatatanPetugas,
   getPengajuanCreatedAt,
@@ -14,6 +15,7 @@ import {
   getPengajuanStatusKind,
   getPengajuanUpdatedAt,
   getSemuaPengajuanPetugas,
+  normalizePengajuan,
   normalizePengajuanStatus,
   updateStatusPengajuanPetugas,
   uploadSuratHasilPengajuan,
@@ -28,8 +30,8 @@ const SURAT_HASIL_TYPES = [
   'image/png',
 ]
 const SURAT_HASIL_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
+const SURAT_HASIL_MAX_SIZE = 5 * 1024 * 1024
 const SURAT_HASIL_INPUT_ID = 'ptg-upload-surat-hasil'
-const RAW_API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim()
 const HIDDEN_DETAIL_DATA_KEYS = new Set([
   '__endpoint',
   'created_by',
@@ -77,6 +79,11 @@ const HIDDEN_DETAIL_DATA_KEYS = new Set([
   'dataform',
   'data',
   'file_hasil',
+  'file_surat_hasil',
+  'filesurathasil',
+  'nama_file_surat_hasil',
+  'namafilesurathasil',
+  'nama_surat_hasil',
   'dokumen_hasil',
   'surat_hasil',
   'url_hasil',
@@ -152,26 +159,6 @@ function getLampiranExt(filename) {
   return clean.split('.').pop().slice(0, 5).toUpperCase()
 }
 
-function isUrl(value) {
-  return /^https?:\/\//i.test(String(value || '').trim())
-}
-
-function isFileLink(value) {
-  const text = String(value || '').trim()
-  return /^https?:\/\//i.test(text) || text.startsWith('/') || text.startsWith('uploads/')
-}
-
-function buildFileLink(value) {
-  const text = String(value || '').trim()
-  if (!text) return ''
-  if (/^https?:\/\//i.test(text)) return text
-  if (!isFileLink(text) || !RAW_API_BASE_URL) return isFileLink(text) ? text : ''
-
-  const base = RAW_API_BASE_URL.replace(/\/+$/, '').replace(/\/api$/i, '')
-  const path = text.startsWith('/') ? text : `/${text}`
-  return `${base}${path}`
-}
-
 function humanizeDetailKey(key) {
   const normalized = String(key || '').trim().toLowerCase()
   if (DETAIL_LABEL_OVERRIDES[normalized]) return DETAIL_LABEL_OVERRIDES[normalized]
@@ -204,36 +191,11 @@ function getDetailFormSource(item) {
   return item && typeof item === 'object' ? item : {}
 }
 
-function filenameFromUrl(url) {
-  try {
-    const parsed = new URL(url)
-    const name = parsed.pathname.split('/').filter(Boolean).pop()
-    return name ? decodeURIComponent(name) : url
-  } catch {
-    return String(url || '')
-  }
-}
-
 function readSuratHasil(item) {
-  const source =
-    item?.dokumen_hasil ||
-    item?.surat_hasil ||
-    item?.file_hasil ||
-    item?.hasil ||
-    null
-
-  if (source && typeof source === 'object' && !Array.isArray(source)) {
-    return {
-      nama: source.nama || source.name || source.filename || source.file_name || source.nama_file || item?.nama_file_hasil || '',
-      url: buildFileLink(source.url || source.href || source.path || source.file_url || item?.url_hasil || item?.hasil_url || item?.file_url || ''),
-      file: null,
-    }
-  }
-
-  const url = item?.url_hasil || item?.hasil_url || item?.file_url || (typeof source === 'string' ? source : '')
+  const suratHasil = normalizePengajuan(item).suratHasil
   return {
-    nama: item?.nama_file_hasil || item?.nama_surat_hasil || '',
-    url: buildFileLink(url) || url || '',
+    nama: suratHasil.namaFile || '',
+    url: suratHasil.url || '',
     file: null,
   }
 }
@@ -248,73 +210,6 @@ function isAllowedSuratFile(file) {
   if (!file) return false
   const ext = String(file.name || '').split('.').pop()?.toLowerCase()
   return SURAT_HASIL_TYPES.includes(file.type) || SURAT_HASIL_EXTENSIONS.includes(ext)
-}
-
-function readUploadString(value) {
-  const text = String(value || '').trim()
-  if (!text) return { nama: '', url: '' }
-  return {
-    nama: isUrl(text) ? filenameFromUrl(text) : text,
-    url: buildFileLink(text),
-  }
-}
-
-function readSuratUploadResult(data, fallbackName) {
-  if (typeof data === 'string') return { ...readUploadString(data), nama: readUploadString(data).nama || fallbackName }
-
-  const base = data && typeof data === 'object' ? data : {}
-  const inner = base.data && typeof base.data === 'object' ? base.data : base
-  const sources = [
-    inner,
-    inner?.file_hasil,
-    inner?.surat_hasil,
-    inner?.dokumen_hasil,
-    inner?.upload,
-    inner?.file,
-    inner?.result,
-  ].filter(Boolean)
-
-  let nama = ''
-  let url = ''
-
-  sources.some((source) => {
-    if (typeof source === 'string') {
-      const parsed = readUploadString(source)
-      nama = nama || parsed.nama
-      url = url || parsed.url
-      return Boolean(nama || url)
-    }
-
-    if (source && typeof source === 'object' && !Array.isArray(source)) {
-      url =
-        source.url ||
-        source.href ||
-        source.path ||
-        source.secure_url ||
-        source.location ||
-        source.file_url ||
-        source.url_hasil ||
-        source.hasil_url ||
-        ''
-      nama =
-        source.nama_file_hasil ||
-        source.nama_file ||
-        source.nama ||
-        source.name ||
-        source.filename ||
-        source.file_name ||
-        source.originalname ||
-        (url ? filenameFromUrl(url) : '')
-      return Boolean(nama || url)
-    }
-
-    return false
-  })
-
-  return {
-    nama: String(nama || fallbackName || '').trim(),
-    url: buildFileLink(String(url || '').trim()) || String(url || '').trim(),
-  }
 }
 
 export default function DetailPengajuanPetugas() {
@@ -335,6 +230,7 @@ export default function DetailPengajuanPetugas() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [savingSurat, setSavingSurat] = useState(false)
+  const [deletingSurat, setDeletingSurat] = useState(false)
   const [suratForm, setSuratForm] = useState(() => readSuratHasil(initialSubmission))
   const [dokumenPersyaratan, setDokumenPersyaratan] = useState([])
   const [documentsReady, setDocumentsReady] = useState(false)
@@ -368,47 +264,54 @@ export default function DetailPengajuanPetugas() {
 
     setLoading(true)
     setError('')
-    setSubmission(fallbackSubmission)
+    setSubmission((current) => current || fallbackSubmission)
 
     try {
-      const res = await getSemuaPengajuanPetugas()
-      if (detailRequestRef.current !== requestId) return
-
-      if (!res?.success) {
-        if (!fallbackSubmission) setSubmission(null)
-        setError(res?.message || 'Gagal memuat detail pengajuan.')
-        return
+      if (submissionId && stateEndpoint) {
+        const directDetail = await getDetailPengajuan(submissionId, {
+          ...(fallbackSubmission || {}),
+          __endpoint: stateEndpoint,
+        })
+        if (detailRequestRef.current !== requestId) return null
+        if (directDetail?.success && directDetail?.data) nextSubmission = directDetail.data
       }
 
-      const items = res.items || []
-      const found =
-        items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
-        items.find((item) => getPengajuanId(item) === String(submissionId)) ||
-        fallbackSubmission
+      if (!nextSubmission) {
+        const res = await getSemuaPengajuanPetugas()
+        if (detailRequestRef.current !== requestId) return null
 
-      if (!found) {
-        if (!fallbackSubmission) setSubmission(null)
-        setError('Detail pengajuan tidak ditemukan.')
-        return
+        if (!res?.success) {
+          setError(res?.message || 'Gagal memuat detail pengajuan.')
+          return null
+        }
+
+        const items = res.items || []
+        const found =
+          items.find((item) => getPengajuanId(item) === String(submissionId) && (!stateEndpoint || item.__endpoint === stateEndpoint)) ||
+          items.find((item) => getPengajuanId(item) === String(submissionId)) ||
+          fallbackSubmission
+
+        if (!found) {
+          setError('Detail pengajuan tidak ditemukan.')
+          return null
+        }
+
+        const detailRes = submissionId ? await getDetailPengajuan(submissionId, found) : null
+        if (detailRequestRef.current !== requestId) return null
+        nextSubmission = detailRes?.success && detailRes?.data ? detailRes.data : found
       }
 
-      const detailRes = submissionId ? await getDetailPengajuan(submissionId, found) : null
-      if (detailRequestRef.current !== requestId) return
-
-      nextSubmission = detailRes?.success ? detailRes.data || found : found
       hydrateDocuments(nextSubmission)
-
       setSubmission(nextSubmission)
       setStatusBaru(normalizePengajuanStatus(nextSubmission))
       setCatatanPetugas(getPengajuanCatatanPetugas(nextSubmission))
       setSuratForm(readSuratHasil(nextSubmission))
       setError('')
+      return nextSubmission
     } catch (err) {
-      if (detailRequestRef.current !== requestId) return
-      if (!fallbackSubmission) {
-        setSubmission(nextSubmission)
-      }
+      if (detailRequestRef.current !== requestId) return null
       setError(err?.message || 'Gagal memuat detail pengajuan.')
+      return null
     } finally {
       if (detailRequestRef.current === requestId) {
         setLoading(false)
@@ -444,6 +347,9 @@ export default function DetailPengajuanPetugas() {
   const pengajuanId = getPengajuanId(submission) || submissionId || ''
   const endpoint = submission?.__endpoint || stateEndpoint || ''
   const suratHasilTersedia = hasUploadedSuratHasil(submission, suratForm)
+  const suratBaruDipilih = Boolean(suratForm.file)
+  const tampilkanTombolUploadSurat = !suratHasilTersedia || suratBaruDipilih
+  const backendStatus = normalizePengajuanStatus(submission)
   const layananPengajuan = getPengajuanLayanan(submission)
   const documentsLoading = !documentsReady && loading && !submission
   const dataFormEntries = useMemo(() => {
@@ -494,30 +400,11 @@ export default function DetailPengajuanPetugas() {
       return
     }
 
-    const refreshedDetail = await getDetailPengajuan(pengajuanId, {
-      ...(submission || {}),
-      status: normalized,
-      status_pengajuan: normalized,
-      catatan_petugas: catatanPetugas,
-      catatanPetugas,
-    })
-
-    const nextSubmission =
-      refreshedDetail?.success && refreshedDetail?.data
-        ? refreshedDetail.data
-        : {
-            ...(submission || {}),
-            status: normalized,
-            status_pengajuan: normalized,
-            catatan_petugas: catatanPetugas,
-            catatanPetugas,
-          }
-
+    const refreshedSubmission = await refreshDetail()
     setSaving(false)
-    setStatusBaru(normalizePengajuanStatus(nextSubmission || normalized))
-    setCatatanPetugas(getPengajuanCatatanPetugas(nextSubmission) || String(catatanPetugas || ''))
-    hydrateDocuments(nextSubmission)
-    setSubmission(nextSubmission)
+    if (!refreshedSubmission) {
+      console.error('Status berhasil diubah, tetapi detail terbaru gagal dimuat ulang.', { endpoint, pengajuanId })
+    }
     showToast(res?.message || 'Perubahan berhasil disimpan.', 'success')
   }
 
@@ -530,7 +417,15 @@ export default function DetailPengajuanPetugas() {
     if (!file) return
 
     if (!isAllowedSuratFile(file)) {
-      showToast('Format surat hasil harus PDF, JPG, JPEG, atau PNG.', 'danger')
+      setSuratForm(readSuratHasil(submission))
+      showToast('Format file tidak didukung. Gunakan PDF, JPG, JPEG, atau PNG.', 'danger')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > SURAT_HASIL_MAX_SIZE) {
+      setSuratForm(readSuratHasil(submission))
+      showToast('Ukuran file terlalu besar. Maksimal ukuran file 5 MB.', 'danger')
       e.target.value = ''
       return
     }
@@ -571,29 +466,38 @@ export default function DetailPengajuanPetugas() {
       return
     }
 
-    const fallbackMetadata = {
-      file_hasil: file.name,
-      surat_hasil: { nama_file: file.name, url: '' },
-      dokumen_hasil: { nama_file: file.name, url: '' },
-      nama_file_hasil: file.name,
-    }
-    const refreshedAfterUpload = await getDetailPengajuan(pengajuanId, {
-      ...(submission || {}),
-      ...fallbackMetadata,
-    })
-    const nextSubmission =
-      refreshedAfterUpload?.success && refreshedAfterUpload?.data
-        ? refreshedAfterUpload.data
-        : {
-            ...(submission || {}),
-            ...fallbackMetadata,
-          }
-
+    const refreshedSubmission = await refreshDetail()
     setSavingSurat(false)
-    setSubmission(nextSubmission)
-    hydrateDocuments(nextSubmission)
-    setSuratForm(readSuratHasil(nextSubmission))
+    if (!refreshedSubmission) {
+      console.error('Surat berhasil diunggah, tetapi detail terbaru gagal dimuat ulang.', { endpoint, pengajuanId })
+    }
     showToast(res?.message || 'Surat hasil berhasil diunggah', 'success')
+  }
+
+  function lihatSuratHasil() {
+    if (!suratForm.url) return
+    window.open(suratForm.url, '_blank', 'noopener,noreferrer')
+  }
+
+  async function hapusSuratHasil() {
+    if (!submission || !suratHasilTersedia || deletingSurat) return
+    if (!window.confirm('Hapus surat hasil yang tersimpan?')) return
+
+    setDeletingSurat(true)
+    const res = await deleteSuratHasilPengajuan(endpoint, pengajuanId)
+    if (!res?.success) {
+      setDeletingSurat(false)
+      console.error('Gagal menghapus surat hasil:', { endpoint, pengajuanId, response: res })
+      showToast(res?.message || 'Gagal menghapus surat hasil.', 'danger')
+      return
+    }
+
+    const refreshedSubmission = await refreshDetail()
+    setDeletingSurat(false)
+    if (!refreshedSubmission) {
+      console.error('Surat berhasil dihapus, tetapi detail terbaru gagal dimuat ulang.', { endpoint, pengajuanId })
+    }
+    showToast(res?.message || 'Surat hasil berhasil dihapus.', 'success')
   }
 
   return (
@@ -714,7 +618,7 @@ export default function DetailPengajuanPetugas() {
                         <dd>{layananPengajuan}</dd>
 
                         <dt>Status Pengajuan</dt>
-                        <dd>{statusBaru ? <span className={getStatusClass(statusBaru)}>{statusBaru}</span> : '-'}</dd>
+                        <dd>{backendStatus ? <span className={getStatusClass(backendStatus)}>{backendStatus}</span> : '-'}</dd>
 
                         <dt>Tanggal Pengajuan</dt>
                         <dd>{formatTanggalWaktuID(getPengajuanCreatedAt(submission))}</dd>
@@ -853,17 +757,27 @@ export default function DetailPengajuanPetugas() {
                     <div className="ptg-divider" />
                     <div style={{ marginTop: 12 }} className="ptg-stack">
                       <p className="ptg-hint" style={{ margin: 0 }}>
-                        Unggah surat rekomendasi yang sudah dibuat oleh petugas. File ini akan tampil di halaman status pengajuan masyarakat
-                        dan dapat diunduh setelah pengajuan selesai.
+                        Unggah surat hasil yang sudah diverifikasi agar dapat dilihat dan diunduh oleh masyarakat.
                       </p>
 
-                      <div className="ptg-statusPanel">
-                        <strong>Status surat hasil</strong>
-                        <span>{suratHasilTersedia ? 'Surat hasil sudah diunggah' : 'Belum ada surat hasil diunggah'}</span>
+                      <div className="ptg-uploadInfo" role="note">
+                        Format: PDF, JPG, JPEG, PNG <span aria-hidden="true">&bull;</span> Maksimal 5 MB
                       </div>
 
+                      <div className="ptg-statusPanel">
+                        <strong>{suratHasilTersedia ? 'Surat hasil sudah diunggah' : 'Belum ada surat hasil'}</strong>
+                        {suratForm.nama ? (
+                          <span>{suratBaruDipilih && suratHasilTersedia ? `File baru: ${suratForm.nama}` : suratForm.nama}</span>
+                        ) : null}
+                      </div>
+
+                      {suratHasilTersedia && backendStatus !== 'Selesai' ? (
+                        <div className="ptg-hint" role="status">
+                          Surat hasil tersimpan, tetapi status belum Selesai. Silakan ubah status menjadi Selesai lalu simpan.
+                        </div>
+                      ) : null}
+
                       <div className="ptg-field">
-                        <div className="ptg-label">File surat hasil</div>
                         <input
                           id={SURAT_HASIL_INPUT_ID}
                           className="ptg-hiddenInput"
@@ -874,41 +788,37 @@ export default function DetailPengajuanPetugas() {
                         />
                         <div className="ptg-actionRow">
                           {suratForm.url ? (
-                            <a className="ptg-btn ptg-fileAction" href={suratForm.url} target="_blank" rel="noreferrer">
+                            <button type="button" className="ptg-btn ptg-fileAction btn-lihat-surat" onClick={lihatSuratHasil}>
                               Lihat Surat
-                            </a>
+                            </button>
                           ) : null}
-                          <label htmlFor={SURAT_HASIL_INPUT_ID} className="ptg-btn ptg-btnLabel">
+                          <label htmlFor={SURAT_HASIL_INPUT_ID} className="ptg-btn ptg-btnLabel btn-ganti-surat">
                             {suratHasilTersedia ? 'Ganti Surat' : 'Pilih Surat'}
                           </label>
+                          {suratHasilTersedia ? (
+                            <button
+                              type="button"
+                              className="ptg-btn btn-hapus-surat"
+                              onClick={() => void hapusSuratHasil()}
+                              disabled={savingSurat || deletingSurat}
+                            >
+                              {deletingSurat ? 'Menghapus...' : 'Hapus Surat'}
+                            </button>
+                          ) : null}
                         </div>
-                        <input
-                          className="ptg-input"
-                          type="text"
-                          value={suratForm.nama || ''}
-                          placeholder="Belum ada file surat hasil yang dipilih"
-                          readOnly
-                        />
-                        <div className="ptg-hint">Format file yang diterima: PDF, JPG, JPEG, atau PNG.</div>
                       </div>
-                      {suratForm.nama ? (
-                        <div className="ptg-uploadSummary">
-                          <div>
-                            <strong>{suratForm.nama}</strong>
-                            <span>{suratForm.file ? 'Siap diunggah sebagai surat hasil terbaru' : 'Tersimpan sebagai surat hasil'}</span>
-                          </div>
+                      {tampilkanTombolUploadSurat ? (
+                        <div className="ptg-actionRow">
+                          <button
+                            type="button"
+                            className="ptg-btn ptg-btnPrimary"
+                            onClick={simpanSuratHasil}
+                            disabled={!submission || savingSurat || deletingSurat || !suratForm.file}
+                          >
+                            {savingSurat ? 'Mengunggah...' : suratHasilTersedia ? 'Upload Surat Baru' : 'Upload Surat Hasil'}
+                          </button>
                         </div>
                       ) : null}
-                      <div className="ptg-actionRow">
-                        <button
-                          type="button"
-                          className="ptg-btn ptg-btnPrimary"
-                          onClick={simpanSuratHasil}
-                          disabled={!submission || savingSurat || !suratForm.file}
-                        >
-                          {savingSurat ? 'Mengunggah...' : 'Upload Surat Hasil'}
-                        </button>
-                      </div>
                     </div>
                   </section>
                 </aside>

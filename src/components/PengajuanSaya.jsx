@@ -18,11 +18,14 @@ import {
   FiX,
 } from 'react-icons/fi'
 import { getAuth } from '../lib/rkLocal'
+import { buildDownloadFilename, downloadFileFromUrl } from '../lib/fileDownload'
 import {
+  canMasyarakatAccessSuratHasil,
   deletePengajuan,
   getDetailPengajuan,
   getPengajuanId,
   getPengajuanSaya,
+  normalizePengajuan,
   updatePengajuan,
   uploadDokumenPengajuan,
 } from '../services/pengajuanService'
@@ -161,6 +164,11 @@ const HIDDEN_DATA_KEYS = new Set([
   'dataform',
   'data',
   'file_hasil',
+  'file_surat_hasil',
+  'filesurathasil',
+  'nama_file_surat_hasil',
+  'namafilesurathasil',
+  'nama_surat_hasil',
   'dokumen_hasil',
   'surat_hasil',
   'url_hasil',
@@ -207,60 +215,14 @@ function formatDataValue(value) {
   return String(value)
 }
 
-const RESULT_FILE_KEYS = [
-  'file_hasil',
-  'dokumen_hasil',
-  'surat_hasil',
-  'url_hasil',
-  'hasil_url',
-  'file_url',
-  'hasilSurat',
-  'hasil_surat',
-]
-
 function getResultFile(item) {
-  if (!item || typeof item !== 'object') return null
-  for (const key of RESULT_FILE_KEYS) {
-    const value = item[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
-    if (value && typeof value === 'object') {
-      const url = value.url || value.href || value.path || value.download_url || value.file_url || ''
-      if (String(url).trim() || value.content) return value
-    }
-  }
-  return null
+  const result = normalizePengajuan(item).suratHasil
+  return result.path || result.url ? result : null
 }
 
-function triggerResultDownload(resultFile) {
-  if (!resultFile) return
-  let url = ''
-  let revokeAfter = false
-  let filename = ''
-
-  if (typeof resultFile === 'string') {
-    url = resultFile
-  } else if (resultFile.content) {
-    const blob = new Blob([resultFile.content], { type: resultFile.type || 'application/octet-stream' })
-    url = URL.createObjectURL(blob)
-    revokeAfter = true
-    filename = resultFile.filename || resultFile.name || 'surat-hasil'
-  } else {
-    url = resultFile.url || resultFile.href || resultFile.path || resultFile.download_url || resultFile.file_url || ''
-    filename = resultFile.filename || resultFile.name || ''
-  }
-
-  if (!url) return
-  const a = document.createElement('a')
-  a.href = url
-  if (filename) a.download = filename
-  if (/^https?:\/\//i.test(url)) {
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-  }
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  if (revokeAfter) URL.revokeObjectURL(url)
+function openResultFile(resultFile) {
+  if (!resultFile?.url) return
+  window.open(resultFile.url, '_blank', 'noopener,noreferrer')
 }
 
 function getRejectReason(item) {
@@ -322,6 +284,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const [editFileInputVersion, setEditFileInputVersion] = useState(0)
   const [loading, setLoading] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
+  const [downloadingResultId, setDownloadingResultId] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState(null)
   const detailBodyRef = useRef(null)
@@ -533,7 +496,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
   const activeKind = statusKind(activeStatus)
   const activeCanManage = canManagePengajuan(activeStatus)
   const activeResultFile = getResultFile(active)
-  const activeCanDownload = activeKind === 'done' && !!activeResultFile
+  const activeCanDownload = canMasyarakatAccessSuratHasil(active)
   const activeRejectReason = getRejectReason(active)
   const activeDokumenPersyaratan = useMemo(() => normalizePengajuanDokumenPersyaratan(active), [active])
   const editDokumenConfig = useMemo(() => getDokumenConfigForPengajuan(editItem), [editItem])
@@ -552,6 +515,27 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
       return true
     })
   }, [active])
+
+  async function downloadResultFile(item, resultFile) {
+    if (!resultFile?.url) return
+
+    const id = getPengajuanId(item)
+    const filename = buildDownloadFilename(resultFile.namaFile, id, resultFile.url || resultFile.path)
+    setDownloadingResultId(id || 'active')
+
+    try {
+      await downloadFileFromUrl(resultFile.url, filename)
+      setNotice({ type: 'success', message: 'Surat hasil berhasil diunduh.' })
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Gagal mengunduh surat hasil:', err)
+      setNotice({
+        type: 'error',
+        message: 'Gagal mengunduh surat hasil. Silakan coba buka melalui tombol Lihat Surat.',
+      })
+    } finally {
+      setDownloadingResultId('')
+    }
+  }
 
   function close() {
     setActive(null)
@@ -887,8 +871,7 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                 const itemStatus = getStatus(item)
                 const itemKind = statusKind(itemStatus)
                 const canManage = canManagePengajuan(itemStatus)
-                const resultFile = getResultFile(item)
-                const canDownloadResult = itemKind === 'done' && !!resultFile
+                const canDownloadResult = canMasyarakatAccessSuratHasil(item)
                 const rejectReason = getRejectReason(item)
 
                 return (
@@ -904,8 +887,8 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                       {itemKind === 'reject' && rejectReason ? (
                         <div className="rk-rowStatusInfo isReject">Alasan penolakan: {rejectReason}</div>
                       ) : null}
-                      {itemKind === 'done' && !resultFile ? (
-                        <div className="rk-rowStatusInfo">Dokumen hasil belum tersedia.</div>
+                      {canDownloadResult ? (
+                        <div className="rk-rowStatusInfo">Surat hasil tersedia di detail pengajuan.</div>
                       ) : null}
                     </div>
 
@@ -928,12 +911,6 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                             Hapus
                           </button>
                         </>
-                      ) : null}
-                      {canDownloadResult ? (
-                        <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(resultFile)}>
-                          <FiDownload aria-hidden="true" />
-                          Download Surat Hasil
-                        </button>
                       ) : null}
                     </div>
                   </div>
@@ -964,12 +941,6 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               <div className={`rk-statusBox is-${activeKind}`}>
                 <div className="rk-statusTop">
                   <span className={`rk-mySubBadge ${badgeClass(activeStatus)}`}>{statusLabel(activeStatus)}</span>
-                  {activeCanDownload ? (
-                    <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
-                      <FiDownload aria-hidden="true" />
-                      Download Surat Hasil
-                    </button>
-                  ) : null}
                 </div>
                 <div style={{ marginTop: 6, opacity: 0.95 }}>{statusMessage(activeStatus)}</div>
                 {activeKind === 'reject' && activeRejectReason ? (
@@ -978,10 +949,40 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
                     <div style={{ marginTop: 4, opacity: 0.95 }}>{activeRejectReason}</div>
                   </div>
                 ) : null}
-                {activeKind === 'done' && !activeResultFile ? (
-                  <div className="rk-resultUnavailable">Dokumen hasil belum tersedia.</div>
-                ) : null}
               </div>
+
+              {activeCanDownload ? (
+                <div className="rk-mySubCard rk-resultDetailCard" aria-label="Surat hasil pengajuan">
+                  <div className="rk-dataFormTitle"><FiFileText aria-hidden="true" /> Surat hasil sudah tersedia</div>
+                  <dl className="rk-kv">
+                    <dt>Nama File Surat Hasil</dt>
+                    <dd>{activeResultFile.namaFile || 'Surat hasil pengajuan'}</dd>
+                  </dl>
+                  <div className="rk-resultCardActions">
+                    <button type="button" className="rk-miniBtn2 isDetail" onClick={() => openResultFile(activeResultFile)}>
+                      <FiEye aria-hidden="true" />
+                      Lihat Surat
+                    </button>
+                    <button
+                      type="button"
+                      className="rk-miniBtn2 isDownload"
+                      onClick={() => void downloadResultFile(active, activeResultFile)}
+                      disabled={downloadingResultId === getPengajuanId(active)}
+                    >
+                      {downloadingResultId === getPengajuanId(active) ? <FiLoader aria-hidden="true" /> : <FiDownload aria-hidden="true" />}
+                      {downloadingResultId === getPengajuanId(active) ? 'Mengunduh...' : 'Unduh Surat'}
+                    </button>
+                  </div>
+                </div>
+              ) : activeResultFile && activeKind !== 'done' ? (
+                <div className="rk-mySubCard rk-resultUnavailable">
+                  Surat hasil sudah tersimpan, tetapi pengajuan belum selesai diverifikasi.
+                </div>
+              ) : activeKind === 'done' ? (
+                <div className="rk-mySubCard rk-resultUnavailable">
+                  Pengajuan selesai, tetapi surat hasil belum tersedia. Silakan tunggu petugas mengunggah surat hasil.
+                </div>
+              ) : null}
 
               <div className="rk-mySubCard" aria-label="Ringkasan data pengajuan">
                 <dl className="rk-kv">
@@ -1059,14 +1060,8 @@ export default function PengajuanSaya({ variant = 'default' } = {}) {
               {activeKind === 'process' ? (
                 <div className="rk-lockedInfo"><FiShield aria-hidden="true" /> Pengajuan sedang diproses petugas.</div>
               ) : null}
-              {activeKind === 'done' && activeCanDownload ? (
-                <button type="button" className="rk-miniBtn2 isDownload" onClick={() => triggerResultDownload(activeResultFile)}>
-                  <FiDownload aria-hidden="true" />
-                  Download Surat Hasil
-                </button>
-              ) : null}
               {activeKind === 'done' && !activeResultFile ? (
-                <div className="rk-lockedInfo"><FiInfo aria-hidden="true" /> Dokumen hasil belum tersedia.</div>
+                <div className="rk-lockedInfo"><FiInfo aria-hidden="true" /> Surat hasil belum tersedia.</div>
               ) : null}
               {activeKind === 'reject' ? (
                 <div className="rk-lockedInfo"><FiAlertCircle aria-hidden="true" /> Pengajuan ditolak dan tidak dapat diubah.</div>
